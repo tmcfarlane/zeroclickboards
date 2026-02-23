@@ -1,0 +1,200 @@
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
+@import "@fontsource/geist-mono/400.css";
+
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  :root {
+    /* Zero Click Dev Dark Theme */
+    --background: 210 11% 7%;
+    --foreground: 160 14% 93%;
+    
+    --card: 220 17% 98% / 0.01;
+    --card-foreground: 160 14% 93%;
+    
+    --popover: 210 11% 7%;
+    --popover-foreground: 160 14% 93%;
+    
+    /* Primary Accent - Teal/Cyan */
+    --primary: 165 96% 71%;
+    --primary-foreground: 160 8% 6%;
+    
+    --secondary: 160 14% 93%;
+    --secondary-foreground: 165 14% 8%;
+    
+    --muted: 240 2% 16%;
+    --muted-foreground: 160 14% 93% / 0.7;
+    
+    --accent: 240 2% 25%;
+    --accent-foreground: 240 2% 96%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 100% 100% / 0.08;
+    --input: 240 2% 16%;
+    --ring: 165 96% 71%;
+    --radius: 0.5rem;
+    
+    /* Custom colors */
+    --cyan: 165 96% 71%;
+    --cyan-dark: 160 100% 50%;
+    --charcoal: 210 11% 7%;
+    --charcoal-light: 220 17% 11%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: 'Geist Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Gradient utilities */
+  .gradient-cyan {
+    background: linear-gradient(135deg, #78fcd6, #00ffb6);
+  }
+  
+  .gradient-cyan-text {
+    background: linear-gradient(135deg, #78fcd6, #00ffb6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Glass morphism */
+  .glass {
+    background-color: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(8px);
+  }
+  
+  .glass-panel {
+    background-color: rgba(17, 21, 21, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+  }
+  
+  /* Glow effects */
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(120, 252, 214, 0.3);
+  }
+  
+  .glow-cyan-strong {
+    box-shadow: 0 0 30px rgba(120, 252, 214, 0.5);
+  }
+  
+  /* Noise overlay */
+  .noise-overlay {
+    position: relative;
+  }
+  
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.04;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+  
+  /* Custom scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 252, 214, 0.3) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(120, 252, 214, 0.3);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(120, 252, 214, 0.5);
+  }
+  
+  /* Animation utilities */
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+  
+  .animate-border-glow {
+    animation: border-glow 3s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(120, 252, 214, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(120, 252, 214, 0.6); }
+}
+
+@keyframes border-glow {
+  0% {
+    border-color: rgba(120, 252, 214, 0.6);
+    box-shadow: 0 0 10px rgba(120, 252, 214, 0.4),
+                0 0 20px rgba(120, 252, 214, 0.3),
+                0 0 30px rgba(120, 252, 214, 0.2),
+                inset 0 0 10px rgba(120, 252, 214, 0.1);
+  }
+  50% {
+    border-color: rgba(120, 252, 214, 1);
+    box-shadow: 0 0 20px rgba(120, 252, 214, 0.6),
+                0 0 30px rgba(120, 252, 214, 0.5),
+                0 0 40px rgba(120, 252, 214, 0.4),
+                inset 0 0 20px rgba(120, 252, 214, 0.2);
+  }
+  100% {
+    border-color: rgba(120, 252, 214, 0.6);
+    box-shadow: 0 0 10px rgba(120, 252, 214, 0.4),
+                0 0 20px rgba(120, 252, 214, 0.3),
+                0 0 30px rgba(120, 252, 214, 0.2),
+                inset 0 0 10px rgba(120, 252, 214, 0.1);
+  }
+}
+
+/* Board column drag and drop styles */
+.dragging {
+  opacity: 0.5;
+}
+
+.drag-over {
+  background: rgba(120, 252, 214, 0.1);
+  border: 2px dashed rgba(120, 252, 214, 0.5);
+}
