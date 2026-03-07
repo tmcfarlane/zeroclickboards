@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Toaster } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { useBoardStore } from '@/store/useBoardStore';
 import { BoardSelector } from '@/components/board/BoardSelector';
 import { KanbanBoard } from '@/components/board/KanbanBoard';
@@ -31,11 +34,25 @@ function App() {
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const { isSignedIn, isLoaded, userId } = useAuth();
 
   const activeBoard = getActiveBoard();
   const userBoards = getBoardsForUser(userId);
   const repoUrl = import.meta.env.VITE_GITHUB_REPO_URL as string | undefined;
+  const searchInputId = 'board-search-input';
+
+  useKeyboardShortcuts({
+    onSearch: () => {
+      const el = document.getElementById(searchInputId) as HTMLInputElement | null;
+      el?.focus();
+    },
+    onToggleAI: () => setIsAIOpen((v) => !v),
+    onBoardView: () => setViewMode('board'),
+    onTimelineView: () => setViewMode('timeline'),
+    onNewBoard: () => setIsCreateDialogOpen(true),
+    onShowShortcuts: () => setIsShortcutsOpen(true),
+  });
 
   // Sync user ID with store
   useEffect(() => {
@@ -275,6 +292,21 @@ function App() {
       {/* AI Assistant Panel */}
       <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
 
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
+
+      <Toaster
+        theme="dark"
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#111515',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#F2F7F7',
+          },
+        }}
+      />
+
       {/* Create Board Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
@@ -292,6 +324,7 @@ function App() {
                 value={newBoardName}
                 onChange={(e) => setNewBoardName(e.target.value)}
                 placeholder="e.g., Website Launch"
+                maxLength={100}
                 className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
                 onKeyDown={(e) => e.key === 'Enter' && handleCreateBoard()}
               />
@@ -303,6 +336,7 @@ function App() {
                 value={newBoardDescription}
                 onChange={(e) => setNewBoardDescription(e.target.value)}
                 placeholder="Brief description of your project"
+                maxLength={500}
                 className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
               />
             </div>

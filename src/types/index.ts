@@ -20,6 +20,7 @@ export interface CardContent {
 export interface Card {
   id: string;
   title: string;
+  description?: string;
   content: CardContent;
   targetDate?: string;
   labels?: CardLabel[];

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
 import type { AppState, Board, Card, CardContent, CardLabel, Column, Json } from '@/types';
@@ -159,7 +160,7 @@ function scheduleBoardSync(boardId: string) {
     const board = state.boards.find((b) => b.id === boardId);
     if (!board?.userId) return;
 
-    void supabase
+    supabase
       .from('boards')
       .update({
         name: board.name,
@@ -168,7 +169,13 @@ function scheduleBoardSync(boardId: string) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', board.id)
-      .eq('user_id', board.userId);
+      .eq('user_id', board.userId)
+      .then(({ error }) => {
+        if (error) {
+          console.error('[boards] sync failed:', error.message);
+          toast.error('Failed to sync changes');
+        }
+      });
   }, 400);
 
   pendingBoardSync.set(boardId, timer);
@@ -209,6 +216,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
     if (error) {
       set({ remoteStatus: 'error', remoteError: error.message });
+      toast.error('Failed to load boards');
       return;
     }
 
@@ -252,9 +260,10 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       boards: [...state.boards, newBoard],
       activeBoardId: newBoard.id,
     }));
+    toast.success('Board created');
 
     if (userId) {
-      void supabase.from('boards').upsert({
+      supabase.from('boards').upsert({
         id: newBoard.id,
         user_id: userId,
         name: newBoard.name,
@@ -262,6 +271,11 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
         data: boardToData(newBoard) as unknown as Json,
         created_at: newBoard.createdAt,
         updated_at: newBoard.updatedAt,
+      }).then(({ error }) => {
+        if (error) {
+          console.error('[boards] upsert failed:', error.message);
+          toast.error('Failed to save board');
+        }
       });
     }
 
@@ -279,8 +293,16 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
           : state.activeBoardId,
     }));
 
+    toast.success('Board deleted');
+
     if (userId) {
-      void supabase.from('boards').delete().eq('id', boardId).eq('user_id', userId);
+      supabase.from('boards').delete().eq('id', boardId).eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('[boards] delete failed:', error.message);
+            toast.error('Failed to delete board');
+          }
+        });
     }
   },
 
@@ -288,6 +310,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     set((state) => ({
       boards: state.boards.map((b) => (b.id === boardId ? { ...b, name: newName, updatedAt: new Date().toISOString() } : b)),
     }));
+    toast.success('Board renamed');
     scheduleBoardSync(boardId);
   },
 
@@ -307,6 +330,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
         };
       }),
     }));
+    toast.success('Column added');
     scheduleBoardSync(boardId);
   },
 
@@ -318,6 +342,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
           : b
       ),
     }));
+    toast.success('Column removed');
     scheduleBoardSync(boardId);
   },
 
@@ -383,6 +408,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
           : b
       ),
     }));
+    toast.success('Card added');
     scheduleBoardSync(boardId);
   },
 
@@ -400,6 +426,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
           : b
       ),
     }));
+    toast.success('Card deleted');
     scheduleBoardSync(boardId);
   },
 
@@ -482,10 +509,12 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
   archiveCard: (boardId, columnId, cardId) => {
     get().editCard(boardId, columnId, cardId, { isArchived: true, archivedAt: new Date().toISOString() });
+    toast.success('Card archived');
   },
 
   restoreCard: (boardId, columnId, cardId) => {
     get().editCard(boardId, columnId, cardId, { isArchived: false, archivedAt: undefined });
+    toast.success('Card restored');
   },
 
   duplicateCard: (boardId, columnId, cardId) => {
@@ -512,6 +541,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
           : b
       ),
     }));
+    toast.success('Card duplicated');
     scheduleBoardSync(boardId);
   },
 

@@ -19,10 +19,12 @@ import {
 } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Image as ImageIcon, ListTodo, FileText, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
 import { LabelPicker, LabelStrip } from './LabelPicker';
 
 export interface CardEditorSaveData {
   title: string;
+  description?: string;
   content: CardContent;
   targetDate?: string;
   labels: CardLabel[];
@@ -36,6 +38,7 @@ interface CardEditorProps {
   mode: 'create' | 'edit';
   initialData?: {
     title: string;
+    description?: string;
     content: CardContent;
     targetDate?: string;
     labels?: CardLabel[];
@@ -45,6 +48,7 @@ interface CardEditorProps {
 
 export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardEditorProps) {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [contentType, setContentType] = useState<CardContent['type']>('text');
   const [textContent, setTextContent] = useState('');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
@@ -59,6 +63,7 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
     if (isOpen) {
       if (initialData) {
         setTitle(initialData.title);
+        setDescription(initialData.description || '');
         setContentType(initialData.content.type);
         setTextContent(initialData.content.text || '');
         setChecklist(initialData.content.checklist || []);
@@ -68,6 +73,7 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
         setCoverImage(initialData.coverImage || '');
       } else {
         setTitle('');
+        setDescription('');
         setContentType('text');
         setTextContent('');
         setChecklist([]);
@@ -96,6 +102,7 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
 
     onSave({
       title: title.trim(),
+      description: description.trim() || undefined,
       content,
       targetDate: targetDate || undefined,
       labels,
@@ -129,24 +136,32 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
     setChecklist(checklist.filter((item) => item.id !== id));
   };
 
+  const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+  const validateImageFile = (file: File): string | null => {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) return 'Only JPEG, PNG, WebP, and GIF images are allowed';
+    if (file.size > MAX_IMAGE_SIZE) return 'Image must be smaller than 2MB';
+    return null;
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { toast.error(err); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => { setImageUrl(reader.result as string); };
+    reader.readAsDataURL(file);
   };
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const err = validateImageFile(file);
+    if (err) { toast.error(err); return; }
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setCoverImage(typeof reader.result === 'string' ? reader.result : '');
-    };
+    reader.onloadend = () => { setCoverImage(typeof reader.result === 'string' ? reader.result : ''); };
     reader.readAsDataURL(file);
   };
 
@@ -166,7 +181,22 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter card title..."
+              maxLength={200}
               className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
+            />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="card-description">Description (optional)</Label>
+            <Textarea
+              id="card-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a more detailed description..."
+              maxLength={2000}
+              className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 min-h-[80px] resize-none"
+              rows={3}
             />
           </div>
 

@@ -53,6 +53,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
   const handleEdit = (data: CardEditorSaveData) => {
     editCard(boardId, columnId, card.id, {
       title: data.title,
+      description: data.description,
       content: data.content,
       targetDate: data.targetDate,
       labels: data.labels,
@@ -85,10 +86,26 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const isOverdue = (dateString?: string) => {
-    if (!dateString) return false;
+  const getDateStatus = (dateString?: string): 'overdue' | 'today' | 'soon' | 'later' => {
+    if (!dateString) return 'later';
     const date = new Date(dateString);
-    return date < new Date() && date.toDateString() !== new Date().toDateString();
+    const now = new Date();
+    const todayStr = now.toDateString();
+    if (date.toDateString() === todayStr) return 'today';
+    if (date < now) return 'overdue';
+    const diffMs = date.getTime() - now.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    if (diffDays <= 2) return 'soon';
+    return 'later';
+  };
+
+  const dateBadgeClass = (status: 'overdue' | 'today' | 'soon' | 'later') => {
+    switch (status) {
+      case 'overdue': return 'bg-red-500/20 text-red-400 border border-red-500/30';
+      case 'today':
+      case 'soon':   return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+      default:       return 'bg-white/5 text-[#A8B2B2] border border-white/10';
+    }
   };
 
   return (
@@ -137,6 +154,17 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
           />
         </div>
 
+        {/* Description preview */}
+        {(() => {
+          const desc = card.description?.trim() || (card.content.type === 'text' ? card.content.text?.trim() : undefined);
+          if (!desc) return null;
+          return (
+            <p className="text-xs text-[#A8B2B2] mt-1 leading-relaxed line-clamp-2">
+              {desc.slice(0, 60)}{desc.length > 60 ? '…' : ''}
+            </p>
+          );
+        })()}
+
         {/* Card Meta */}
         <div className="flex items-center gap-3 mt-2">
           {/* Content Type Indicator */}
@@ -148,16 +176,15 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
           </div>
 
           {/* Target Date */}
-          {card.targetDate && (
-            <div
-              className={`flex items-center gap-1 text-xs ${
-                isOverdue(card.targetDate) ? 'text-red-400' : 'text-[#A8B2B2]'
-              }`}
-            >
-              <Calendar className="w-3 h-3" />
-              <span>{formatDate(card.targetDate)}</span>
-            </div>
-          )}
+          {card.targetDate && (() => {
+            const status = getDateStatus(card.targetDate);
+            return (
+              <div className={`flex items-center gap-1 text-xs rounded-full px-2 py-0.5 ${dateBadgeClass(status)}`}>
+                <Calendar className="w-3 h-3" />
+                <span>{formatDate(card.targetDate)}</span>
+              </div>
+            );
+          })()}
         </div>
         </div>
       </div>
