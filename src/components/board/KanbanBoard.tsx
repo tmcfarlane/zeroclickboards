@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DndContext, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
+import { DndContext, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/store/useBoardStore';
 import type { Board, CardLabel } from '@/types';
@@ -54,9 +54,10 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
     })
   );
 
@@ -203,7 +204,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Board Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 border-b border-white/5">
         <div>
           <h1 className="text-lg font-semibold">{board.name}</h1>
           {board.description && (
@@ -211,7 +212,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
           )}
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
@@ -220,7 +221,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search cards... (press /)"
-              className="w-64 pl-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-9"
+              className="w-full sm:w-64 pl-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-9"
             />
           </div>
 
@@ -231,8 +232,8 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
                 variant="outline"
                 className={`h-9 px-3 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${selectedLabels.length > 0 ? 'border-[#78fcd6]/50 text-[#78fcd6]' : ''}`}
               >
-                <Tag className="w-4 h-4 mr-1.5" />
-                Labels
+                <Tag className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Labels</span>
                 {selectedLabels.length > 0 && (
                   <span className="ml-1 text-xs bg-[#78fcd6]/20 px-1.5 rounded-full">{selectedLabels.length}</span>
                 )}
@@ -278,8 +279,8 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
                 variant="outline"
                 className={`h-9 px-3 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${dueDateFilter ? 'border-[#78fcd6]/50 text-[#78fcd6]' : ''}`}
               >
-                <Calendar className="w-4 h-4 mr-1.5" />
-                Due Date
+                <Calendar className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Due Date</span>
                 <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </PopoverTrigger>
@@ -320,8 +321,8 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
             onClick={() => setIsAddColumnDialogOpen(true)}
             className="h-9 px-4 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
           >
-            <Plus className="w-4 h-4 mr-1.5" />
-            Column
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-1.5">Column</span>
           </Button>
         </div>
       </div>

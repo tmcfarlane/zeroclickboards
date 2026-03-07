@@ -420,7 +420,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-end p-4 pointer-events-none">
+    <div className="fixed inset-0 z-50 flex items-end justify-end p-2 sm:p-4 pointer-events-none">
       {/* Backdrop */}
       <button
         type="button"
@@ -430,7 +430,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       />
       
       {/* Chat Panel */}
-      <div className="relative w-full max-w-md h-[600px] bg-[#111515] border border-white/10 rounded-2xl shadow-2xl flex flex-col pointer-events-auto overflow-hidden">
+      <div className="relative w-full sm:max-w-md h-[600px] sm:h-[600px] bg-[#111515] border border-white/10 rounded-2xl shadow-2xl flex flex-col pointer-events-auto overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0B0F0F]">
           <div className="flex items-center gap-3">
@@ -445,7 +445,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
           <button
             type="button"
             onClick={onClose}
-            className="p-2 hover:bg-white/5 rounded-lg text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors"
+            className="p-3 hover:bg-white/5 rounded-lg text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>

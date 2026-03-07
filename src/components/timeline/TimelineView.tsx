@@ -81,7 +81,7 @@ export function TimelineView({ board }: TimelineViewProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Timeline Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 border-b border-white/5">
         <div>
           <h1 className="text-lg font-semibold">{board.name} - Timeline</h1>
           <p className="text-sm text-[#A8B2B2]">
@@ -95,8 +95,8 @@ export function TimelineView({ board }: TimelineViewProps) {
             variant="outline"
             className="h-9 border-white/10 text-[#F2F7F7] hover:bg-white/5"
           >
-            <Calendar className="w-4 h-4 mr-1.5" />
-            Today
+            <Calendar className="w-4 h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Today</span>
           </Button>
           <div className="flex items-center bg-white/5 rounded-lg">
             <Button
@@ -121,13 +121,13 @@ export function TimelineView({ board }: TimelineViewProps) {
 
       {/* Timeline Grid */}
       <div className="flex-1 overflow-auto scrollbar-thin">
-        <div className="min-w-[800px] p-4">
+        <div className="p-4">
           {/* Days Header */}
           <div className="grid grid-cols-7 gap-2 mb-4">
             {days.map((day) => (
               <div
                 key={day.toISOString()}
-                className={`text-center p-3 rounded-lg ${
+                className={`text-center p-1.5 sm:p-3 rounded-lg ${
                   isToday(day)
                     ? 'bg-[#78fcd6]/20 border border-[#78fcd6]/30'
                     : 'bg-white/5 border border-white/5'
@@ -136,7 +136,7 @@ export function TimelineView({ board }: TimelineViewProps) {
                 <div className={`text-xs font-medium ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#A8B2B2]'}`}>
                   {format(day, 'EEE')}
                 </div>
-                <div className={`text-lg font-semibold ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#F2F7F7]'}`}>
+                <div className={`text-sm sm:text-lg font-semibold ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#F2F7F7]'}`}>
                   {format(day, 'd')}
                 </div>
               </div>
@@ -169,7 +169,7 @@ export function TimelineView({ board }: TimelineViewProps) {
                     {days.map((day) => (
                       <div
                         key={`bg-${day.toISOString()}`}
-                        className={`h-20 rounded-lg border ${
+                        className={`h-14 sm:h-20 rounded-lg border ${
                           isToday(day)
                             ? 'bg-[#78fcd6]/5 border-[#78fcd6]/20'
                             : 'bg-white/[0.02] border-white/5'
@@ -191,7 +191,7 @@ export function TimelineView({ board }: TimelineViewProps) {
                             width: `calc(${100 / 7}% - 8px)`,
                           }}
                         >
-                          <div className="h-full bg-gradient-to-r from-[#78fcd6]/30 to-[#00ffb6]/20 border border-[#78fcd6]/30 rounded-lg p-2 overflow-hidden hover:from-[#78fcd6]/40 hover:to-[#00ffb6]/30 transition-colors cursor-pointer">
+                          <div className="h-full bg-gradient-to-r from-[#78fcd6]/30 to-[#00ffb6]/20 border border-[#78fcd6]/30 rounded-lg p-1 sm:p-2 overflow-hidden hover:from-[#78fcd6]/40 hover:to-[#00ffb6]/30 transition-colors cursor-pointer">
                             <p className="text-xs font-medium text-[#F2F7F7] line-clamp-2">
                               {item.card.title}
                             </p>

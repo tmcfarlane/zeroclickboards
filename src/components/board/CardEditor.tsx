@@ -167,7 +167,7 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Add Card' : 'Edit Card'}</DialogTitle>
         </DialogHeader>
@@ -224,7 +224,7 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
 
             <div className="space-y-2">
               <Label htmlFor="cover" className="text-sm">Card cover (optional)</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   id="cover"
                   value={coverImage}
@@ -236,7 +236,7 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
                   type="file"
                   accept="image/*"
                   onChange={handleCoverUpload}
-                  className="w-[150px] bg-white/5 border-white/10 text-[#F2F7F7] file:text-[#A8B2B2]"
+                  className="w-full sm:w-[150px] bg-white/5 border-white/10 text-[#F2F7F7] file:text-[#A8B2B2]"
                 />
               </div>
               {coverImage && (

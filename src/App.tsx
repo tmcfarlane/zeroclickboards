@@ -182,7 +182,7 @@ function App() {
 
           {/* Board Selector */}
           {userBoards.length > 0 && (
-            <div className="hidden sm:block">
+            <div className="flex-1 mx-2 min-w-0">
               <BoardSelector />
             </div>
           )}
@@ -202,8 +202,8 @@ function App() {
                       : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <Layout className="w-4 h-4 mr-1.5" />
-                  Board
+                  <Layout className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Board</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -215,8 +215,8 @@ function App() {
                       : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <Clock className="w-4 h-4 mr-1.5" />
-                  Timeline
+                  <Clock className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Timeline</span>
                 </Button>
               </div>
             )}
@@ -225,8 +225,8 @@ function App() {
               onClick={() => setIsCreateDialogOpen(true)}
               className="h-9 px-4 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-medium rounded-lg"
             >
-              <Plus className="w-4 h-4 mr-1.5" />
-              New Board
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1.5">New Board</span>
             </Button>
 
             {repoUrl && (
@@ -234,7 +234,7 @@ function App() {
                 href={repoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hidden sm:flex items-center justify-center transition-colors"
                 aria-label="Open GitHub repository"
               >
                 <Github className="w-4 h-4 text-[#A8B2B2]" />
@@ -281,7 +281,7 @@ function App() {
       <button
         type="button"
         onClick={() => setIsAIOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full gradient-cyan flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40 group"
+        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full gradient-cyan flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40 group"
         style={{
           boxShadow: '0 0 0 1px rgba(120, 252, 214, 0.35), 0 20px 50px rgba(120, 252, 214, 0.18)',
         }}

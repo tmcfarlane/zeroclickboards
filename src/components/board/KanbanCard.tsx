@@ -124,7 +124,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
               e.stopPropagation();
               setIsEditDialogOpen(true);
             }}
-            className="h-20 w-full"
+            className="h-16 sm:h-20 w-full"
           >
             <img src={card.coverImage} alt="Card cover" className="h-full w-full object-cover" />
           </button>
