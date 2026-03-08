@@ -3,7 +3,6 @@ import { useBoardStore } from '@/store/useBoardStore';
 import type { AICommand, AIMessage } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Sparkles, X, Bot, User, Check, AlertCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,28 +11,40 @@ interface AIAssistantProps {
   onClose: () => void;
 }
 
-async function parseCommandWithAI(input: string, context: string): Promise<AICommand | null> {
+function validateCommand(v: unknown): AICommand | null {
+  if (!v || typeof v !== 'object') return null;
+  const obj = v as Record<string, unknown>;
+  if (typeof obj.type !== 'string' || typeof obj.originalText !== 'string' || typeof obj.params !== 'object' || !obj.params) {
+    return null;
+  }
+  return {
+    type: obj.type as AICommand['type'],
+    params: obj.params as Record<string, unknown>,
+    originalText: obj.originalText,
+  };
+}
+
+async function parseCommandWithAI(input: string, context: string, lastCommand?: { type: string; params: Record<string, unknown> }): Promise<AICommand[] | null> {
   try {
     const res = await fetch('/api/ai/command', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ text: input, context }),
+      body: JSON.stringify({ text: input, context, lastCommand }),
     });
     if (!res.ok) return null;
     const json: unknown = await res.json();
     if (!json || typeof json !== 'object') return null;
     const root = json as Record<string, unknown>;
-    const cmd = root.command;
-    if (!cmd || typeof cmd !== 'object') return null;
-    const v = cmd as Record<string, unknown>;
-    if (typeof v.type !== 'string' || typeof v.originalText !== 'string' || typeof v.params !== 'object' || !v.params) {
-      return null;
+
+    // Batch response: { commands: [...] }
+    if (Array.isArray(root.commands)) {
+      const validated = root.commands.map(validateCommand).filter((c): c is AICommand => c !== null);
+      return validated.length > 0 ? validated : null;
     }
-    return {
-      type: v.type as AICommand['type'],
-      params: v.params as Record<string, unknown>,
-      originalText: v.originalText,
-    };
+
+    // Single response: { command: {...} }
+    const cmd = validateCommand(root.command);
+    return cmd ? [cmd] : null;
   } catch {
     return null;
   }
@@ -86,27 +97,35 @@ function parseCommandLocal(input: string): AICommand {
     };
   }
   
-  // Add card/task
-  if (lower.match(/add (a )?(task|card|item)|create (a )?(task|card)/)) {
-    const titleMatch = input.match(/(?:["'])([^"']+)(?:["'])/);
-    const toColumnMatch = input.match(/(?:to|in)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)/i);
+  // Add card/task — flexible matching for natural language variations
+  if (lower.match(/(?:add|create|make|put|new)\b.*(?:task|card|item|todo|note|reminder|ticket|checklist)/i) ||
+      lower.match(/^(?:add|create|make)\b/) && input.match(/["']([^"']+)["']/)) {
+    const titleMatch = input.match(/["']([^"']+)["']/);
+    const toColumnMatch = input.match(/(?:to|in|into)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)/i);
+    // Detect checklist items: "with items: X, Y, Z" or "with items X, Y, Z"
+    const checklistMatch = input.match(/(?:with\s+(?:items|tasks|steps)[:\s]+)(.+)/i);
+    const checklistItems = checklistMatch
+      ? checklistMatch[1].split(/,|;|\n/).map(s => s.trim()).filter(Boolean)
+      : undefined;
     return {
       type: 'add_card',
-      params: { 
+      params: {
         title: titleMatch?.[1]?.trim() || 'New Task',
-        columnTitle: toColumnMatch?.[1]?.trim()
+        columnTitle: toColumnMatch?.[1]?.trim(),
+        checklistItems,
       },
       originalText: input,
     };
   }
   
-  // Move card
-  if (lower.match(/move (the )?(task|card|item)/)) {
-    const titleMatch = input.match(/(?:["'])([^"']+)(?:["'])/);
+  // Move card — also match pronouns ("it", "that", "this") and bare "move to X"
+  if (lower.match(/(?:move|put|send|transfer)\s+(?:the\s+|a\s+)?(?:(?:\w+\s+)*?(?:task|card|item)|it|that|this)\b/) ||
+      lower.match(/(?:move|put|send|transfer)\s+(?:to|into)\s+/)) {
+    const titleMatch = input.match(/["']([^"']+)["']/);
     const toColumnMatch = input.match(/(?:to|into)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)/i);
     return {
       type: 'move_card',
-      params: { 
+      params: {
         cardTitle: titleMatch?.[1]?.trim(),
         toColumnTitle: toColumnMatch?.[1]?.trim()
       },
@@ -114,9 +133,10 @@ function parseCommandLocal(input: string): AICommand {
     };
   }
   
-  // Remove card
-  if (lower.match(/remove (the )?(task|card|item)|delete (the )?(task|card)/)) {
-    const titleMatch = input.match(/(?:["'])([^"']+)(?:["'])/);
+  // Remove card — flexible matching + pronouns
+  if (lower.match(/(?:remove|delete|trash|discard)\s+(?:the\s+|a\s+)?(?:(?:\w+\s+)*?(?:task|card|item|todo|note|ticket)|it|that|this)\b/) ||
+      lower.match(/(?:remove|delete) ["']/)) {
+    const titleMatch = input.match(/["']([^"']+)["']/);
     return {
       type: 'remove_card',
       params: { title: titleMatch?.[1]?.trim() },
@@ -124,14 +144,15 @@ function parseCommandLocal(input: string): AICommand {
     };
   }
   
-  // Set target date
+  // Set target date — also accept "for it/that/this"
   if (lower.match(/set (the )?due date|set (the )?target|due|deadline/)) {
     const titleMatch = input.match(/(?:for\s*["'])([^"']+)(?:["'])/);
+    const pronounMatch = !titleMatch && lower.match(/(?:for|on)\s+(?:it|that|this)\b/);
     const dateMatch = input.match(/(?:to|on|for)\s+(?:the\s+)?(\w+day|tomorrow|next \w+|\d{1,2}\/\d{1,2}|\d{4}-\d{2}-\d{2})/i);
     return {
       type: 'set_target_date',
-      params: { 
-        cardTitle: titleMatch?.[1]?.trim(),
+      params: {
+        cardTitle: pronounMatch ? undefined : titleMatch?.[1]?.trim(),
         date: dateMatch?.[1] || 'next week'
       },
       originalText: input,
@@ -154,6 +175,20 @@ function parseCommandLocal(input: string): AICommand {
     };
   }
   
+  // Last-resort heuristic: if input has a quoted string, treat as add_card
+  const lastResortTitle = input.match(/["']([^"']+)["']/);
+  if (lastResortTitle) {
+    const toColumnMatch = input.match(/(?:to|in|into)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)/i);
+    return {
+      type: 'add_card',
+      params: {
+        title: lastResortTitle[1].trim(),
+        columnTitle: toColumnMatch?.[1]?.trim()
+      },
+      originalText: input,
+    };
+  }
+
   return {
     type: 'unknown',
     params: {},
@@ -196,6 +231,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastCardTitle = useRef<string | null>(null);
 
   const activeBoard = getActiveBoard();
 
@@ -261,44 +297,56 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
         const columnTitle = getString('columnTitle');
 
         if (columnTitle) {
-          const column = activeBoard?.columns.find(c => 
+          const column = activeBoard?.columns.find(c =>
             c.title.toLowerCase().includes(columnTitle.toLowerCase())
           );
           if (column) columnId = column.id;
         }
-        
+
         if (!columnId) return 'No column found to add the card to.';
+
+        const rawItems = command.params.checklistItems;
+        const checklistItems = Array.isArray(rawItems) ? rawItems.filter((i): i is string => typeof i === 'string') : [];
+        if (checklistItems.length > 0) {
+          const checklist = checklistItems.map(text => ({ id: uuidv4(), text, completed: false }));
+          addCard(activeBoardId, columnId, title, { type: 'checklist', checklist });
+          lastCardTitle.current = title;
+          return `Added checklist "${title}" with ${checklist.length} items`;
+        }
+
         addCard(activeBoardId, columnId, title, { type: 'text', text: '' });
+        lastCardTitle.current = title;
         return `Added card "${title}"`;
       }
       
       case 'remove_card': {
         if (!activeBoardId) return 'No active board.';
         let removed = false;
-        const title = getString('title');
+        const title = getString('title') || lastCardTitle.current || undefined;
         activeBoard?.columns.forEach(column => {
-          const card = column.cards.find(c => 
+          const card = column.cards.find(c =>
             title ? c.title.toLowerCase().includes(title.toLowerCase()) : false
           );
           if (card) {
             removeCard(activeBoardId, column.id, card.id);
+            lastCardTitle.current = card.title;
             removed = true;
           }
         });
-        if (!title) return removed ? 'Removed card.' : 'Card not found.';
+        if (!title) return 'No card specified and no previous card to reference.';
         return removed ? `Removed card "${title}"` : `Card "${title}" not found.`;
       }
       
       case 'move_card': {
         if (!activeBoardId) return 'No active board.';
-        
+
         let sourceColumnId: string | undefined;
         let cardId: string | undefined;
-        const cardTitle = getString('cardTitle');
+        const cardTitle = getString('cardTitle') || lastCardTitle.current || undefined;
         const toColumnTitle = getString('toColumnTitle');
-        
+
         activeBoard?.columns.forEach(column => {
-          const card = column.cards.find(c => 
+          const card = column.cards.find(c =>
             cardTitle ? c.title.toLowerCase().includes(cardTitle.toLowerCase()) : false
           );
           if (card) {
@@ -306,21 +354,25 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
             cardId = card.id;
           }
         });
-        
-        if (!cardId) return cardTitle ? `Card "${cardTitle}" not found.` : 'Card not found.';
-        
-        const targetColumn = activeBoard?.columns.find(c => 
+
+        if (!cardId) {
+          if (!cardTitle) return 'No card specified and no previous card to reference.';
+          return `Card "${cardTitle}" not found.`;
+        }
+
+        const targetColumn = activeBoard?.columns.find(c =>
           toColumnTitle ? c.title.toLowerCase().includes(toColumnTitle.toLowerCase()) : false
         );
         if (!targetColumn) return toColumnTitle ? `Column "${toColumnTitle}" not found.` : 'Column not found.';
-        
+
         moveCard(activeBoardId, sourceColumnId!, targetColumn.id, cardId);
+        lastCardTitle.current = cardTitle || null;
         return `Moved "${cardTitle || 'card'}" to ${targetColumn.title}`;
       }
       
       case 'set_target_date': {
         if (!activeBoardId) return 'No active board.';
-        
+
         // Parse date
         let targetDate: string;
         const dateStr = getString('date')?.toLowerCase();
@@ -336,20 +388,21 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
         } else {
           targetDate = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
         }
-        
+
         let updated = false;
-        const cardTitle = getString('cardTitle');
+        const cardTitle = getString('cardTitle') || lastCardTitle.current || undefined;
         activeBoard?.columns.forEach(column => {
-          const card = column.cards.find(c => 
+          const card = column.cards.find(c =>
             cardTitle ? c.title.toLowerCase().includes(cardTitle.toLowerCase()) : false
           );
           if (card) {
             editCard(activeBoardId, column.id, card.id, { targetDate });
+            lastCardTitle.current = card.title;
             updated = true;
           }
         });
-        
-        if (!cardTitle) return updated ? `Set due date to ${targetDate}` : 'Card not found.';
+
+        if (!cardTitle) return 'No card specified and no previous card to reference.';
         return updated
           ? `Set due date for "${cardTitle}" to ${targetDate}`
           : `Card "${cardTitle}" not found.`;
@@ -367,13 +420,14 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isProcessing) return;
+  const handleSend = async (overrideText?: string) => {
+    const text = overrideText || input.trim();
+    if (!text || isProcessing) return;
 
     const userMessage: AIMessage = {
       id: uuidv4(),
       role: 'user',
-      content: input.trim(),
+      content: text,
       timestamp: new Date().toISOString(),
     };
 
@@ -393,19 +447,32 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       return JSON.stringify(snapshot);
     })();
 
-    const command = (await parseCommandWithAI(userMessage.content, boardContext)) ?? parseCommandLocal(userMessage.content);
-    
-    // Simulate processing delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const result = executeCommand(command);
-    
+    // Extract last executed command for pronoun resolution
+    const lastMsg = [...messages].reverse().find(m => m.role === 'assistant' && m.command && m.command.type !== 'unknown');
+    const lastCommand = lastMsg?.command ? { type: lastMsg.command.type, params: lastMsg.command.params } : undefined;
+
+    const commands = (await parseCommandWithAI(userMessage.content, boardContext, lastCommand)) ?? [parseCommandLocal(userMessage.content)];
+
+    const results: string[] = [];
+    for (let i = 0; i < commands.length; i++) {
+      const result = executeCommand(commands[i]);
+      results.push(result);
+      if (i < commands.length - 1) {
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+
+    const content = commands.length > 1
+      ? results.map((r, i) => `${i + 1}. ${r}`).join('\n')
+      : results[0];
+
     const assistantMessage: AIMessage = {
       id: uuidv4(),
       role: 'assistant',
-      content: result,
+      content,
       timestamp: new Date().toISOString(),
-      command,
+      command: commands[0],
+      commands: commands.length > 1 ? commands : undefined,
     };
 
     setMessages(prev => [...prev, assistantMessage]);
@@ -414,7 +481,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
 
   const handleQuickAction = (action: string) => {
     setInput(action);
-    setTimeout(() => handleSend(), 50);
+    handleSend(action);
   };
 
   if (!isOpen) return null;
@@ -452,7 +519,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 scrollbar-thin" ref={scrollRef}>
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -506,7 +573,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Quick Actions */}
         <div className="px-4 py-2 border-t border-white/5 bg-[#0B0F0F]/50">
@@ -537,7 +604,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
               disabled={isProcessing}
             />
             <Button
-              onClick={handleSend}
+              onClick={() => handleSend()}
               disabled={!input.trim() || isProcessing}
               className="h-10 w-10 p-0 gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
             >

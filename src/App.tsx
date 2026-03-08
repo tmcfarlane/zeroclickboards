@@ -298,6 +298,7 @@ function App() {
       <Toaster
         theme="dark"
         position="bottom-right"
+        offset={{ bottom: 80 }}
         toastOptions={{
           style: {
             background: '#111515',

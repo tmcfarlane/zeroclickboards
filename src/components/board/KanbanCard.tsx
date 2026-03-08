@@ -42,7 +42,6 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
   };
 
   const handleDelete = () => {
@@ -115,7 +114,11 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
         style={style}
         {...attributes}
         {...listeners}
-        className="group bg-[#1a1f1f] hover:bg-[#222828] border border-white/5 hover:border-[#78fcd6]/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200"
+        className={`group rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 ${
+          isDragging
+            ? 'opacity-30 border-2 border-dashed border-[#78fcd6]/30 bg-[#78fcd6]/5'
+            : 'bg-[#1a1f1f] hover:bg-[#222828] border border-white/5 hover:border-[#78fcd6]/30'
+        }`}
       >
         {card.coverImage && (
           <button
@@ -180,7 +183,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
             const status = getDateStatus(card.targetDate);
             return (
               <div className={`flex items-center gap-1 text-xs rounded-full px-2 py-0.5 ${dateBadgeClass(status)}`}>
-                <Calendar className="w-3 h-3" />
+                <Calendar className="w-3 h-3 text-white" />
                 <span>{formatDate(card.targetDate)}</span>
               </div>
             );
@@ -194,6 +197,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
         onSave={handleEdit}
+        onDelete={() => { setIsEditDialogOpen(false); handleDelete(); }}
         mode="edit"
         initialData={card}
       />

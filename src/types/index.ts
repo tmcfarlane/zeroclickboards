@@ -67,6 +67,7 @@ export interface AIMessage {
   content: string;
   timestamp: string;
   command?: AICommand;
+  commands?: AICommand[];
 }
 
 // Timeline types

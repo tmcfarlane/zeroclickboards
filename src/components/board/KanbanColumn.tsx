@@ -5,7 +5,8 @@ import { useBoardStore } from '@/store/useBoardStore';
 import type { Column } from '@/types';
 import { KanbanCard } from './KanbanCard';
 import { Button } from '@/components/ui/button';
-import { Plus, MoreHorizontal, Edit2, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit2, Trash2, Download, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,9 +27,11 @@ import { CardEditor, type CardEditorSaveData } from './CardEditor';
 interface KanbanColumnProps {
   boardId: string;
   column: Column;
+  onHide?: () => void;
+  isDragOver?: boolean;
 }
 
-export function KanbanColumn({ boardId, column }: KanbanColumnProps) {
+export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColumnProps) {
   const { renameColumn, removeColumn, addCard } = useBoardStore();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -117,6 +120,38 @@ export function KanbanColumn({ boardId, column }: KanbanColumnProps) {
                 <Edit2 className="w-4 h-4 mr-2" />
                 Rename
               </DropdownMenuItem>
+              {onHide && (
+                <DropdownMenuItem
+                  onClick={onHide}
+                  className="hover:bg-white/5 cursor-pointer focus:bg-white/5"
+                >
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Hide
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={() => {
+                  const data = {
+                    title: column.title,
+                    cards: column.cards.filter(c => !c.isArchived).map(({ id, title, description, content, targetDate, labels, coverImage, createdAt }) => ({
+                      id, title, description, content, targetDate, labels, coverImage, createdAt,
+                    })),
+                    exportedAt: new Date().toISOString(),
+                  };
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${column.title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  toast.success('Column exported as JSON');
+                }}
+                className="hover:bg-white/5 cursor-pointer focus:bg-white/5"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export as JSON
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setIsDeleteDialogOpen(true)}
                 className="text-red-400 hover:bg-red-500/10 cursor-pointer focus:bg-red-500/10 focus:text-red-400"
@@ -129,11 +164,11 @@ export function KanbanColumn({ boardId, column }: KanbanColumnProps) {
         </div>
 
         {/* Column Content */}
-        <div className="flex-1 bg-[#111515]/50 backdrop-blur-sm border border-white/10 border-t-0 rounded-b-lg overflow-hidden flex flex-col">
+        <div className={`flex-1 bg-[#111515]/50 backdrop-blur-sm border border-t-0 rounded-b-lg overflow-hidden flex flex-col transition-colors duration-200 ${isDragOver ? 'border-[#78fcd6]/40 bg-[#78fcd6]/5' : 'border-white/10'}`}>
           {/* Cards List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin min-h-[100px]">
             <SortableContext
-              items={column.cards.map((c) => c.id)}
+              items={column.cards.filter((c) => !c.isArchived).map((c) => c.id)}
               strategy={verticalListSortingStrategy}
             >
               {column.cards.filter((c) => !c.isArchived).map((card) => (
@@ -232,6 +267,7 @@ export function KanbanColumn({ boardId, column }: KanbanColumnProps) {
         onSave={handleAddCard}
         mode="create"
       />
+
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { CardContent, CardLabel, ChecklistItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, Image as ImageIcon, ListTodo, FileText, Calendar } from 'lucide-react';
+import { Plus, X, Image as ImageIcon, ListTodo, FileText, Calendar, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { LabelPicker, LabelStrip } from './LabelPicker';
 
@@ -35,6 +35,7 @@ interface CardEditorProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: CardEditorSaveData) => void;
+  onDelete?: () => void;
   mode: 'create' | 'edit';
   initialData?: {
     title: string;
@@ -46,7 +47,7 @@ interface CardEditorProps {
   };
 }
 
-export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardEditorProps) {
+export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialData }: CardEditorProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [contentType, setContentType] = useState<CardContent['type']>('text');
@@ -57,6 +58,8 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
   const [labels, setLabels] = useState<CardLabel[]>([]);
   const [coverImage, setCoverImage] = useState('');
   const [newChecklistItem, setNewChecklistItem] = useState('');
+  const coverFileRef = useRef<HTMLInputElement>(null);
+  const imageFileRef = useRef<HTMLInputElement>(null);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -203,7 +206,7 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
           {/* Target Date */}
           <div className="space-y-2">
             <Label htmlFor="target-date" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
+              <Calendar className="w-4 h-4 text-white" />
               Target Completion Date (optional)
             </Label>
             <Input
@@ -232,12 +235,22 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
                   placeholder="Paste an image URL or upload"
                   className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
                 />
-                <Input
+                <input
                   type="file"
+                  ref={coverFileRef}
                   accept="image/*"
                   onChange={handleCoverUpload}
-                  className="w-full sm:w-[150px] bg-white/5 border-white/10 text-[#F2F7F7] file:text-[#A8B2B2]"
+                  className="hidden"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => coverFileRef.current?.click()}
+                  className="w-full sm:w-[150px] border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
+                >
+                  <Upload className="w-4 h-4 mr-1.5" />
+                  Upload
+                </Button>
               </div>
               {coverImage && (
                 <div className="relative">
@@ -343,12 +356,22 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
             <TabsContent value="image" className="mt-4 space-y-4">
               <div className="space-y-2">
                 <Label>Upload Image</Label>
-                <Input
+                <input
                   type="file"
+                  ref={imageFileRef}
                   accept="image/*"
                   onChange={handleImageUpload}
-                  className="bg-white/5 border-white/10 text-[#F2F7F7] file:text-[#A8B2B2]"
+                  className="hidden"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => imageFileRef.current?.click()}
+                  className="w-full border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
+                >
+                  <Upload className="w-4 h-4 mr-1.5" />
+                  Choose File
+                </Button>
               </div>
 
               {imageUrl && (
@@ -371,21 +394,32 @@ export function CardEditor({ isOpen, onClose, onSave, mode, initialData }: CardE
           </Tabs>
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!title.trim()}
-            className="gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
-          >
-            {mode === 'create' ? 'Add Card' : 'Save Changes'}
-          </Button>
+        <DialogFooter className="flex-row justify-between gap-2">
+          {mode === 'edit' && onDelete ? (
+            <Button
+              variant="ghost"
+              onClick={onDelete}
+              className="text-red-400/50 hover:text-red-400 hover:bg-red-400/10 mr-auto"
+            >
+              Delete
+            </Button>
+          ) : <div />}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={!title.trim()}
+              className="gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
+            >
+              {mode === 'create' ? 'Add Card' : 'Save Changes'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -73,6 +73,7 @@ export default async function handler(req: Request) {
   const body = (payload && typeof payload === 'object') ? (payload as Record<string, unknown>) : null;
   const text = typeof body?.text === 'string' ? body.text : '';
   const context = typeof body?.context === 'string' ? body.context : '';
+  const lastCommand = body?.lastCommand && typeof body.lastCommand === 'object' ? body.lastCommand as Record<string, unknown> : null;
 
   if (!text.trim()) {
     return jsonResponse(400, { error: 'Missing text' });
@@ -80,12 +81,21 @@ export default async function handler(req: Request) {
 
   const system =
     'You are a command parser for a Trello-like kanban app. ' +
-    'Return ONLY a single JSON object with keys: type, params, originalText. ' +
-    'type must be one of: create_board, rename_board, delete_board, add_column, rename_column, remove_column, add_card, edit_card, remove_card, move_card, set_target_date, switch_view, unknown. ' +
-    'params must be an object. ' +
-    'If ambiguous, pick unknown.';
+    'For single operations, return ONLY a JSON object: { "type": "...", "params": {...}, "originalText": "..." }. ' +
+    'For requests involving multiple operations (e.g. "create column Review and add 3 tasks"), return: { "commands": [{ "type": "...", "params": {...}, "originalText": "..." }, ...] }. ' +
+    'Supported types: create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, remove_card, edit_card, move_card, set_target_date, switch_view, unknown. ' +
+    'params must be an object with relevant keys. ' +
+    'Always try to map the user\'s intent to the closest matching action. ' +
+    'When the user refers to "it", "that", or "this", resolve it using the last command context provided. For example, if the last command added a card titled "Fix bug", and the user says "move it to Done", the cardTitle should be "Fix bug". ' +
+    'For add_card, if the user requests a checklist or specifies items/steps/tasks, include a "checklistItems" array of strings in params. Example: "Create a checklist \'Sprint tasks\' with items: design, build, test" → add_card with params { title: "Sprint tasks", checklistItems: ["design", "build", "test"] }. ' +
+    'Examples: "Add a TODO item \'X\'" means add_card with title "X". "Put \'Y\' in Done" means add_card or move_card. ' +
+    '"Create a reminder to update docs" means add_card. "Add a quick note \'Z\'" means add_card. ' +
+    'Only use type "unknown" if the request is completely unrelated to board management.';
 
-  const user = `User text: ${text}\n\nBoard context (optional):\n${context}`;
+  let user = `User text: ${text}\n\nBoard context (optional):\n${context}`;
+  if (lastCommand) {
+    user += `\n\nLast command context: ${JSON.stringify(lastCommand)}`;
+  }
 
   const upstream = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
     method: 'POST',
@@ -124,9 +134,25 @@ export default async function handler(req: Request) {
   })();
   const parsed = typeof content === 'string' ? safeParseJsonObject(content) : null;
 
-  if (!parsed || !isAICommand(parsed)) {
+  if (!parsed || typeof parsed !== 'object') {
     return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text } });
   }
 
-  return jsonResponse(200, { command: parsed });
+  const root = parsed as Record<string, unknown>;
+
+  // Batch response: { commands: [...] }
+  if (Array.isArray(root.commands)) {
+    const valid = root.commands.filter(isAICommand);
+    if (valid.length > 0) {
+      return jsonResponse(200, { commands: valid });
+    }
+    return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text } });
+  }
+
+  // Single response: { type, params, originalText }
+  if (isAICommand(parsed)) {
+    return jsonResponse(200, { command: parsed });
+  }
+
+  return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text } });
 }
