@@ -177,12 +177,12 @@ function App() {
             <div className="w-8 h-8 rounded-lg gradient-cyan flex items-center justify-center">
               <span className="text-[#0B0F0F] font-bold text-sm">Z</span>
             </div>
-            <span className="font-semibold text-lg">ZeroBoard</span>
+            <span className="font-semibold text-lg hidden sm:inline">ZeroBoard</span>
           </div>
 
           {/* Board Selector */}
           {userBoards.length > 0 && (
-            <div className="hidden sm:block flex-1 mx-2 min-w-0">
+            <div className="flex-1 mx-2 min-w-0">
               <BoardSelector />
             </div>
           )}
@@ -196,7 +196,7 @@ function App() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setViewMode('board')}
-                  className={`h-8 px-3 rounded-md transition-all ${
+                  className={`h-8 px-2 sm:px-3 rounded-md transition-all ${
                     viewMode === 'board'
                       ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
                       : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
@@ -209,7 +209,7 @@ function App() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setViewMode('timeline')}
-                  className={`h-8 px-3 rounded-md transition-all ${
+                  className={`h-8 px-2 sm:px-3 rounded-md transition-all ${
                     viewMode === 'timeline'
                       ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
                       : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
@@ -223,7 +223,7 @@ function App() {
 
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
-              className="h-9 px-4 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-medium rounded-lg"
+              className="h-9 px-2 sm:px-4 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-medium rounded-lg"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline ml-1.5">New Board</span>
@@ -281,7 +281,7 @@ function App() {
       <button
         type="button"
         onClick={() => setIsAIOpen(true)}
-        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full gradient-cyan flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40 group"
+        className="fixed bottom-6 right-4 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full gradient-cyan flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40 group"
         style={{
           boxShadow: '0 0 0 1px rgba(120, 252, 214, 0.35), 0 20px 50px rgba(120, 252, 214, 0.18)',
         }}
@@ -297,7 +297,7 @@ function App() {
 
       <Toaster
         theme="dark"
-        position="bottom-right"
+        position="top-right"
         toastOptions={{
           style: {
             background: '#111515',

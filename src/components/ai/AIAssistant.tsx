@@ -420,7 +420,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-end p-2 sm:p-4 pointer-events-none">
+    <div className="fixed inset-0 z-50 flex items-end sm:justify-end p-1 sm:p-4 pointer-events-none">
       {/* Backdrop */}
       <button
         type="button"
@@ -430,7 +430,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
       />
       
       {/* Chat Panel */}
-      <div className="relative w-full sm:max-w-md h-[600px] sm:h-[600px] bg-[#111515] border border-white/10 rounded-2xl shadow-2xl flex flex-col pointer-events-auto overflow-hidden">
+      <div className="relative w-full sm:max-w-md h-[calc(100dvh-1rem)] sm:h-[600px] bg-[#111515] border border-white/10 rounded-2xl shadow-2xl flex flex-col pointer-events-auto overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#0B0F0F]">
           <div className="flex items-center gap-3">
@@ -518,7 +518,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                 onClick={() => handleQuickAction(action)}
                 className="flex-shrink-0 text-xs px-3 py-1.5 border border-[#78fcd6]/30 rounded-full hover:bg-[#78fcd6]/10 hover:border-[#78fcd6]/50 transition-all duration-300 bg-gradient-to-r from-black/20 to-transparent backdrop-blur-sm text-[#78fcd6] font-medium"
               >
-                {action.length > 25 ? action.slice(0, 25) + '...' : action}
+                {action.length > 20 ? action.slice(0, 20) + '...' : action}
               </button>
             ))}
           </div>
@@ -533,13 +533,13 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="What should we do next?"
-              className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-10"
+              className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-11 sm:h-10 text-base sm:text-sm"
               disabled={isProcessing}
             />
             <Button
               onClick={handleSend}
               disabled={!input.trim() || isProcessing}
-              className="h-10 w-10 p-0 gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
+              className="h-11 w-11 sm:h-10 sm:w-10 p-0 gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
             </Button>

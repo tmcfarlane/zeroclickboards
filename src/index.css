@@ -204,11 +204,22 @@
   /* Prevent iOS bounce/overscroll on the body */
   body {
     overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Ensure dialogs fit on mobile */
   [role="dialog"] {
-    max-width: calc(100vw - 2rem) !important;
-    margin: 1rem;
+    max-width: calc(100vw - 1rem) !important;
+    margin: 0.5rem;
+  }
+
+  /* Ensure buttons have touch-friendly sizes */
+  button, [role="button"] {
+    min-height: 36px;
+  }
+
+  /* Prevent text size adjustment on orientation change */
+  html {
+    -webkit-text-size-adjust: 100%;
   }
 }
