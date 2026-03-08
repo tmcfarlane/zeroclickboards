@@ -204,17 +204,17 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Board Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 border-b border-white/5">
-        <div>
-          <h1 className="text-lg font-semibold">{board.name}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b border-white/5">
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-lg font-semibold truncate">{board.name}</h1>
           {board.description && (
-            <p className="text-sm text-[#A8B2B2]">{board.description}</p>
+            <p className="text-xs sm:text-sm text-[#A8B2B2] truncate">{board.description}</p>
           )}
         </div>
-        
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
           {/* Search */}
-          <div className="relative">
+          <div className="relative flex-1 min-w-0 sm:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
             <Input
               id="board-search-input"
@@ -336,7 +336,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
         onDragEnd={handleDragEnd}
       >
         <div className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin">
-          <div className="h-full flex items-start gap-4 p-4 min-w-max">
+          <div className="h-full flex items-start gap-3 sm:gap-4 p-3 sm:p-4 after:content-[''] after:min-w-[1px] after:flex-shrink-0">
             <SortableContext
               items={board.columns.map((c) => c.id)}
               strategy={horizontalListSortingStrategy}

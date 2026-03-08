@@ -198,3 +198,17 @@
   background: rgba(120, 252, 214, 0.1);
   border: 2px dashed rgba(120, 252, 214, 0.5);
 }
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Prevent iOS bounce/overscroll on the body */
+  body {
+    overscroll-behavior: none;
+  }
+
+  /* Ensure dialogs fit on mobile */
+  [role="dialog"] {
+    max-width: calc(100vw - 2rem) !important;
+    margin: 1rem;
+  }
+}

@@ -81,7 +81,7 @@ export function KanbanColumn({ boardId, column }: KanbanColumnProps) {
       <div
         ref={setNodeRef}
         style={style}
-        className="w-72 sm:w-80 flex-shrink-0 flex flex-col max-h-full"
+        className="w-[calc(100vw-2rem)] min-w-[260px] max-w-[320px] sm:w-80 flex-shrink-0 flex flex-col max-h-full"
       >
         {/* Column Header */}
         <div

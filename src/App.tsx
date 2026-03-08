@@ -182,16 +182,16 @@ function App() {
 
           {/* Board Selector */}
           {userBoards.length > 0 && (
-            <div className="flex-1 mx-2 min-w-0">
+            <div className="hidden sm:block flex-1 mx-2 min-w-0">
               <BoardSelector />
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* View Toggle */}
             {activeBoard && (
-              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 mr-2">
+              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 sm:mr-2">
                 <Button
                   variant="ghost"
                   size="sm"
