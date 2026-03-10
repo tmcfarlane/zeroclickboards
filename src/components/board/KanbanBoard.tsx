@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/store/useBoardStore';
@@ -74,6 +74,25 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     }
     return null;
   })();
+
+  // Horizontal scroll on wheel when hovering the board canvas (not over a column/card)
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const handleCanvasWheel = useCallback((e: WheelEvent) => {
+    const target = e.target as HTMLElement;
+    // If the mouse is over a column or card, let normal scroll behavior happen
+    if (target.closest('[data-kanban-column], [data-kanban-card]')) return;
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      scrollContainerRef.current!.scrollLeft += e.deltaY;
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.addEventListener('wheel', handleCanvasWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleCanvasWheel);
+  }, [handleCanvasWheel]);
 
   const ALL_LABELS: CardLabel[] = ['red', 'yellow', 'green', 'blue', 'purple', 'gray'];
   const LABEL_COLORS: Record<CardLabel, string> = {
@@ -431,7 +450,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin">
+        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin">
           <div className="h-full flex items-start gap-4 p-4 min-w-max">
             <SortableContext
               items={visibleColumns.map((c) => c.id)}

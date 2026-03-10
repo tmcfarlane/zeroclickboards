@@ -112,6 +112,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
       <div
         ref={setNodeRef}
         style={style}
+        data-kanban-card
         {...attributes}
         {...listeners}
         className={`group rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 ${
