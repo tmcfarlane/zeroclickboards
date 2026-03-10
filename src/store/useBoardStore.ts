@@ -577,10 +577,6 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   moveCard: (boardId, sourceColumnId, targetColumnId, cardId, targetIndex) => {
-    const board = get().boards.find((b) => b.id === boardId);
-    const sourceColumn = board?.columns.find((c) => c.id === sourceColumnId);
-    const sourceIndex = sourceColumn?.cards.findIndex((c) => c.id === cardId) ?? -1;
-
     set((state) => {
       const board = state.boards.find((b) => b.id === boardId);
       if (!board) return state;
@@ -612,14 +608,8 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       };
     });
     scheduleBoardSync(boardId);
-
-    if (sourceColumnId !== targetColumnId) {
-      useUndoStore.getState().pushAction({
-        description: `Move card`,
-        undo: () => useBoardStore.getState().moveCard(boardId, targetColumnId, sourceColumnId, cardId, sourceIndex >= 0 ? sourceIndex : undefined),
-        redo: () => useBoardStore.getState().moveCard(boardId, sourceColumnId, targetColumnId, cardId, targetIndex),
-      });
-    }
+    // Undo for cross-column moves is handled in KanbanBoard handleDragEnd
+    // to avoid stale references from intermediate handleDragOver calls.
   },
 
   reorderCards: (boardId, columnId, cardIds) => {

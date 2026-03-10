@@ -8,7 +8,7 @@ interface TemplatePickerProps {
 }
 
 export function TemplatePicker({ onSelect, selected }: TemplatePickerProps) {
-  const [templates] = useState(() => getAllBoardTemplates());
+  const [templates, setTemplates] = useState(() => getAllBoardTemplates());
 
   return (
     <div className="space-y-3">
@@ -54,7 +54,7 @@ export function TemplatePicker({ onSelect, selected }: TemplatePickerProps) {
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteUserBoardTemplate(template.id);
-                  // Force refresh by selecting blank
+                  setTemplates(getAllBoardTemplates());
                   onSelect(null);
                 }}
                 className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-red-400 transition-opacity"

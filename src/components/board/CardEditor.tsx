@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { LabelPicker } from './LabelPicker';
 import { CardActivityFeed } from './CardActivityFeed';
+import { getAllCardTemplates, deleteUserCardTemplate, type CardTemplate } from '@/lib/templates';
 
 export interface CardEditorSaveData {
   title: string;
@@ -80,6 +81,43 @@ function formatTimeAgo(dateStr: string): string {
 
 function genId() {
   return Math.random().toString(36).substring(2, 11);
+}
+
+function CardTemplatePicker({ onApply }: { onApply: (tpl: CardTemplate) => void }) {
+  const [templates, setTemplates] = useState(() => getAllCardTemplates());
+  if (templates.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <span className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">From template</span>
+      <div className="flex flex-wrap gap-1.5">
+        {templates.map((tpl) => (
+          <div key={tpl.id} className="relative group/tpl">
+            <button
+              type="button"
+              onClick={() => onApply(tpl)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-white/10 bg-white/5 text-[#A8B2B2] hover:bg-white/10 hover:text-[#F2F7F7] transition-colors"
+            >
+              {tpl.name}
+            </button>
+            {tpl.category === 'user' && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteUserCardTemplate(tpl.id);
+                  setTemplates(getAllCardTemplates());
+                  toast.success('Template deleted');
+                }}
+                className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-[#111515] border border-white/10 opacity-0 group-hover/tpl:opacity-100 hover:bg-red-500/20 text-red-400 transition-opacity"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, initialData }: CardEditorProps) {
@@ -785,6 +823,15 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
             </Tabs>
           ) : (
             <div className="space-y-5 mt-4">
+              {/* Card Template Picker (create mode only) */}
+              <CardTemplatePicker onApply={(tpl) => {
+                setTitle(tpl.card.title);
+                setDescription(tpl.card.description || '');
+                setContentType(tpl.card.content.type === 'image' ? 'text' : tpl.card.content.type);
+                setChecklist(tpl.card.content.checklist ? tpl.card.content.checklist.map(item => ({ ...item, id: genId(), completed: false })) : []);
+                setLabels(tpl.card.labels || []);
+                if (tpl.card.labels && tpl.card.labels.length > 0) setShowLabels(true);
+              }} />
               {renderDetailsContent()}
             </div>
           )}

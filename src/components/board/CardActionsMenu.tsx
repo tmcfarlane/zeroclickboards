@@ -79,7 +79,7 @@ export function CardActionsMenu({ boardId, columnId, cardId, columns, onEdit }: 
               if (card) {
                 const template = cardToTemplate(card, card.title);
                 saveUserCardTemplate(template);
-                toast.success('Card saved as template');
+                toast.success('Card saved as template — available when creating new cards');
               }
             }}
             className="hover:bg-white/5 cursor-pointer focus:bg-white/5 text-xs"

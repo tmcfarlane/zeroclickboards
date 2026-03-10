@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { DndContext, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
+import { DndContext, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners, type CollisionDetection } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useUndoStore } from '@/store/useUndoStore';
 import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
@@ -35,7 +36,9 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDragData, setActiveDragData] = useState<{ cardId: string; sourceColumnId: string } | null>(null);
+  const [activeDragType, setActiveDragType] = useState<'card' | 'column' | null>(null);
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const dragOriginRef = useRef<{ columnId: string; index: number } | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<CardLabel[]>([]);
   const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
   const [hiddenColumnIds, setHiddenColumnIds] = useState<string[]>(() => {
@@ -121,16 +124,39 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     })
   );
 
+  // When dragging a column, only consider other columns as drop targets to prevent
+  // oscillation from closestCorners bouncing between cards and columns.
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      if (activeDragType === 'column') {
+        return closestCorners({
+          ...args,
+          droppableContainers: args.droppableContainers.filter(
+            (container) => container.data.current?.type === 'column'
+          ),
+        });
+      }
+      return closestCorners(args);
+    },
+    [activeDragType]
+  );
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const activeData = active.data.current;
-    
+
     if (activeData?.type === 'card') {
+      const colId = activeData.columnId as string;
+      const col = board.columns.find((c) => c.id === colId);
+      const idx = col?.cards.findIndex((c) => c.id === active.id) ?? -1;
+      dragOriginRef.current = { columnId: colId, index: idx >= 0 ? idx : 0 };
       setActiveDragData({
         cardId: active.id as string,
-        sourceColumnId: activeData.columnId as string,
+        sourceColumnId: colId,
       });
     }
+
+    setActiveDragType((activeData?.type as 'card' | 'column') ?? null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -171,11 +197,46 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    const origin = dragOriginRef.current;
+    dragOriginRef.current = null;
 
     setActiveDragData(null);
+    setActiveDragType(null);
     setDragOverColumnId(null);
 
     if (!over) return;
+
+    // Record undo for cross-column card moves using the origin captured at drag start
+    if (origin && active.data.current?.type === 'card') {
+      const cardId = active.id as string;
+      // Find which column the card ended up in
+      let finalColumnId: string | null = null;
+      let finalIndex = 0;
+      for (const col of board.columns) {
+        const idx = col.cards.findIndex((c) => c.id === cardId);
+        if (idx >= 0) {
+          finalColumnId = col.id;
+          finalIndex = idx;
+          break;
+        }
+      }
+      if (finalColumnId && finalColumnId !== origin.columnId) {
+        const origColId = origin.columnId;
+        const origIdx = origin.index;
+        const destColId = finalColumnId;
+        const destIdx = finalIndex;
+        const bId = board.id;
+        useUndoStore.getState().pushAction({
+          description: 'Move card',
+          undo: () => {
+            useBoardStore.getState().moveCard(bId, destColId, origColId, cardId, origIdx);
+          },
+          redo: () => {
+            useBoardStore.getState().moveCard(bId, origColId, destColId, cardId, destIdx);
+          },
+        });
+      }
+    }
 
     const activeId = active.id;
     const overId = over.id;
@@ -185,16 +246,27 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     const activeData = active.data.current;
     const overData = over.data.current;
 
-    if (activeData?.type === 'column' && overData?.type === 'column') {
-      // Reorder columns
-      const oldIndex = board.columns.findIndex((c) => c.id === activeId);
-      const newIndex = board.columns.findIndex((c) => c.id === overId);
-      const newColumnIds = arrayMove(
-        board.columns.map((c) => c.id),
-        oldIndex,
-        newIndex
-      );
-      reorderColumns(board.id, newColumnIds);
+    if (activeData?.type === 'column') {
+      // Determine target column — over element may be a column or a card inside one
+      const targetColumnId =
+        overData?.type === 'column'
+          ? (overId as string)
+          : overData?.type === 'card'
+            ? (overData.columnId as string)
+            : null;
+
+      if (targetColumnId && targetColumnId !== activeId) {
+        const oldIndex = board.columns.findIndex((c) => c.id === activeId);
+        const newIndex = board.columns.findIndex((c) => c.id === targetColumnId);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newColumnIds = arrayMove(
+            board.columns.map((c) => c.id),
+            oldIndex,
+            newIndex
+          );
+          reorderColumns(board.id, newColumnIds);
+        }
+      }
       return;
     }
 
@@ -220,7 +292,9 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   };
 
   const handleDragCancel = () => {
+    dragOriginRef.current = null;
     setActiveDragData(null);
+    setActiveDragType(null);
     setDragOverColumnId(null);
   };
 
@@ -394,7 +468,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
             onClick={() => {
               const template = boardToTemplate(board);
               saveUserBoardTemplate(template);
-              toast.success('Board saved as template');
+              toast.success('Board saved as template — use it when creating a new board');
             }}
             className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
           >
@@ -461,7 +535,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
       {/* Board Columns */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
