@@ -4,11 +4,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { useBoardStore } from '@/store/useBoardStore';
 import type { Card } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Calendar, CheckSquare, Image as ImageIcon, FileText } from 'lucide-react';
+import { Calendar, CheckSquare, Image as ImageIcon, FileText, Repeat } from 'lucide-react';
+import { formatRecurrence } from '@/lib/recurrence';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CardEditor, type CardEditorSaveData } from './CardEditor';
 import { CardActionsMenu } from './CardActionsMenu';
 import { LabelStrip } from './LabelPicker';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 
 interface KanbanCardProps {
   boardId: string;
@@ -18,6 +20,7 @@ interface KanbanCardProps {
 
 export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
   const { boards, removeCard, editCard } = useBoardStore();
+  const { logActivity } = useActivityLogger();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -50,6 +53,22 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
   };
 
   const handleEdit = (data: CardEditorSaveData) => {
+    if (data.title !== card.title) {
+      logActivity(card.id, 'renamed', { from: card.title, to: data.title });
+    }
+
+    const oldLabels = card.labels || [];
+    const newLabels = data.labels || [];
+    const addedLabels = newLabels.filter((l) => !oldLabels.includes(l));
+    const removedLabels = oldLabels.filter((l) => !newLabels.includes(l));
+    if (addedLabels.length > 0 || removedLabels.length > 0) {
+      logActivity(card.id, 'label_changed', { added: addedLabels, removed: removedLabels });
+    }
+
+    if (data.targetDate !== card.targetDate) {
+      logActivity(card.id, 'date_changed', { from: card.targetDate || null, to: data.targetDate || null });
+    }
+
     editCard(boardId, columnId, card.id, {
       title: data.title,
       description: data.description,
@@ -58,6 +77,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
       labels: data.labels,
       coverImage: data.coverImage,
       attachments: data.attachments,
+      recurrence: data.recurrence,
     });
     setIsEditDialogOpen(false);
   };
@@ -190,6 +210,14 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
               </div>
             );
           })()}
+
+          {/* Recurrence Badge */}
+          {card.recurrence && (
+            <div className="flex items-center gap-1 text-xs text-[#78fcd6] bg-[#78fcd6]/10 border border-[#78fcd6]/20 rounded-full px-2 py-0.5">
+              <Repeat className="w-3 h-3" />
+              <span>{formatRecurrence(card.recurrence)}</span>
+            </div>
+          )}
         </div>
         </div>
       </div>
@@ -201,6 +229,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
         onSave={handleEdit}
         onDelete={() => { setIsEditDialogOpen(false); handleDelete(); }}
         mode="edit"
+        cardId={card.id}
         initialData={card}
       />
 

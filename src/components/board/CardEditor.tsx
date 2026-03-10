@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { CardContent, CardLabel, ChecklistItem, Attachment } from '@/types';
+import type { CardContent, CardLabel, ChecklistItem, Attachment, RecurrenceConfig } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,12 +19,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, X, ListTodo, Calendar, AlignLeft,
-  Tag, Trash2, Paperclip, MoreHorizontal, Image as ImageIcon,
+  Tag, Trash2, Paperclip, MoreHorizontal, Image as ImageIcon, Repeat,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LabelPicker } from './LabelPicker';
+import { CardActivityFeed } from './CardActivityFeed';
 
 export interface CardEditorSaveData {
   title: string;
@@ -34,6 +36,7 @@ export interface CardEditorSaveData {
   labels: CardLabel[];
   coverImage?: string;
   attachments?: Attachment[];
+  recurrence?: RecurrenceConfig;
 }
 
 interface CardEditorProps {
@@ -42,6 +45,7 @@ interface CardEditorProps {
   onSave: (data: CardEditorSaveData) => void;
   onDelete?: () => void;
   mode: 'create' | 'edit';
+  cardId?: string;
   initialData?: {
     title: string;
     description?: string;
@@ -50,6 +54,7 @@ interface CardEditorProps {
     labels?: CardLabel[];
     coverImage?: string;
     attachments?: Attachment[];
+    recurrence?: RecurrenceConfig;
   };
 }
 
@@ -77,7 +82,7 @@ function genId() {
   return Math.random().toString(36).substring(2, 11);
 }
 
-export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialData }: CardEditorProps) {
+export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, initialData }: CardEditorProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [contentType, setContentType] = useState<CardContent['type']>('text');
@@ -93,6 +98,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
   // Section visibility
   const [showDates, setShowDates] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
+  const [showRecurrence, setShowRecurrence] = useState(false);
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -131,6 +138,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
         setAttachments(existing);
         setShowDates(!!initialData.targetDate);
         setShowLabels(!!(initialData.labels && initialData.labels.length > 0));
+        setRecurrence(initialData.recurrence || null);
+        setShowRecurrence(!!initialData.recurrence);
       } else {
         setTitle('');
         setDescription('');
@@ -141,6 +150,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
         setAttachments([]);
         setShowDates(false);
         setShowLabels(false);
+        setRecurrence(null);
+        setShowRecurrence(false);
       }
       setNewChecklistItem('');
       setEditingAttachmentId(null);
@@ -168,6 +179,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
       labels,
       coverImage: coverAttachment?.url,
       attachments: attachments.length > 0 ? attachments : undefined,
+      recurrence: recurrence || undefined,
     });
   };
 
@@ -256,40 +268,9 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
 
   const coverAttachment = attachments.find(a => a.isCover);
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[95vw] sm:max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0">
-        {/* Cover Image from first attachment */}
-        {coverAttachment && (
-          <div className="relative">
-            <img
-              src={coverAttachment.url}
-              alt="Card cover"
-              className="w-full h-32 object-cover"
-            />
-            <button
-              type="button"
-              onClick={() => toggleCover(coverAttachment.id)}
-              className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors text-xs"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        <div className="overflow-y-auto max-h-[calc(90vh-60px)] px-5 pt-5 pb-4 space-y-5">
-          {/* Title */}
-          <Input
-            id="card-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Card title..."
-            maxLength={200}
-            autoFocus
-            className="text-lg font-semibold bg-transparent border-0 border-b border-white/10 rounded-none px-0 h-auto py-2 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 focus-visible:ring-0 focus-visible:border-[#78fcd6]/50"
-          />
-
-          {/* Quick Action Pills */}
+  const renderDetailsContent = () => (
+    <>
+      {/* Quick Action Pills */}
           <div className="flex flex-wrap gap-2">
             {/* + Add dropdown */}
             <Popover open={addMenuOpen} onOpenChange={setAddMenuOpen}>
@@ -388,6 +369,21 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
               <ListTodo className="w-3.5 h-3.5" />
               Checklist
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (recurrence) {
+                  setRecurrence(null);
+                  setShowRecurrence(false);
+                } else {
+                  setShowRecurrence(!showRecurrence);
+                }
+              }}
+              className={pillClass(!!recurrence)}
+            >
+              <Repeat className="w-3.5 h-3.5" />
+              Repeat
+            </button>
           </div>
 
           {/* Hidden file input for attachments */}
@@ -421,6 +417,103 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
                 onChange={(e) => setTargetDate(e.target.value)}
                 className="bg-white/5 border-white/10 text-[#F2F7F7] h-9"
               />
+            </div>
+          )}
+
+          {/* Recurrence Section */}
+          {(showRecurrence || !!recurrence) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Recurrence</span>
+                {recurrence && (
+                  <button
+                    type="button"
+                    onClick={() => { setRecurrence(null); setShowRecurrence(false); }}
+                    className="text-xs text-[#A8B2B2] hover:text-red-400 transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+
+              {/* Frequency selector */}
+              <div className="flex gap-1.5">
+                {(['daily', 'weekly', 'monthly'] as const).map((freq) => (
+                  <button
+                    key={freq}
+                    type="button"
+                    onClick={() => setRecurrence({ frequency: freq, interval: recurrence?.interval || 1, ...(freq === 'weekly' && recurrence?.daysOfWeek ? { daysOfWeek: recurrence.daysOfWeek } : {}), ...(freq === 'monthly' && recurrence?.dayOfMonth ? { dayOfMonth: recurrence.dayOfMonth } : {}) })}
+                    className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors capitalize ${
+                      recurrence?.frequency === freq
+                        ? 'border-[#78fcd6]/40 bg-[#78fcd6]/10 text-[#78fcd6]'
+                        : 'border-white/10 bg-white/5 text-[#A8B2B2] hover:bg-white/10'
+                    }`}
+                  >
+                    {freq}
+                  </button>
+                ))}
+              </div>
+
+              {/* Interval */}
+              {recurrence && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#A8B2B2]">Every</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={99}
+                    value={recurrence.interval}
+                    onChange={(e) => setRecurrence({ ...recurrence, interval: Math.max(1, parseInt(e.target.value) || 1) })}
+                    className="w-16 h-8 bg-white/5 border-white/10 text-[#F2F7F7] text-center text-xs"
+                  />
+                  <span className="text-xs text-[#A8B2B2]">
+                    {recurrence.frequency === 'daily' ? 'day(s)' : recurrence.frequency === 'weekly' ? 'week(s)' : 'month(s)'}
+                  </span>
+                </div>
+              )}
+
+              {/* Weekly: day of week picker */}
+              {recurrence?.frequency === 'weekly' && (
+                <div className="flex gap-1">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => {
+                    const selected = recurrence.daysOfWeek?.includes(idx) ?? false;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          const current = recurrence.daysOfWeek || [];
+                          const next = selected ? current.filter((d) => d !== idx) : [...current, idx];
+                          setRecurrence({ ...recurrence, daysOfWeek: next.length > 0 ? next : undefined });
+                        }}
+                        className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
+                          selected
+                            ? 'bg-[#78fcd6]/20 text-[#78fcd6] border border-[#78fcd6]/40'
+                            : 'bg-white/5 text-[#A8B2B2] border border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Monthly: day of month */}
+              {recurrence?.frequency === 'monthly' && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#A8B2B2]">On day</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={recurrence.dayOfMonth || ''}
+                    onChange={(e) => setRecurrence({ ...recurrence, dayOfMonth: parseInt(e.target.value) || undefined })}
+                    placeholder="Any"
+                    className="w-16 h-8 bg-white/5 border-white/10 text-[#F2F7F7] text-center text-xs"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -627,8 +720,77 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
             </div>
           )}
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-between pt-3 border-t border-white/5">
+    </>
+  );
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[95vw] sm:max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0">
+        {/* Cover Image from first attachment */}
+        {coverAttachment && (
+          <div className="relative">
+            <img
+              src={coverAttachment.url}
+              alt="Card cover"
+              className="w-full h-32 object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => toggleCover(coverAttachment.id)}
+              className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors text-xs"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        <div className="overflow-y-auto max-h-[calc(90vh-60px)] px-5 pt-5 pb-4 flex flex-col min-h-0">
+          {/* Title - always visible */}
+          <Input
+            id="card-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Card title..."
+            maxLength={200}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+              if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+            }}
+            className="text-lg font-semibold bg-transparent border-0 border-b border-white/10 rounded-none px-0 h-auto py-2 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 focus-visible:ring-0 focus-visible:border-[#78fcd6]/50 flex-shrink-0"
+          />
+
+          {mode === 'edit' && cardId ? (
+            <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0 mt-4">
+              <TabsList className="bg-white/5 border border-white/10 flex-shrink-0 h-9">
+                <TabsTrigger
+                  value="details"
+                  className="text-xs data-[state=active]:bg-[#78fcd6]/10 data-[state=active]:text-[#78fcd6]"
+                >
+                  Details
+                </TabsTrigger>
+                <TabsTrigger
+                  value="activity"
+                  className="text-xs data-[state=active]:bg-[#78fcd6]/10 data-[state=active]:text-[#78fcd6]"
+                >
+                  Activity
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="details" className="flex-1 mt-4 space-y-5 overflow-y-auto">
+                {renderDetailsContent()}
+              </TabsContent>
+              <TabsContent value="activity" className="flex-1 mt-4 overflow-hidden">
+                <CardActivityFeed cardId={cardId} />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="space-y-5 mt-4">
+              {renderDetailsContent()}
+            </div>
+          )}
+
+          {/* Footer Actions - always visible */}
+          <div className="flex items-center justify-between pt-3 border-t border-white/5 mt-4 flex-shrink-0">
             {mode === 'edit' && onDelete ? (
               <button
                 type="button"

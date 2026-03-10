@@ -6,7 +6,9 @@ import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, ChevronDown, EyeOff, Eye } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, ChevronDown, EyeOff, Eye, BookmarkPlus } from 'lucide-react';
+import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -384,6 +386,21 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
           </Popover>
 
           <ArchiveView boardId={board.id} />
+
+          {/* Save as Template */}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              const template = boardToTemplate(board);
+              saveUserBoardTemplate(template);
+              toast.success('Board saved as template');
+            }}
+            className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
+          >
+            <BookmarkPlus className="w-4 h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Save Template</span>
+          </Button>
 
           {/* Hidden Columns */}
           {hiddenColumns.length > 0 && (

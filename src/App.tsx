@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useUndoStore } from '@/store/useUndoStore';
 import { BoardSelector } from '@/components/board/BoardSelector';
 import { KanbanBoard } from '@/components/board/KanbanBoard';
 import { BoardSkeleton } from '@/components/board/BoardSkeleton';
@@ -16,6 +17,8 @@ import { Plus, Layout, Clock, Sparkles, LogIn, Github } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { TemplatePicker } from '@/components/board/TemplatePicker';
+import { templateToColumns, type BoardTemplate } from '@/lib/templates';
 
 function App() {
   const { 
@@ -34,6 +37,7 @@ function App() {
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<BoardTemplate | null>(null);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const { isSignedIn, isLoaded, userId } = useAuth();
@@ -53,6 +57,8 @@ function App() {
     onTimelineView: () => setViewMode('timeline'),
     onNewBoard: () => setIsCreateDialogOpen(true),
     onShowShortcuts: () => setIsShortcutsOpen(true),
+    onUndo: () => useUndoStore.getState().undo(),
+    onRedo: () => useUndoStore.getState().redo(),
   });
 
   // Sync user ID with store
@@ -82,9 +88,14 @@ function App() {
 
   const handleCreateBoard = () => {
     if (newBoardName.trim()) {
-      createBoard(newBoardName.trim(), newBoardDescription.trim() || undefined);
+      createBoard(
+        newBoardName.trim(),
+        newBoardDescription.trim() || undefined,
+        selectedTemplate ? templateToColumns(selectedTemplate) : undefined
+      );
       setNewBoardName('');
       setNewBoardDescription('');
+      setSelectedTemplate(null);
       setIsCreateDialogOpen(false);
     }
   };
@@ -312,7 +323,10 @@ function App() {
       />
 
       {/* Create Board Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+        setIsCreateDialogOpen(open);
+        if (!open) setSelectedTemplate(null);
+      }}>
         <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
           <DialogHeader>
             <DialogTitle>Create New Board</DialogTitle>
@@ -321,6 +335,7 @@ function App() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <TemplatePicker selected={selectedTemplate} onSelect={setSelectedTemplate} />
             <div className="space-y-2">
               <Label htmlFor="name">Board Name</Label>
               <Input

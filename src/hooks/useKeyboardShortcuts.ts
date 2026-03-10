@@ -8,6 +8,8 @@ interface KeyboardShortcutCallbacks {
   onTimelineView?: () => void;    // t - switch to timeline view
   onNewBoard?: () => void;        // shift+n - new board
   onShowShortcuts?: () => void;   // ? or shift+/ - show shortcuts help
+  onUndo?: () => void;            // ctrl/cmd+z - undo
+  onRedo?: () => void;            // ctrl/cmd+shift+z - redo
 }
 
 export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
@@ -21,6 +23,17 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       target.isContentEditable ||
       target.closest('[role="dialog"]')  // Don't trigger in dialogs
     ) {
+      return;
+    }
+
+    // Handle Ctrl/Cmd shortcuts (undo/redo)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        callbacks.onRedo?.();
+      } else {
+        callbacks.onUndo?.();
+      }
       return;
     }
 

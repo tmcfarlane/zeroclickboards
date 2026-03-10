@@ -76,6 +76,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
       labels: data.labels,
       coverImage: data.coverImage,
       attachments: data.attachments,
+      recurrence: data.recurrence,
     });
     setIsAddCardOpen(false);
   };

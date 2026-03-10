@@ -12,7 +12,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Archive, Copy, Edit2, MoreHorizontal, MoveRight, Trash2 } from 'lucide-react';
+import { Archive, BookmarkPlus, Copy, Edit2, MoreHorizontal, MoveRight, Trash2 } from 'lucide-react';
+import { cardToTemplate, saveUserCardTemplate } from '@/lib/templates';
+import { toast } from 'sonner';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 
 interface CardActionsMenuProps {
   boardId: string;
@@ -24,8 +27,15 @@ interface CardActionsMenuProps {
 
 export function CardActionsMenu({ boardId, columnId, cardId, columns, onEdit }: CardActionsMenuProps) {
   const { removeCard, duplicateCard, archiveCard, moveCard } = useBoardStore();
+  const { logActivity } = useActivityLogger();
 
   const moveTargets = useMemo(() => columns.filter((c) => c.id !== columnId), [columns, columnId]);
+
+  const card = useMemo(() => {
+    const board = useBoardStore.getState().boards.find((b) => b.id === boardId);
+    const col = board?.columns.find((c) => c.id === columnId);
+    return col?.cards.find((c) => c.id === cardId);
+  }, [boardId, columnId, cardId]);
 
   return (
       <DropdownMenu>
@@ -63,6 +73,21 @@ export function CardActionsMenu({ boardId, columnId, cardId, columns, onEdit }: 
             Duplicate
           </DropdownMenuItem>
 
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              if (card) {
+                const template = cardToTemplate(card, card.title);
+                saveUserCardTemplate(template);
+                toast.success('Card saved as template');
+              }
+            }}
+            className="hover:bg-white/5 cursor-pointer focus:bg-white/5 text-xs"
+          >
+            <BookmarkPlus className="w-3.5 h-3.5" />
+            Save as Template
+          </DropdownMenuItem>
+
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="hover:bg-white/5 focus:bg-white/5 text-xs">
               <MoveRight className="w-3.5 h-3.5" />
@@ -79,6 +104,8 @@ export function CardActionsMenu({ boardId, columnId, cardId, columns, onEdit }: 
                     key={target.id}
                     onClick={(e) => {
                       e.stopPropagation();
+                      const sourceCol = columns.find((c) => c.id === columnId);
+                      logActivity(cardId, 'moved', { from: sourceCol?.title || '', to: target.title });
                       moveCard(boardId, columnId, target.id, cardId);
                     }}
                     className="hover:bg-white/5 cursor-pointer focus:bg-white/5 text-xs"
@@ -93,6 +120,7 @@ export function CardActionsMenu({ boardId, columnId, cardId, columns, onEdit }: 
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
+              logActivity(cardId, 'archived', {});
               archiveCard(boardId, columnId, cardId);
             }}
             className="hover:bg-white/5 cursor-pointer focus:bg-white/5 text-xs"

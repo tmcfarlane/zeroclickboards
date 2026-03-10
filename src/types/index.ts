@@ -25,6 +25,13 @@ export interface Attachment {
   isCover?: boolean;
 }
 
+export interface RecurrenceConfig {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  interval: number;
+  daysOfWeek?: number[]; // 0=Sun..6=Sat, only for 'weekly'
+  dayOfMonth?: number;   // 1-31, only for 'monthly'
+}
+
 export interface Card {
   id: string;
   title: string;
@@ -34,6 +41,7 @@ export interface Card {
   labels?: CardLabel[];
   coverImage?: string;
   attachments?: Attachment[];
+  recurrence?: RecurrenceConfig;
   isArchived?: boolean;
   archivedAt?: string;
   createdAt: string;
@@ -65,7 +73,7 @@ export interface AppState {
 
 // AI Assistant types
 export interface AICommand {
-  type: 'create_board' | 'delete_board' | 'rename_board' | 'add_column' | 'remove_column' | 'rename_column' | 'add_card' | 'remove_card' | 'edit_card' | 'move_card' | 'set_target_date' | 'switch_view' | 'extract_card_json' | 'extract_column_json' | 'clear_column' | 'count_cards' | 'rename_card' | 'unknown';
+  type: 'create_board' | 'delete_board' | 'rename_board' | 'add_column' | 'remove_column' | 'rename_column' | 'add_card' | 'remove_card' | 'edit_card' | 'move_card' | 'set_target_date' | 'switch_view' | 'extract_card_json' | 'extract_column_json' | 'clear_column' | 'count_cards' | 'rename_card' | 'set_recurrence' | 'remove_recurrence' | 'unknown';
   params: Record<string, unknown>;
   originalText: string;
 }

@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
-import type { AppState, Attachment, Board, Card, CardContent, CardLabel, Column, Json } from '@/types';
+import type { AppState, Attachment, Board, Card, CardContent, CardLabel, Column, Json, RecurrenceConfig } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { createRecurringCardCopy } from '@/lib/recurrence';
+import { useUndoStore } from './useUndoStore';
 
 interface BoardStore extends AppState {
   currentUserId: string | null;
@@ -13,7 +15,7 @@ interface BoardStore extends AppState {
   setCurrentUserId: (userId: string | null) => void;
   refreshFromRemote: () => Promise<void>;
 
-  createBoard: (name: string, description?: string) => string;
+  createBoard: (name: string, description?: string, columns?: Column[]) => string;
   deleteBoard: (boardId: string) => void;
   renameBoard: (boardId: string, newName: string) => void;
   setActiveBoard: (boardId: string) => void;
@@ -24,15 +26,15 @@ interface BoardStore extends AppState {
   reorderColumns: (boardId: string, columnIds: string[]) => void;
 
   addCard: {
-    (boardId: string, columnId: string, title: string, content?: CardContent, targetDate?: string): void;
+    (boardId: string, columnId: string, title: string, content?: CardContent, targetDate?: string): string;
     (
       boardId: string,
       columnId: string,
       title: string,
       content: CardContent | undefined,
       targetDate: string | undefined,
-      options: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[] }
-    ): void;
+      options: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[]; recurrence?: RecurrenceConfig }
+    ): string;
   };
   removeCard: (boardId: string, columnId: string, cardId: string) => void;
   editCard: (boardId: string, columnId: string, cardId: string, updates: Partial<Card>) => void;
@@ -243,7 +245,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
   },
 
-  createBoard: (name, description) => {
+  createBoard: (name, description, columns) => {
     const userId = get().currentUserId;
     const now = new Date().toISOString();
 
@@ -251,7 +253,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       id: uuidv4(),
       name,
       description,
-      columns: createDefaultColumns(),
+      columns: columns || createDefaultColumns(),
       createdAt: now,
       updatedAt: now,
       userId: userId ?? undefined,
@@ -317,25 +319,38 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
   setActiveBoard: (boardId) => {
     set({ activeBoardId: boardId });
+    useUndoStore.getState().clearHistory();
   },
 
   addColumn: (boardId, title) => {
+    const newId = uuidv4();
     set((state) => ({
       boards: state.boards.map((b) => {
         if (b.id !== boardId) return b;
         const maxOrder = Math.max(...b.columns.map((c) => c.order), -1);
         return {
           ...b,
-          columns: [...b.columns, { id: uuidv4(), title, cards: [], order: maxOrder + 1 }],
+          columns: [...b.columns, { id: newId, title, cards: [], order: maxOrder + 1 }],
           updatedAt: new Date().toISOString(),
         };
       }),
     }));
     toast.success('Column added');
     scheduleBoardSync(boardId);
+
+    useUndoStore.getState().pushAction({
+      description: `Add column '${title}'`,
+      undo: () => useBoardStore.getState().removeColumn(boardId, newId),
+      redo: () => useBoardStore.getState().addColumn(boardId, title),
+    });
   },
 
   removeColumn: (boardId, columnId) => {
+    const board = get().boards.find((b) => b.id === boardId);
+    const column = board?.columns.find((c) => c.id === columnId);
+    const columnClone = column ? structuredClone(column) : null;
+    const columnIndex = board?.columns.findIndex((c) => c.id === columnId) ?? -1;
+
     set((state) => ({
       boards: state.boards.map((b) =>
         b.id === boardId
@@ -345,9 +360,32 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     }));
     toast.success('Column removed');
     scheduleBoardSync(boardId);
+
+    if (columnClone) {
+      useUndoStore.getState().pushAction({
+        description: `Remove column '${columnClone.title}'`,
+        undo: () => {
+          useBoardStore.setState((state) => ({
+            boards: state.boards.map((b) => {
+              if (b.id !== boardId) return b;
+              const cols = [...b.columns];
+              cols.splice(Math.min(columnIndex, cols.length), 0, columnClone);
+              return { ...b, columns: cols, updatedAt: new Date().toISOString() };
+            }),
+          }));
+          scheduleBoardSync(boardId);
+          toast.success('Column restored');
+        },
+        redo: () => useBoardStore.getState().removeColumn(boardId, columnId),
+      });
+    }
   },
 
   renameColumn: (boardId, columnId, newTitle) => {
+    const board = get().boards.find((b) => b.id === boardId);
+    const column = board?.columns.find((c) => c.id === columnId);
+    const oldTitle = column?.title ?? '';
+
     set((state) => ({
       boards: state.boards.map((b) =>
         b.id === boardId
@@ -360,6 +398,14 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       ),
     }));
     scheduleBoardSync(boardId);
+
+    if (oldTitle !== newTitle) {
+      useUndoStore.getState().pushAction({
+        description: `Rename column '${oldTitle}' to '${newTitle}'`,
+        undo: () => useBoardStore.getState().renameColumn(boardId, columnId, oldTitle),
+        redo: () => useBoardStore.getState().renameColumn(boardId, columnId, newTitle),
+      });
+    }
   },
 
   reorderColumns: (boardId, columnIds) => {
@@ -383,7 +429,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     title,
     content,
     targetDate,
-    options?: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[] }
+    options?: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[]; recurrence?: RecurrenceConfig }
   ) => {
     const now = new Date().toISOString();
     const newCard: Card = {
@@ -394,6 +440,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       labels: options?.labels ?? [],
       coverImage: options?.coverImage,
       attachments: options?.attachments,
+      recurrence: options?.recurrence,
       isArchived: false,
       createdAt: now,
       updatedAt: now,
@@ -412,9 +459,38 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     }));
     toast.success('Card added');
     scheduleBoardSync(boardId);
+
+    useUndoStore.getState().pushAction({
+      description: `Add card '${title}'`,
+      undo: () => useBoardStore.getState().removeCard(boardId, columnId, newCard.id),
+      redo: () => {
+        useBoardStore.setState((state) => ({
+          boards: state.boards.map((b) =>
+            b.id === boardId
+              ? {
+                  ...b,
+                  columns: b.columns.map((c) =>
+                    c.id === columnId ? { ...c, cards: [...c.cards, newCard] } : c
+                  ),
+                  updatedAt: new Date().toISOString(),
+                }
+              : b
+          ),
+        }));
+        scheduleBoardSync(boardId);
+      },
+    });
+
+    return newCard.id;
   },
 
   removeCard: (boardId, columnId, cardId) => {
+    const board = get().boards.find((b) => b.id === boardId);
+    const column = board?.columns.find((c) => c.id === columnId);
+    const card = column?.cards.find((c) => c.id === cardId);
+    const cardIndex = column?.cards.findIndex((c) => c.id === cardId) ?? -1;
+    const cardClone = card ? structuredClone(card) : null;
+
     set((state) => ({
       boards: state.boards.map((b) =>
         b.id === boardId
@@ -430,9 +506,41 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     }));
     toast.success('Card deleted');
     scheduleBoardSync(boardId);
+
+    if (cardClone) {
+      useUndoStore.getState().pushAction({
+        description: `Delete card '${cardClone.title}'`,
+        undo: () => {
+          useBoardStore.setState((state) => ({
+            boards: state.boards.map((b) =>
+              b.id === boardId
+                ? {
+                    ...b,
+                    columns: b.columns.map((c) => {
+                      if (c.id !== columnId) return c;
+                      const cards = [...c.cards];
+                      cards.splice(Math.min(cardIndex, cards.length), 0, cardClone);
+                      return { ...c, cards };
+                    }),
+                    updatedAt: new Date().toISOString(),
+                  }
+                : b
+            ),
+          }));
+          scheduleBoardSync(boardId);
+          toast.success('Card restored');
+        },
+        redo: () => useBoardStore.getState().removeCard(boardId, columnId, cardId),
+      });
+    }
   },
 
   editCard: (boardId, columnId, cardId, updates) => {
+    const board = get().boards.find((b) => b.id === boardId);
+    const column = board?.columns.find((c) => c.id === columnId);
+    const card = column?.cards.find((c) => c.id === cardId);
+    const prevState = card ? structuredClone(card) : null;
+
     set((state) => ({
       boards: state.boards.map((b) =>
         b.id === boardId
@@ -454,9 +562,25 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       ),
     }));
     scheduleBoardSync(boardId);
+
+    if (prevState) {
+      useUndoStore.getState().pushAction({
+        description: `Edit card '${prevState.title}'`,
+        undo: () => {
+          useBoardStore.getState().editCard(boardId, columnId, cardId, prevState);
+        },
+        redo: () => {
+          useBoardStore.getState().editCard(boardId, columnId, cardId, updates);
+        },
+      });
+    }
   },
 
   moveCard: (boardId, sourceColumnId, targetColumnId, cardId, targetIndex) => {
+    const board = get().boards.find((b) => b.id === boardId);
+    const sourceColumn = board?.columns.find((c) => c.id === sourceColumnId);
+    const sourceIndex = sourceColumn?.cards.findIndex((c) => c.id === cardId) ?? -1;
+
     set((state) => {
       const board = state.boards.find((b) => b.id === boardId);
       if (!board) return state;
@@ -488,6 +612,14 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       };
     });
     scheduleBoardSync(boardId);
+
+    if (sourceColumnId !== targetColumnId) {
+      useUndoStore.getState().pushAction({
+        description: `Move card`,
+        undo: () => useBoardStore.getState().moveCard(boardId, targetColumnId, sourceColumnId, cardId, sourceIndex >= 0 ? sourceIndex : undefined),
+        redo: () => useBoardStore.getState().moveCard(boardId, sourceColumnId, targetColumnId, cardId, targetIndex),
+      });
+    }
   },
 
   reorderCards: (boardId, columnId, cardIds) => {
@@ -510,12 +642,53 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   archiveCard: (boardId, columnId, cardId) => {
+    // Look up card BEFORE archiving to check for recurrence
+    const board = get().boards.find((b) => b.id === boardId);
+    const column = board?.columns.find((c) => c.id === columnId);
+    const card = column?.cards.find((c) => c.id === cardId);
+    const hasRecurrence = card?.recurrence && !card.isArchived;
+
     get().editCard(boardId, columnId, cardId, { isArchived: true, archivedAt: new Date().toISOString() });
-    toast.success('Card archived');
+
+    // If card has recurrence, create a new copy in the same column
+    if (hasRecurrence && card) {
+      const newCard = createRecurringCardCopy(card);
+      set((state) => ({
+        boards: state.boards.map((b) =>
+          b.id === boardId
+            ? {
+                ...b,
+                columns: b.columns.map((c) =>
+                  c.id === columnId ? { ...c, cards: [...c.cards, newCard] } : c
+                ),
+                updatedAt: new Date().toISOString(),
+              }
+            : b
+        ),
+      }));
+      scheduleBoardSync(boardId);
+      toast.success('Card archived — recurring copy created');
+    } else {
+      toast.success('Card archived');
+    }
+
+    // editCard already pushed an undo action — replace its description with a cleaner one
+    const undoStore = useUndoStore.getState();
+    const lastAction = undoStore.undoStack[undoStore.undoStack.length - 1];
+    if (lastAction) {
+      useUndoStore.setState((s) => ({
+        undoStack: [...s.undoStack.slice(0, -1), { ...lastAction, description: `Archive card` }],
+      }));
+    }
   },
 
   archiveAllCards: (boardId, columnId) => {
     const now = new Date().toISOString();
+    const board = get().boards.find((b) => b.id === boardId);
+    const column = board?.columns.find((c) => c.id === columnId);
+    const recurringCards = column?.cards.filter((c) => c.recurrence && !c.isArchived) || [];
+    const newRecurringCards = recurringCards.map((c) => createRecurringCardCopy(c));
+
     set((state) => ({
       boards: state.boards.map((b) =>
         b.id === boardId
@@ -525,9 +698,12 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
                 c.id === columnId
                   ? {
                       ...c,
-                      cards: c.cards.map((card) =>
-                        card.isArchived ? card : { ...card, isArchived: true, archivedAt: now, updatedAt: now }
-                      ),
+                      cards: [
+                        ...c.cards.map((card) =>
+                          card.isArchived ? card : { ...card, isArchived: true, archivedAt: now, updatedAt: now }
+                        ),
+                        ...newRecurringCards,
+                      ],
                     }
                   : c
               ),
@@ -536,13 +712,22 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
           : b
       ),
     }));
-    toast.success('All cards archived');
+    toast.success(newRecurringCards.length > 0 ? `All cards archived — ${newRecurringCards.length} recurring copies created` : 'All cards archived');
     scheduleBoardSync(boardId);
   },
 
   restoreCard: (boardId, columnId, cardId) => {
     get().editCard(boardId, columnId, cardId, { isArchived: false, archivedAt: undefined });
     toast.success('Card restored');
+
+    // editCard already pushed an undo action — replace its description with a cleaner one
+    const undoStore = useUndoStore.getState();
+    const lastAction = undoStore.undoStack[undoStore.undoStack.length - 1];
+    if (lastAction) {
+      useUndoStore.setState((s) => ({
+        undoStack: [...s.undoStack.slice(0, -1), { ...lastAction, description: `Restore card` }],
+      }));
+    }
   },
 
   duplicateCard: (boardId, columnId, cardId) => {

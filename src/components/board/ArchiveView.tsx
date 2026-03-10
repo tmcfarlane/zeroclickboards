@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { ArchiveRestore, Trash2, Archive } from 'lucide-react';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 
 interface ArchiveViewProps {
   boardId: string;
@@ -11,6 +12,7 @@ interface ArchiveViewProps {
 
 export function ArchiveView({ boardId }: ArchiveViewProps) {
   const { boards, restoreCard, removeCard } = useBoardStore();
+  const { logActivity } = useActivityLogger();
 
   const archived = useMemo(() => {
     const board = boards.find((b) => b.id === boardId);
@@ -57,7 +59,10 @@ export function ArchiveView({ boardId }: ArchiveViewProps) {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => restoreCard(boardId, columnId, card.id)}
+                      onClick={() => {
+                        logActivity(card.id, 'restored', {});
+                        restoreCard(boardId, columnId, card.id);
+                      }}
                       className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
                     >
                       <ArchiveRestore className="w-4 h-4 mr-2" />
