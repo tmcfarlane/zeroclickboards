@@ -189,6 +189,12 @@
   }
 }
 
+/* Date input native calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(0.1) saturate(0.5) hue-rotate(130deg);
+  cursor: pointer;
+}
+
 /* Board column drag and drop styles */
 .dragging {
   opacity: 0.5;

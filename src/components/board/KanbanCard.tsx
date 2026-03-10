@@ -183,7 +183,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
             const status = getDateStatus(card.targetDate);
             return (
               <div className={`flex items-center gap-1 text-xs rounded-full px-2 py-0.5 ${dateBadgeClass(status)}`}>
-                <Calendar className="w-3 h-3 text-white" />
+                <Calendar className="w-3 h-3 text-[#A8B2B2]" />
                 <span>{formatDate(card.targetDate)}</span>
               </div>
             );

@@ -3,7 +3,7 @@ import { useBoardStore } from '@/store/useBoardStore';
 import type { AICommand, AIMessage } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Sparkles, X, Bot, User, Check, AlertCircle } from 'lucide-react';
+import { Send, Sparkles, X, Bot, User, Check, AlertCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AIAssistantProps {
@@ -50,53 +50,145 @@ async function parseCommandWithAI(input: string, context: string, lastCommand?: 
   }
 }
 
-function parseCommandLocal(input: string): AICommand {
+function downloadJson(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const SAMPLE_TASKS = [
+  'Update documentation', 'Fix navigation bug', 'Design landing page',
+  'Write unit tests', 'Review pull request', 'Optimize database queries',
+  'Set up CI/CD pipeline', 'Create onboarding flow', 'Refactor auth module',
+  'Add dark mode toggle', 'Implement search feature', 'Update dependencies',
+  'Fix responsive layout', 'Add error handling', 'Create API endpoints',
+  'Write integration tests', 'Design email templates', 'Set up monitoring',
+  'Add accessibility audit', 'Optimize page load time', 'Create user settings page',
+  'Build notification system', 'Add file upload support', 'Write migration scripts',
+  'Configure logging', 'Add rate limiting', 'Create admin dashboard',
+  'Implement caching layer', 'Add OAuth providers', 'Set up staging environment',
+];
+
+function pickRandomTasks(count: number): string[] {
+  const shuffled = [...SAMPLE_TASKS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, shuffled.length));
+}
+
+function parseCommandLocal(input: string): AICommand[] {
   const lower = input.toLowerCase().trim();
-  
+
+  // --- Batch creation: "Add 10 random tasks to TODO" or "Add 5 cards to Done" ---
+  const batchCountMatch = lower.match(/(?:add|create|make|generate)\s+(\d+)\s+(?:random\s+)?(?:tasks?|cards?|items?|todos?)/);
+  if (batchCountMatch) {
+    const count = Math.min(parseInt(batchCountMatch[1], 10), 30);
+    const toColumnMatch = input.match(/(?:to|in|into)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)/i);
+    const columnTitle = toColumnMatch?.[1]?.trim();
+    const titles = pickRandomTasks(count);
+    return titles.map(title => ({
+      type: 'add_card' as const,
+      params: { title, columnTitle },
+      originalText: input,
+    }));
+  }
+
+  // --- Batch named tasks: "Add tasks: design, build, test to TODO" ---
+  const batchListMatch = input.match(/(?:add|create|make)\s+(?:tasks?|cards?|items?)[:\s]+([\s\S]+?)(?:\s+(?:to|in|into)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)|$)/i);
+  if (batchListMatch && !lower.match(/(?:add|create|make)\s+(?:a\s+)?(?:task|card|item)\s/)) {
+    const items = batchListMatch[1].split(/,|;/).map(s => s.trim()).filter(Boolean);
+    if (items.length > 1) {
+      const columnTitle = batchListMatch[2]?.trim();
+      return items.map(title => ({
+        type: 'add_card' as const,
+        params: { title, columnTitle },
+        originalText: input,
+      }));
+    }
+  }
+
+  // --- Clear column: "Clear TODO", "Empty the Done column" ---
+  if (lower.match(/(?:clear|empty|wipe)\s+(?:the\s+)?(?:["']?([^"']+?)["']?\s+)?(?:column|list)?/i) &&
+      lower.match(/(?:clear|empty|wipe)/)) {
+    const colMatch = input.match(/(?:clear|empty|wipe)\s+(?:the\s+)?["']?([^"']+?)["']?(?:\s+column|\s+list)?$/i);
+    return [{
+      type: 'clear_column',
+      params: { columnTitle: colMatch?.[1]?.trim() },
+      originalText: input,
+    }];
+  }
+
+  // --- Count cards: "How many cards in Done?", "Count tasks" ---
+  if (lower.match(/(?:how many|count|total)\s+(?:cards?|tasks?|items?)/)) {
+    const colMatch = input.match(/(?:in|from)\s+(?:the\s+)?["']?([^"'?]+?)["']?(?:\s+column)?[?]?$/i);
+    return [{
+      type: 'count_cards',
+      params: { columnTitle: colMatch?.[1]?.trim() },
+      originalText: input,
+    }];
+  }
+
+  // --- Rename card: "Rename card 'X' to 'Y'" ---
+  if (lower.match(/rename\s+(?:the\s+)?(?:card|task|item)/)) {
+    const titles = [...input.matchAll(/["']([^"']+)["']/g)];
+    return [{
+      type: 'rename_card',
+      params: {
+        cardTitle: titles[0]?.[1]?.trim(),
+        newTitle: titles[1]?.[1]?.trim(),
+      },
+      originalText: input,
+    }];
+  }
+
   // Create board
   if (lower.match(/create (a )?new (board|project)|add (a )?board|make (a )?board/)) {
     const nameMatch = input.match(/(?:called|named|name[d]?\s*["']?)([^"']+)(?:["']|$|\s+(?:for|with|to))/i);
-    return {
+    return [{
       type: 'create_board',
       params: { name: nameMatch?.[1]?.trim() || 'New Board' },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Add column
   if (lower.match(/add (a )?column|create (a )?column|new column/)) {
     const nameMatch = input.match(/(?:called|named|title[d]?\s*["']?)([^"']+)(?:["']|$|\s+(?:to|in))/i);
-    return {
+    return [{
       type: 'add_column',
       params: { title: nameMatch?.[1]?.trim() || 'New Column' },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Remove column
   if (lower.match(/remove (the )?column|delete (the )?column/)) {
     const nameMatch = input.match(/(?:column\s*["']?)([^"']+)(?:["']|$)/i);
-    return {
+    return [{
       type: 'remove_column',
       params: { title: nameMatch?.[1]?.trim() },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Rename column
   if (lower.match(/rename (the )?column/)) {
     const fromMatch = input.match(/(?:from\s*["']?)([^"']+)(?:["']?\s*to)/i);
     const toMatch = input.match(/(?:to\s*["']?)([^"']+)(?:["']|$)/i);
-    return {
+    return [{
       type: 'rename_column',
-      params: { 
+      params: {
         fromTitle: fromMatch?.[1]?.trim(),
         toTitle: toMatch?.[1]?.trim() || 'Renamed Column'
       },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Add card/task — flexible matching for natural language variations
   if (lower.match(/(?:add|create|make|put|new)\b.*(?:task|card|item|todo|note|reminder|ticket|checklist)/i) ||
       lower.match(/^(?:add|create|make)\b/) && input.match(/["']([^"']+)["']/)) {
@@ -107,7 +199,7 @@ function parseCommandLocal(input: string): AICommand {
     const checklistItems = checklistMatch
       ? checklistMatch[1].split(/,|;|\n/).map(s => s.trim()).filter(Boolean)
       : undefined;
-    return {
+    return [{
       type: 'add_card',
       params: {
         title: titleMatch?.[1]?.trim() || 'New Task',
@@ -115,85 +207,109 @@ function parseCommandLocal(input: string): AICommand {
         checklistItems,
       },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Move card — also match pronouns ("it", "that", "this") and bare "move to X"
   if (lower.match(/(?:move|put|send|transfer)\s+(?:the\s+|a\s+)?(?:(?:\w+\s+)*?(?:task|card|item)|it|that|this)\b/) ||
       lower.match(/(?:move|put|send|transfer)\s+(?:to|into)\s+/)) {
     const titleMatch = input.match(/["']([^"']+)["']/);
     const toColumnMatch = input.match(/(?:to|into)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)/i);
-    return {
+    return [{
       type: 'move_card',
       params: {
         cardTitle: titleMatch?.[1]?.trim(),
         toColumnTitle: toColumnMatch?.[1]?.trim()
       },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Remove card — flexible matching + pronouns
   if (lower.match(/(?:remove|delete|trash|discard)\s+(?:the\s+|a\s+)?(?:(?:\w+\s+)*?(?:task|card|item|todo|note|ticket)|it|that|this)\b/) ||
       lower.match(/(?:remove|delete) ["']/)) {
     const titleMatch = input.match(/["']([^"']+)["']/);
-    return {
+    return [{
       type: 'remove_card',
       params: { title: titleMatch?.[1]?.trim() },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Set target date — also accept "for it/that/this"
   if (lower.match(/set (the )?due date|set (the )?target|due|deadline/)) {
     const titleMatch = input.match(/(?:for\s*["'])([^"']+)(?:["'])/);
     const pronounMatch = !titleMatch && lower.match(/(?:for|on)\s+(?:it|that|this)\b/);
     const dateMatch = input.match(/(?:to|on|for)\s+(?:the\s+)?(\w+day|tomorrow|next \w+|\d{1,2}\/\d{1,2}|\d{4}-\d{2}-\d{2})/i);
-    return {
+    return [{
       type: 'set_target_date',
       params: {
         cardTitle: pronounMatch ? undefined : titleMatch?.[1]?.trim(),
         date: dateMatch?.[1] || 'next week'
       },
       originalText: input,
-    };
+    }];
   }
-  
+
+  // Extract card JSON
+  if (lower.match(/(?:export|extract|show|get|dump)\b.*(?:card|task|item)\b.*(?:json|data)/i) ||
+      lower.match(/(?:json|data)\b.*(?:for|of|from)\b.*(?:card|task|item)/i)) {
+    const titleMatch = input.match(/["']([^"']+)["']/);
+    return [{
+      type: 'extract_card_json',
+      params: { cardTitle: titleMatch?.[1]?.trim() },
+      originalText: input,
+    }];
+  }
+
+  // Extract column JSON
+  if (lower.match(/(?:export|extract|show|get|dump)\b.*(?:column|list)\b.*(?:json|data)/i) ||
+      lower.match(/(?:json|data)\b.*(?:for|of|from)\b.*(?:column|list)/i) ||
+      lower.match(/(?:export|extract|show|get|dump)\b.*(?:the\s+)?(\w+)\b.*(?:as\s+)?json/i)) {
+    const titleMatch = input.match(/["']([^"']+)["']/);
+    const namedMatch = !titleMatch ? input.match(/(?:export|extract|show|get|dump)\s+(?:the\s+)?(.+?)\s+(?:column\s+)?(?:as\s+)?json/i) : null;
+    return [{
+      type: 'extract_column_json',
+      params: { columnTitle: titleMatch?.[1]?.trim() || namedMatch?.[1]?.trim() },
+      originalText: input,
+    }];
+  }
+
   // Switch view
   if (lower.match(/show (the )?timeline|switch to timeline|timeline view/)) {
-    return {
+    return [{
       type: 'switch_view',
       params: { view: 'timeline' },
       originalText: input,
-    };
+    }];
   }
   if (lower.match(/show (the )?board|switch to board|board view|kanban/)) {
-    return {
+    return [{
       type: 'switch_view',
       params: { view: 'board' },
       originalText: input,
-    };
+    }];
   }
-  
+
   // Last-resort heuristic: if input has a quoted string, treat as add_card
   const lastResortTitle = input.match(/["']([^"']+)["']/);
   if (lastResortTitle) {
     const toColumnMatch = input.match(/(?:to|in|into)\s+(?:the\s+)?["']?([^"']+?)(?:["']|\s+column|$)/i);
-    return {
+    return [{
       type: 'add_card',
       params: {
         title: lastResortTitle[1].trim(),
         columnTitle: toColumnMatch?.[1]?.trim()
       },
       originalText: input,
-    };
+    }];
   }
 
-  return {
+  return [{
     type: 'unknown',
     params: {},
     originalText: input,
-  };
+  }];
 }
 
 // Quick action suggestions
@@ -201,6 +317,7 @@ const QUICK_ACTIONS = [
   "Add task 'Fix navigation' to To Do",
   "Move 'Design review' to Review",
   "Set due Friday for 'Client presentation'",
+  "Export Done column as JSON",
   "Show the timeline",
 ];
 
@@ -408,15 +525,91 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
           : `Card "${cardTitle}" not found.`;
       }
       
+      case 'extract_card_json': {
+        if (!activeBoardId) return 'No active board.';
+        const cardTitle = getString('cardTitle') || lastCardTitle.current || undefined;
+        if (!cardTitle) return 'No card specified and no previous card to reference.';
+        for (const col of activeBoard?.columns ?? []) {
+          const card = col.cards.find(c => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
+          if (card) {
+            lastCardTitle.current = card.title;
+            downloadJson(card, `card-${card.title.toLowerCase().replace(/\s+/g, '-')}`);
+            return `Downloaded JSON for card "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
+      case 'extract_column_json': {
+        if (!activeBoardId) return 'No active board.';
+        const columnTitle = getString('columnTitle');
+        if (!columnTitle) return 'Please specify a column name.';
+        const column = activeBoard?.columns.find(c =>
+          c.title.toLowerCase().includes(columnTitle.toLowerCase())
+        );
+        if (!column) return `Column "${columnTitle}" not found.`;
+        downloadJson(column, `column-${column.title.toLowerCase().replace(/\s+/g, '-')}`);
+        return `Downloaded JSON for column "${column.title}" (${column.cards.length} cards)`;
+      }
+
+      case 'clear_column': {
+        if (!activeBoardId) return 'No active board.';
+        const columnTitle = getString('columnTitle');
+        if (!columnTitle) return 'Please specify a column name.';
+        const column = activeBoard?.columns.find(c =>
+          c.title.toLowerCase().includes(columnTitle.toLowerCase())
+        );
+        if (!column) return `Column "${columnTitle}" not found.`;
+        const cardCount = column.cards.length;
+        if (cardCount === 0) return `Column "${column.title}" is already empty.`;
+        column.cards.forEach(card => {
+          removeCard(activeBoardId, column.id, card.id);
+        });
+        return `Cleared ${cardCount} card${cardCount !== 1 ? 's' : ''} from "${column.title}"`;
+      }
+
+      case 'count_cards': {
+        if (!activeBoardId) return 'No active board.';
+        const columnTitle = getString('columnTitle');
+        if (columnTitle) {
+          const column = activeBoard?.columns.find(c =>
+            c.title.toLowerCase().includes(columnTitle.toLowerCase())
+          );
+          if (!column) return `Column "${columnTitle}" not found.`;
+          const active = column.cards.filter(c => !c.isArchived).length;
+          return `"${column.title}" has ${active} card${active !== 1 ? 's' : ''}`;
+        }
+        const total = activeBoard?.columns.reduce((sum, c) => sum + c.cards.filter(x => !x.isArchived).length, 0) ?? 0;
+        const breakdown = activeBoard?.columns.map(c => `${c.title}: ${c.cards.filter(x => !x.isArchived).length}`).join(', ');
+        return `${total} total card${total !== 1 ? 's' : ''} (${breakdown})`;
+      }
+
+      case 'rename_card': {
+        if (!activeBoardId) return 'No active board.';
+        const cardTitle = getString('cardTitle') || lastCardTitle.current || undefined;
+        const newTitle = getString('newTitle');
+        if (!cardTitle) return 'No card specified and no previous card to reference.';
+        if (!newTitle) return 'Please specify the new title.';
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find(c => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
+          if (card) {
+            editCard(activeBoardId, column.id, card.id, { title: newTitle });
+            lastCardTitle.current = newTitle;
+            return `Renamed "${card.title}" to "${newTitle}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
       case 'switch_view': {
         const view = getString('view');
         if (view !== 'board' && view !== 'timeline') return 'Unknown view.';
         setViewMode(view);
         return `Switched to ${view} view`;
       }
-      
+
       default:
-        return "I'm not sure how to help with that. Try commands like:\n• Add task 'Title' to Column\n• Move 'Title' to Column\n• Set due Friday for 'Title'\n• Show the timeline";
+        return "I'm not sure how to help with that. Try commands like:\n• Add 5 random tasks to TODO\n• Add tasks: design, build, test to Done\n• Clear the TODO column\n• How many cards in Done?\n• Rename card 'old' to 'new'\n• Export the Done column as JSON\n• Show the timeline";
     }
   };
 
@@ -451,7 +644,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     const lastMsg = [...messages].reverse().find(m => m.role === 'assistant' && m.command && m.command.type !== 'unknown');
     const lastCommand = lastMsg?.command ? { type: lastMsg.command.type, params: lastMsg.command.params } : undefined;
 
-    const commands = (await parseCommandWithAI(userMessage.content, boardContext, lastCommand)) ?? [parseCommandLocal(userMessage.content)];
+    const commands = (await parseCommandWithAI(userMessage.content, boardContext, lastCommand)) ?? parseCommandLocal(userMessage.content);
 
     const results: string[] = [];
     for (let i = 0; i < commands.length; i++) {
@@ -509,13 +702,28 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
               <p className="text-xs text-[#A8B2B2]">Natural language commands</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-3 hover:bg-white/5 rounded-lg text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setMessages([{
+                id: 'welcome',
+                role: 'assistant',
+                content: "Hi! I'm your ZeroBoard AI assistant. I can help you manage your boards, columns, and cards using natural language. Try saying:\n\n• " + QUICK_ACTIONS.join('\n• '),
+                timestamp: new Date().toISOString(),
+              }])}
+              className="p-3 hover:bg-white/5 rounded-lg text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+              title="Clear chat"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-3 hover:bg-white/5 rounded-lg text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
@@ -537,7 +745,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                     <Bot className="w-4 h-4 text-[#0B0F0F]" />
                   )}
                 </div>
-                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
+                <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm overflow-hidden ${
                   message.role === 'user'
                     ? 'bg-[#78fcd6]/20 text-[#F2F7F7] rounded-br-md'
                     : 'bg-white/5 text-[#F2F7F7] rounded-bl-md'
@@ -548,9 +756,9 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
                       <span>{message.content}</span>
                     </div>
                   ) : message.command && message.role === 'assistant' ? (
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
                       <Check className="w-4 h-4 text-[#78fcd6] flex-shrink-0 mt-0.5" />
-                      <span>{message.content}</span>
+                      <span className="break-all whitespace-pre-wrap min-w-0">{message.content}</span>
                     </div>
                   ) : (
                     <div className="whitespace-pre-line">{message.content}</div>

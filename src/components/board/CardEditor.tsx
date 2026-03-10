@@ -206,7 +206,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, initialDat
           {/* Target Date */}
           <div className="space-y-2">
             <Label htmlFor="target-date" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-white" />
+              <Calendar className="w-4 h-4 text-[#A8B2B2]" />
               Target Completion Date (optional)
             </Label>
             <Input

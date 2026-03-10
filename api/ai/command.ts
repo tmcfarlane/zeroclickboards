@@ -15,6 +15,11 @@ type AICommandType =
   | 'move_card'
   | 'set_target_date'
   | 'switch_view'
+  | 'extract_card_json'
+  | 'extract_column_json'
+  | 'clear_column'
+  | 'count_cards'
+  | 'rename_card'
   | 'unknown';
 
 type AICommand = {
@@ -83,13 +88,19 @@ export default async function handler(req: Request) {
     'You are a command parser for a Trello-like kanban app. ' +
     'For single operations, return ONLY a JSON object: { "type": "...", "params": {...}, "originalText": "..." }. ' +
     'For requests involving multiple operations (e.g. "create column Review and add 3 tasks"), return: { "commands": [{ "type": "...", "params": {...}, "originalText": "..." }, ...] }. ' +
-    'Supported types: create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, remove_card, edit_card, move_card, set_target_date, switch_view, unknown. ' +
+    'Supported types: create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, remove_card, edit_card, move_card, set_target_date, switch_view, extract_card_json, extract_column_json, clear_column, count_cards, rename_card, unknown. ' +
     'params must be an object with relevant keys. ' +
     'Always try to map the user\'s intent to the closest matching action. ' +
     'When the user refers to "it", "that", or "this", resolve it using the last command context provided. For example, if the last command added a card titled "Fix bug", and the user says "move it to Done", the cardTitle should be "Fix bug". ' +
     'For add_card, if the user requests a checklist or specifies items/steps/tasks, include a "checklistItems" array of strings in params. Example: "Create a checklist \'Sprint tasks\' with items: design, build, test" → add_card with params { title: "Sprint tasks", checklistItems: ["design", "build", "test"] }. ' +
     'Examples: "Add a TODO item \'X\'" means add_card with title "X". "Put \'Y\' in Done" means add_card or move_card. ' +
     '"Create a reminder to update docs" means add_card. "Add a quick note \'Z\'" means add_card. ' +
+    'For extract_card_json, params should include "cardTitle". For extract_column_json, params should include "columnTitle". ' +
+    'For clear_column, params should include "columnTitle". For count_cards, params should include "columnTitle" (optional, omit to count all). For rename_card, params should include "cardTitle" and "newTitle". ' +
+    'When the user asks to add N tasks (e.g. "Add 5 tasks to TODO" or "Add 10 random tasks"), return a batch { "commands": [...] } with N separate add_card commands, each with a unique realistic task title. ' +
+    'When the user lists multiple items (e.g. "Add tasks: design, build, test to TODO"), return a batch with one add_card per item. ' +
+    'Examples: "Export the Done column as JSON" → extract_column_json with columnTitle "Done". "Clear the TODO column" → clear_column with columnTitle "TODO". ' +
+    '"How many cards in Done?" → count_cards with columnTitle "Done". "Rename card \'old\' to \'new\'" → rename_card with cardTitle "old" and newTitle "new". ' +
     'Only use type "unknown" if the request is completely unrelated to board management.';
 
   let user = `User text: ${text}\n\nBoard context (optional):\n${context}`;

@@ -329,7 +329,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
                 variant="outline"
                 className={`h-9 px-3 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${dueDateFilter ? 'border-[#78fcd6]/50 text-[#78fcd6]' : ''}`}
               >
-                <Calendar className="w-4 h-4 sm:mr-1.5 text-white" />
+                <Calendar className="w-4 h-4 sm:mr-1.5 text-[#A8B2B2]" />
                 <span className="hidden sm:inline">Due Date</span>
                 <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
