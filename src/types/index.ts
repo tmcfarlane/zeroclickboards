@@ -17,6 +17,14 @@ export interface CardContent {
   imageUrl?: string;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  addedAt: string;
+  isCover?: boolean;
+}
+
 export interface Card {
   id: string;
   title: string;
@@ -25,6 +33,7 @@ export interface Card {
   targetDate?: string;
   labels?: CardLabel[];
   coverImage?: string;
+  attachments?: Attachment[];
   isArchived?: boolean;
   archivedAt?: string;
   createdAt: string;

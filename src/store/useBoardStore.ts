@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
-import type { AppState, Board, Card, CardContent, CardLabel, Column, Json } from '@/types';
+import type { AppState, Attachment, Board, Card, CardContent, CardLabel, Column, Json } from '@/types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface BoardStore extends AppState {
@@ -31,7 +31,7 @@ interface BoardStore extends AppState {
       title: string,
       content: CardContent | undefined,
       targetDate: string | undefined,
-      options: { labels?: CardLabel[]; coverImage?: string }
+      options: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[] }
     ): void;
   };
   removeCard: (boardId: string, columnId: string, cardId: string) => void;
@@ -40,6 +40,7 @@ interface BoardStore extends AppState {
   reorderCards: (boardId: string, columnId: string, cardIds: string[]) => void;
 
   archiveCard: (boardId: string, columnId: string, cardId: string) => void;
+  archiveAllCards: (boardId: string, columnId: string) => void;
   restoreCard: (boardId: string, columnId: string, cardId: string) => void;
   duplicateCard: (boardId: string, columnId: string, cardId: string) => void;
 
@@ -382,7 +383,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     title,
     content,
     targetDate,
-    options?: { labels?: CardLabel[]; coverImage?: string }
+    options?: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[] }
   ) => {
     const now = new Date().toISOString();
     const newCard: Card = {
@@ -392,6 +393,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       targetDate,
       labels: options?.labels ?? [],
       coverImage: options?.coverImage,
+      attachments: options?.attachments,
       isArchived: false,
       createdAt: now,
       updatedAt: now,
@@ -510,6 +512,32 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   archiveCard: (boardId, columnId, cardId) => {
     get().editCard(boardId, columnId, cardId, { isArchived: true, archivedAt: new Date().toISOString() });
     toast.success('Card archived');
+  },
+
+  archiveAllCards: (boardId, columnId) => {
+    const now = new Date().toISOString();
+    set((state) => ({
+      boards: state.boards.map((b) =>
+        b.id === boardId
+          ? {
+              ...b,
+              columns: b.columns.map((c) =>
+                c.id === columnId
+                  ? {
+                      ...c,
+                      cards: c.cards.map((card) =>
+                        card.isArchived ? card : { ...card, isArchived: true, archivedAt: now, updatedAt: now }
+                      ),
+                    }
+                  : c
+              ),
+              updatedAt: now,
+            }
+          : b
+      ),
+    }));
+    toast.success('All cards archived');
+    scheduleBoardSync(boardId);
   },
 
   restoreCard: (boardId, columnId, cardId) => {

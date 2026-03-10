@@ -57,6 +57,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
       targetDate: data.targetDate,
       labels: data.labels,
       coverImage: data.coverImage,
+      attachments: data.attachments,
     });
     setIsEditDialogOpen(false);
   };

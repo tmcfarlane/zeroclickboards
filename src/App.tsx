@@ -6,6 +6,7 @@ import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { useBoardStore } from '@/store/useBoardStore';
 import { BoardSelector } from '@/components/board/BoardSelector';
 import { KanbanBoard } from '@/components/board/KanbanBoard';
+import { BoardSkeleton } from '@/components/board/BoardSkeleton';
 import { TimelineView } from '@/components/timeline/TimelineView';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
@@ -251,7 +252,9 @@ function App() {
 
       {/* Main Content */}
       <main className="pt-14 h-screen">
-        {activeBoard ? (
+        {remoteStatus === 'loading' && !activeBoard ? (
+          <BoardSkeleton />
+        ) : activeBoard ? (
           viewMode === 'board' ? (
             <KanbanBoard board={activeBoard} />
           ) : (

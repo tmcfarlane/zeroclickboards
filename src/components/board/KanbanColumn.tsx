@@ -5,7 +5,7 @@ import { useBoardStore } from '@/store/useBoardStore';
 import type { Column } from '@/types';
 import { KanbanCard } from './KanbanCard';
 import { Button } from '@/components/ui/button';
-import { Plus, MoreHorizontal, Edit2, Trash2, Download, EyeOff } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit2, Trash2, Download, EyeOff, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -32,7 +32,7 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColumnProps) {
-  const { renameColumn, removeColumn, addCard } = useBoardStore();
+  const { renameColumn, removeColumn, addCard, archiveAllCards } = useBoardStore();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddCardOpen, setIsAddCardOpen] = useState(false);
@@ -75,6 +75,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
     addCard(boardId, column.id, data.title, data.content, data.targetDate, {
       labels: data.labels,
       coverImage: data.coverImage,
+      attachments: data.attachments,
     });
     setIsAddCardOpen(false);
   };
@@ -96,7 +97,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">{column.title}</span>
             <span className="text-xs text-[#A8B2B2] bg-white/5 px-2 py-0.5 rounded-full">
-              {column.cards.length}
+              {column.cards.filter(c => !c.isArchived).length}
             </span>
           </div>
           
@@ -152,6 +153,14 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export as JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => archiveAllCards(boardId, column.id)}
+                disabled={column.cards.filter(c => !c.isArchived).length === 0}
+                className="hover:bg-white/5 cursor-pointer focus:bg-white/5"
+              >
+                <Archive className="w-4 h-4 mr-2" />
+                Archive all cards
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setIsDeleteDialogOpen(true)}
