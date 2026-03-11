@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useUndoStore } from '@/store/useUndoStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -37,8 +38,51 @@ export function ArchiveView({ boardId }: ArchiveViewProps) {
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-sm">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Archived cards</DialogTitle>
+          {archived.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const snapshot = archived.map(({ card, columnId }) => ({ card: structuredClone(card), columnId }));
+                // Suppress individual undo actions
+                useUndoStore.setState({ _skipRecord: true });
+                snapshot.forEach(({ card, columnId }) => removeCard(boardId, columnId, card.id));
+                useUndoStore.setState({ _skipRecord: false });
+                // Push single compound undo
+                useUndoStore.getState().pushAction({
+                  description: `Delete ${snapshot.length} archived cards`,
+                  undo: () => {
+                    snapshot.forEach(({ card, columnId }) => {
+                      useBoardStore.setState((state) => ({
+                        boards: state.boards.map((b) =>
+                          b.id === boardId
+                            ? {
+                                ...b,
+                                columns: b.columns.map((c) =>
+                                  c.id === columnId ? { ...c, cards: [...c.cards, card] } : c
+                                ),
+                                updatedAt: new Date().toISOString(),
+                              }
+                            : b
+                        ),
+                      }));
+                    });
+                  },
+                  redo: () => {
+                    snapshot.forEach(({ card, columnId }) => {
+                      useBoardStore.getState().removeCard(boardId, columnId, card.id);
+                    });
+                  },
+                });
+              }}
+              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 px-2 mr-4"
+            >
+              Delete All
+            </Button>
+          )}
         </DialogHeader>
         <div className="overflow-hidden">
           <div className="space-y-2">
@@ -64,7 +108,7 @@ export function ArchiveView({ boardId }: ArchiveViewProps) {
                             logActivity(card.id, 'restored', {});
                             restoreCard(boardId, columnId, card.id);
                           }}
-                          className="border-white/10 text-[#F2F7F7] hover:bg-white/5 p-2"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity border-white/10 text-[#F2F7F7] hover:bg-white/5 p-2"
                         >
                           <ArchiveRestore className="w-4 h-4" />
                         </Button>
