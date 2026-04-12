@@ -62,26 +62,37 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-[#0B0F0F] text-[#F2F7F7]">
       {/* Hero */}
-      <section className="flex flex-col items-center justify-center px-6 py-24 text-center">
-        <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">
-          <span className="gradient-cyan text-5xl font-black leading-none">Z</span>
+      <section className="relative flex flex-col items-center justify-center overflow-hidden px-6 py-28 text-center md:py-36 lg:py-44">
+        {/* Background decorative orbs */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-40 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#78fcd6]/10 blur-[120px] animate-float" />
+          <div className="absolute -bottom-20 -right-20 h-[300px] w-[300px] rounded-full bg-[#00ffb6]/8 blur-[100px]" />
         </div>
 
-        <h1 className="mb-4 max-w-2xl text-5xl font-black tracking-tight sm:text-6xl">
+        {/* Badge */}
+        <div className="relative mb-6 inline-flex items-center gap-2 rounded-full border border-[#78fcd6]/30 bg-[#78fcd6]/10 px-4 py-1.5 text-sm font-medium text-[#78fcd6] backdrop-blur-sm">
+          <Sparkles className="w-4 h-4" />
+          Open Source Kanban Board
+        </div>
+
+        {/* Headline */}
+        <h1 className="relative mb-6 max-w-3xl text-5xl font-black tracking-tight sm:text-6xl lg:text-7xl leading-[1.1]">
           Organize your work with{' '}
-          <span className="gradient-cyan">ZeroBoard</span>
+          <span className="gradient-cyan-text">ZeroBoard</span>
         </h1>
 
-        <p className="mb-10 max-w-xl text-lg text-[#A8B2B2] leading-relaxed">
+        {/* Description */}
+        <p className="relative mb-10 max-w-2xl text-lg text-[#A8B2B2] leading-relaxed md:text-xl">
           A powerful, open-source Kanban board with timeline views, AI assistance,
           real-time sync, and deep customization — built for people who want more
           control of their workflow tooling.
         </p>
 
-        <div className="flex flex-wrap items-center justify-center gap-4">
+        {/* CTAs */}
+        <div className="relative flex flex-wrap items-center justify-center gap-4">
           <Button
             onClick={() => setIsSignInModalOpen(true)}
-            className="h-12 px-8 gradient-cyan text-[#0B0F0F] font-bold rounded-xl text-base hover:opacity-90"
+            className="h-12 px-8 bg-gradient-to-r from-[#78fcd6] to-[#00ffb6] text-[#0B0F0F] font-bold rounded-full text-base shadow-lg ring-2 ring-[#78fcd6]/30 hover:shadow-[#78fcd6]/50 hover:scale-105 transition-all duration-300"
           >
             Get Started — It's Free
           </Button>
@@ -90,7 +101,7 @@ export function LandingPage() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 h-12 px-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[#F2F7F7] text-base font-medium transition-colors"
+            className="flex items-center gap-2 h-12 px-8 bg-white/5 hover:bg-white/10 border border-[#78fcd6]/30 hover:border-[#78fcd6]/50 rounded-full text-[#F2F7F7] text-base font-medium transition-all duration-300 hover:shadow-lg hover:shadow-[#78fcd6]/20"
           >
             <Github className="w-5 h-5" />
             View on GitHub
@@ -146,55 +157,60 @@ export function LandingPage() {
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {/* Free plan */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-              <div className="h-1 w-full gradient-cyan" />
-              <div className="p-6">
-                <h3 className="mb-1 text-xl font-bold text-[#F2F7F7]">Free</h3>
-                <p className="mb-6 text-3xl font-black text-[#78fcd6]">FREE</p>
-                <ul className="space-y-2">
-                  {freePlanFeatures.map((feat) => (
-                    <li key={feat} className="flex items-start gap-2 text-sm text-[#A8B2B2]">
-                      <span className="mt-0.5 text-[#78fcd6]">✓</span>
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  onClick={() => setIsSignInModalOpen(true)}
-                  className="mt-6 w-full h-11 gradient-cyan text-[#0B0F0F] font-bold rounded-xl hover:opacity-90"
-                >
-                  Get Started Free
-                </Button>
-              </div>
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col">
+              <h3 className="mb-1 text-xl font-bold text-[#F2F7F7]">Free</h3>
+              <p className="mb-6 text-3xl font-black text-[#F2F7F7]">
+                $0
+                <span className="text-base font-normal text-[#A8B2B2]">/forever</span>
+              </p>
+              <ul className="space-y-2.5 flex-1">
+                {freePlanFeatures.map((feat) => (
+                  <li key={feat} className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
+                    <span className="mt-0.5 text-[#78fcd6]">✓</span>
+                    {feat}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                onClick={() => setIsSignInModalOpen(true)}
+                className="mt-8 w-full h-11 bg-white/10 hover:bg-white/15 text-[#F2F7F7] border border-white/10 rounded-xl font-semibold transition-all duration-300"
+              >
+                Get Started Free
+              </Button>
             </div>
 
-            {/* AI Pro plan */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+            {/* AI Pro plan — highlighted */}
+            <div className="relative bg-white/5 backdrop-blur-md border border-[#78fcd6]/40 rounded-2xl p-6 flex flex-col shadow-lg shadow-[#78fcd6]/10 ring-1 ring-[#78fcd6]/20">
+              <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl gradient-cyan" />
+              <div className="mb-2 inline-flex self-start items-center gap-1.5 rounded-full bg-[#78fcd6]/10 px-3 py-0.5 text-xs font-semibold text-[#78fcd6]">
+                <Sparkles className="w-3 h-3" />
+                Best Value
+              </div>
               <h3 className="mb-1 text-xl font-bold text-[#F2F7F7]">AI Pro</h3>
-              <p className="mb-1 text-3xl font-black text-[#F2F7F7]">
+              <p className="mb-1 text-3xl font-black text-[#78fcd6]">
                 $3
                 <span className="text-base font-normal text-[#A8B2B2]">/month</span>
               </p>
-              <p className="mb-6 text-sm text-[#A8B2B2]">Everything in Free, plus:</p>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2 text-sm text-[#A8B2B2]">
+              <p className="mb-6 text-sm text-[#A8B2B2]">Less than a coffee. Everything in Free, plus:</p>
+              <ul className="space-y-2.5 flex-1">
+                <li className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
                   <span className="mt-0.5 text-[#78fcd6]">✓</span>
-                  AI Assistant for natural language board management
+                  AI Assistant — manage your board with plain English
                 </li>
-                <li className="flex items-start gap-2 text-sm text-[#A8B2B2]">
+                <li className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
                   <span className="mt-0.5 text-[#78fcd6]">✓</span>
-                  Create, move, and edit cards with plain English commands
+                  Create, move, and edit cards in seconds
                 </li>
-                <li className="flex items-start gap-2 text-sm text-[#A8B2B2]">
+                <li className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
                   <span className="mt-0.5 text-[#78fcd6]">✓</span>
-                  Priority support
+                  Priority support &amp; early access to new features
                 </li>
               </ul>
               <Button
                 onClick={() => setIsSignInModalOpen(true)}
-                className="mt-6 w-full h-11 bg-white/10 hover:bg-white/15 text-[#F2F7F7] border border-white/10 rounded-xl font-semibold"
+                className="mt-8 w-full h-11 bg-gradient-to-r from-[#78fcd6] to-[#00ffb6] text-[#0B0F0F] font-bold rounded-xl hover:shadow-lg hover:shadow-[#78fcd6]/30 hover:scale-[1.02] transition-all duration-300"
               >
-                Subscribe
+                Start 7-Day Free Trial
               </Button>
             </div>
           </div>

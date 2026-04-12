@@ -14,9 +14,13 @@ export function PublicHeader() {
         <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-cyan flex items-center justify-center">
-              <span className="text-[#0B0F0F] font-bold text-sm">Z</span>
-            </div>
+            <img
+              src="/logo/logo_color.svg"
+              alt="ZeroBoard"
+              width={32}
+              height={32}
+              className="w-8 h-8 drop-shadow-[0_0_8px_rgba(120,252,214,0.3)]"
+            />
             <span className="font-semibold text-lg text-[#F2F7F7]">ZeroBoard</span>
           </Link>
 
