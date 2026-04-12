@@ -126,6 +126,8 @@ function ensureBoardsSubscription(userId: string) {
         if (payload.eventType === 'INSERT') {
           const next = rowToBoard(payload.new);
           if (!next) return;
+          // Skip if board already exists locally (optimistic create)
+          if (state.boards.some((b) => b.id === next.id)) return;
           useBoardStore.setState({
             boards: [...state.boards, next].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
           });
