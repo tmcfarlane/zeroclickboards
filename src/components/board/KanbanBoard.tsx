@@ -7,9 +7,10 @@ import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, ChevronDown, EyeOff, Eye, BookmarkPlus, Share2 } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download } from 'lucide-react';
 import { ShareBoardDialog } from './ShareBoardDialog';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
+import { downloadBoardJSON } from '@/lib/board-io';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import {
@@ -26,6 +27,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface KanbanBoardProps {
   board: Board;
@@ -43,6 +52,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   const [selectedLabels, setSelectedLabels] = useState<CardLabel[]>([]);
   const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [hiddenColumnIds, setHiddenColumnIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(`zcb-hidden-cols-${board.id}`);
@@ -407,7 +417,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
           )}
         </div>
         
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
@@ -420,90 +430,87 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
             />
           </div>
 
-          {/* Label Filter */}
+          {/* Filters */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
-                variant="outline"
-                className={`h-9 px-3 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${selectedLabels.length > 0 ? 'border-[#78fcd6]/50 text-[#78fcd6]' : ''}`}
+                variant="ghost"
+                size="icon"
+                className={`relative h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${
+                  selectedLabels.length > 0 || dueDateFilter ? 'text-[#78fcd6]' : ''
+                }`}
               >
-                <Tag className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Labels</span>
-                {selectedLabels.length > 0 && (
-                  <span className="ml-1 text-xs bg-[#78fcd6]/20 px-1.5 rounded-full">{selectedLabels.length}</span>
+                <SlidersHorizontal className="w-4 h-4" />
+                {(selectedLabels.length > 0 || dueDateFilter) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#78fcd6] rounded-full" />
                 )}
-                <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48 bg-[#111515] border-white/10 p-3" align="end">
-              <div className="space-y-2">
-                {ALL_LABELS.map((label) => (
-                  <label key={label} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded p-1">
-                    <Checkbox
-                      checked={selectedLabels.includes(label)}
-                      onCheckedChange={(checked) => {
-                        setSelectedLabels(checked
-                          ? [...selectedLabels, label]
-                          : selectedLabels.filter((l) => l !== label)
-                        );
-                      }}
-                      className="border-white/20 data-[state=checked]:bg-[#78fcd6] data-[state=checked]:border-[#78fcd6]"
-                    />
-                    <div className={`w-4 h-4 rounded ${LABEL_COLORS[label]}`} />
-                    <span className="text-sm text-[#F2F7F7] capitalize">{label}</span>
-                  </label>
-                ))}
-                {selectedLabels.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedLabels([])}
-                    className="w-full h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7]"
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
+            <PopoverContent className="w-56 bg-[#111515] border-white/10 p-3" align="end">
+              <div className="space-y-3">
+                {/* Labels */}
+                <div>
+                  <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                    <Tag className="w-3 h-3" /> Labels
+                  </p>
+                  <div className="space-y-1.5">
+                    {ALL_LABELS.map((label) => (
+                      <label key={label} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded p-1">
+                        <Checkbox
+                          checked={selectedLabels.includes(label)}
+                          onCheckedChange={(checked) => {
+                            setSelectedLabels(checked
+                              ? [...selectedLabels, label]
+                              : selectedLabels.filter((l) => l !== label)
+                            );
+                          }}
+                          className="border-white/20 data-[state=checked]:bg-[#78fcd6] data-[state=checked]:border-[#78fcd6]"
+                        />
+                        <div className={`w-4 h-4 rounded ${LABEL_COLORS[label]}`} />
+                        <span className="text-sm text-[#F2F7F7] capitalize">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-          {/* Due Date Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={`h-9 px-3 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${dueDateFilter ? 'border-[#78fcd6]/50 text-[#78fcd6]' : ''}`}
-              >
-                <Calendar className="w-4 h-4 sm:mr-1.5 text-[#A8B2B2]" />
-                <span className="hidden sm:inline">Due Date</span>
-                <ChevronDown className="w-3 h-3 ml-1" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 bg-[#111515] border-white/10 p-3" align="end">
-              <div className="space-y-1">
-                {DUE_DATE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
-                    className={`w-full text-left text-sm px-2 py-1.5 rounded transition-colors ${
-                      dueDateFilter === opt.value
-                        ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                        : 'text-[#F2F7F7] hover:bg-white/5'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-                {dueDateFilter && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDueDateFilter(null)}
-                    className="w-full h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7] mt-1"
-                  >
-                    Clear
-                  </Button>
+                <div className="border-t border-white/10" />
+
+                {/* Due Date */}
+                <div>
+                  <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3" /> Due Date
+                  </p>
+                  <div className="space-y-1">
+                    {DUE_DATE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
+                        className={`w-full text-left text-sm px-2 py-1.5 rounded transition-colors ${
+                          dueDateFilter === opt.value
+                            ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
+                            : 'text-[#F2F7F7] hover:bg-white/5'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clear All */}
+                {(selectedLabels.length > 0 || dueDateFilter) && (
+                  <>
+                    <div className="border-t border-white/10" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setSelectedLabels([]); setDueDateFilter(null); }}
+                      className="w-full h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7]"
+                    >
+                      Clear All
+                    </Button>
+                  </>
                 )}
               </div>
             </PopoverContent>
@@ -516,80 +523,87 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
             onClick={() => setIsShareDialogOpen(true)}
             className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
           >
-            <Share2 className="w-4 h-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Share</span>
+            <Share2 className="w-4 h-4 mr-1.5" />
+            Share
           </Button>
 
-          <ArchiveView boardId={board.id} />
-
-          {/* Save as Template */}
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              const template = boardToTemplate(board);
-              saveUserBoardTemplate(template);
-              toast.success('Board saved as template — use it when creating a new board');
-            }}
-            className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
-          >
-            <BookmarkPlus className="w-4 h-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Save Template</span>
-          </Button>
-
-          {/* Hidden Columns */}
-          {hiddenColumns.length > 0 && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="h-9 px-3 border-[#78fcd6]/50 text-[#78fcd6] hover:bg-white/5"
-                >
-                  <EyeOff className="w-4 h-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Hidden</span>
-                  <span className="ml-1 text-xs bg-[#78fcd6]/20 px-1.5 rounded-full">{hiddenColumns.length}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 bg-[#111515] border-white/10 p-3" align="end">
-                <div className="space-y-1">
-                  <p className="text-xs text-[#A8B2B2] mb-2">Hidden columns</p>
+          {/* More Options */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-[#111515] border-white/10">
+              <DropdownMenuItem
+                onClick={() => setIsAddColumnDialogOpen(true)}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Plus className="w-4 h-4" />
+                Add Column
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const template = boardToTemplate(board);
+                  saveUserBoardTemplate(template);
+                  toast.success('Board saved as template — use it when creating a new board');
+                }}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <BookmarkPlus className="w-4 h-4" />
+                Save as Template
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  downloadBoardJSON(board);
+                  toast.success('Board exported');
+                }}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Download className="w-4 h-4" />
+                Export to JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setIsArchiveOpen(true)}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Archive className="w-4 h-4" />
+                Archive
+              </DropdownMenuItem>
+              {hiddenColumns.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuLabel className="text-[#A8B2B2] text-xs">
+                    Hidden Columns
+                  </DropdownMenuLabel>
                   {hiddenColumns.map((col) => (
-                    <div key={col.id} className="flex items-center justify-between p-1.5 rounded hover:bg-white/5">
-                      <span className="text-sm text-[#F2F7F7] truncate">{col.title}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => showColumn(col.id)}
-                        className="h-6 px-2 text-xs text-[#78fcd6] hover:bg-[#78fcd6]/10"
-                      >
-                        <Eye className="w-3 h-3 mr-1" />
-                        Show
-                      </Button>
-                    </div>
+                    <DropdownMenuItem
+                      key={col.id}
+                      onClick={() => showColumn(col.id)}
+                      className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+                    >
+                      <Eye className="w-4 h-4" />
+                      {col.title}
+                    </DropdownMenuItem>
                   ))}
                   {hiddenColumns.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <DropdownMenuItem
                       onClick={() => setHiddenColumnIds([])}
-                      className="w-full h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7] mt-1"
+                      className="text-[#78fcd6] focus:bg-white/5 focus:text-[#78fcd6]"
                     >
-                      Show All
-                    </Button>
+                      Show All Columns
+                    </DropdownMenuItem>
                   )}
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* Add Column Button */}
-          <Button
-            onClick={() => setIsAddColumnDialogOpen(true)}
-            className="h-9 px-4 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline ml-1.5">Column</span>
-          </Button>
+          <ArchiveView boardId={board.id} open={isArchiveOpen} onOpenChange={setIsArchiveOpen} />
         </div>
       </div>
 

@@ -1,17 +1,19 @@
 import { useMemo } from 'react';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { ArchiveRestore, Trash2, Archive } from 'lucide-react';
+import { ArchiveRestore, Trash2 } from 'lucide-react';
 import { useActivityLogger } from '@/hooks/useActivityLogger';
 
 interface ArchiveViewProps {
   boardId: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ArchiveView({ boardId }: ArchiveViewProps) {
+export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
   const { boards, restoreCard, removeCard } = useBoardStore();
   const { logActivity } = useActivityLogger();
 
@@ -26,17 +28,7 @@ export function ArchiveView({ boardId }: ArchiveViewProps) {
   }, [boards, boardId]);
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
-        >
-          <Archive className="w-4 h-4 mr-2" />
-          Archive
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-sm">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Archived cards</DialogTitle>

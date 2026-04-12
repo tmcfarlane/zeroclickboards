@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Toaster } from 'sonner';
+import { useEffect, useRef, useState } from 'react';
+import { toast, Toaster } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
@@ -13,12 +13,13 @@ import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { Button } from '@/components/ui/button';
-import { Plus, Layout, Clock, Sparkles, Github } from 'lucide-react';
+import { Plus, Layout, Clock, Sparkles, Github, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TemplatePicker } from '@/components/board/TemplatePicker';
 import { templateToColumns, type BoardTemplate } from '@/lib/templates';
+import { readFileAsJSON, validateBoardJSON, importBoardFromJSON } from '@/lib/board-io';
 import { Footer } from './Footer';
 import { useSubscription } from '@/hooks/useSubscription';
 import { AIUpgradePrompt } from '@/components/billing/AIUpgradePrompt';
@@ -44,6 +45,7 @@ export function AppShell() {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const { isSignedIn, isLoaded, userId } = useAuth();
   const { hasSubscription } = useSubscription();
 
@@ -105,6 +107,27 @@ export function AppShell() {
       setNewBoardDescription('');
       setSelectedTemplate(null);
       setIsCreateDialogOpen(false);
+    }
+  };
+
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const data = await readFileAsJSON(file);
+      const result = validateBoardJSON(data);
+      if (!result.valid) {
+        toast.error(result.error);
+        return;
+      }
+      const { name, description, columns } = importBoardFromJSON(result.payload);
+      createBoard(name, description, columns);
+      toast.success('Board imported successfully');
+      setIsCreateDialogOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to import board');
+    } finally {
+      if (importFileRef.current) importFileRef.current.value = '';
     }
   };
 
@@ -280,6 +303,26 @@ export function AppShell() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <TemplatePicker selected={selectedTemplate} onSelect={setSelectedTemplate} />
+            <div className="relative flex items-center gap-3 py-1">
+              <div className="flex-1 border-t border-white/10" />
+              <span className="text-xs text-[#A8B2B2]">or</span>
+              <div className="flex-1 border-t border-white/10" />
+            </div>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleFileImport}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => importFileRef.current?.click()}
+              className="w-full border border-dashed border-white/20 hover:border-[#78fcd6]/40 hover:bg-[#78fcd6]/5 rounded-lg p-3 text-sm text-[#A8B2B2] hover:text-[#78fcd6] transition-colors flex items-center justify-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Import from JSON file
+            </button>
             <div className="space-y-2">
               <Label htmlFor="name">Board Name</Label>
               <Input
