@@ -198,3 +198,28 @@
   background: rgba(120, 252, 214, 0.1);
   border: 2px dashed rgba(120, 252, 214, 0.5);
 }
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  /* Prevent iOS bounce/overscroll on the body */
+  body {
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Ensure dialogs fit on mobile */
+  [role="dialog"] {
+    max-width: calc(100vw - 1rem) !important;
+    margin: 0.5rem;
+  }
+
+  /* Ensure buttons have touch-friendly sizes */
+  button, [role="button"] {
+    min-height: 36px;
+  }
+
+  /* Prevent text size adjustment on orientation change */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+}
