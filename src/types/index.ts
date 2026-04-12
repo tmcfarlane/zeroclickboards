@@ -63,6 +63,8 @@ export interface Board {
   createdAt: string;
   updatedAt: string;
   userId?: string; // Optional for backward compatibility
+  isPublic?: boolean;
+  embedEnabled?: boolean;
 }
 
 export interface AppState {
@@ -107,16 +109,25 @@ export type {
   ColumnRow,
   CardRow,
   CardActivity,
+  BoardMemberRow,
+  SubscriptionRow,
+  FeedbackRow,
   InsertProfile,
   InsertBoard,
   InsertColumn,
   InsertCard,
   InsertCardActivity,
+  InsertBoardMember,
+  InsertSubscription,
+  InsertFeedback,
   UpdateProfile,
   UpdateBoard,
   UpdateColumn,
   UpdateCard,
   UpdateCardActivity,
+  UpdateBoardMember,
+  UpdateSubscription,
+  UpdateFeedback,
   Json,
 } from './database';
 

@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { User, LogIn, LogOut, ChevronDown } from 'lucide-react';
+import { User, LogIn, LogOut, ChevronDown, Sparkles } from 'lucide-react';
 import { useAuthContext } from './AuthProvider';
+import { useSubscription } from '@/hooks/useSubscription';
+import { ManageSubscription } from '@/components/billing/ManageSubscription';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +16,7 @@ interface UserProfileProps {
 
 export function UserProfile({ onSignInClick }: UserProfileProps) {
   const { isSignedIn, isLoaded, user, signOut } = useAuthContext();
+  const { hasSubscription } = useSubscription();
 
   if (!isLoaded) {
     return (
@@ -70,6 +73,16 @@ export function UserProfile({ onSignInClick }: UserProfileProps) {
           <div className="text-xs text-[#A8B2B2]">Signed in as</div>
           <div className="text-sm font-medium truncate">{user?.email}</div>
         </div>
+        {hasSubscription && (
+          <>
+            <div className="h-px bg-white/10 my-1" />
+            <div className="px-3 py-1.5 flex items-center gap-2">
+              <Sparkles className="w-3 h-3 text-[#78fcd6]" />
+              <span className="text-xs text-[#78fcd6] font-medium">AI Pro</span>
+            </div>
+            <ManageSubscription />
+          </>
+        )}
         <div className="h-px bg-white/10 my-1" />
         <DropdownMenuItem
           onClick={async () => {

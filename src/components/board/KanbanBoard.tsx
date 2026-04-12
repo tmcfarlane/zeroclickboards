@@ -7,7 +7,8 @@ import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, ChevronDown, EyeOff, Eye, BookmarkPlus } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, ChevronDown, EyeOff, Eye, BookmarkPlus, Share2 } from 'lucide-react';
+import { ShareBoardDialog } from './ShareBoardDialog';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   const dragOriginRef = useRef<{ columnId: string; index: number } | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<CardLabel[]>([]);
   const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [hiddenColumnIds, setHiddenColumnIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(`zcb-hidden-cols-${board.id}`);
@@ -80,24 +82,72 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     return null;
   })();
 
-  // Horizontal scroll on wheel when hovering the board canvas (not over a column/card)
+  // Vertical wheel → horizontal board scroll everywhere on the board.
+  // Only exception: if mouse is inside a column card list that has room to scroll vertically.
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const handleCanvasWheel = useCallback((e: WheelEvent) => {
-    const target = e.target as HTMLElement;
-    // If the mouse is over a column or card, let normal scroll behavior happen
-    if (target.closest('[data-kanban-column], [data-kanban-card]')) return;
-    if (e.deltaY !== 0) {
-      e.preventDefault();
-      scrollContainerRef.current!.scrollLeft += e.deltaY;
-    }
-  }, []);
+  const isDraggingBoard = useRef(false);
+  const dragStart = useRef({ x: 0, scrollLeft: 0 });
 
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
-    el.addEventListener('wheel', handleCanvasWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleCanvasWheel);
-  }, [handleCanvasWheel]);
+    // Non-null alias for use inside closures (guarded by early return above)
+    const container: HTMLDivElement = el;
+
+    function onWheel(e: WheelEvent) {
+      // Check if over a column card list that can still scroll vertically
+      const target = e.target as HTMLElement;
+      const colScroll = target.closest('[data-column-cards]') as HTMLElement | null;
+      if (colScroll && e.deltaY !== 0) {
+        const atTop = colScroll.scrollTop <= 0;
+        const atBottom = colScroll.scrollTop + colScroll.clientHeight >= colScroll.scrollHeight - 1;
+        if (!(e.deltaY < 0 && atTop) && !(e.deltaY > 0 && atBottom)) {
+          return; // column can scroll in this direction, let it
+        }
+      }
+      // Convert vertical wheel → horizontal scroll
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    }
+
+    // Click-and-drag to scroll horizontally
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as HTMLElement;
+      // Only drag on the canvas background or column headers, not on cards/inputs/buttons
+      if (target.closest('button, input, textarea, [data-kanban-card], a, [role="dialog"]')) return;
+      isDraggingBoard.current = true;
+      dragStart.current = { x: e.clientX, scrollLeft: container.scrollLeft };
+      container.style.cursor = 'grabbing';
+      container.setPointerCapture(e.pointerId);
+    }
+    function onPointerMove(e: PointerEvent) {
+      if (!isDraggingBoard.current) return;
+      const dx = e.clientX - dragStart.current.x;
+      container.scrollLeft = dragStart.current.scrollLeft - dx;
+    }
+    function onPointerUp(e: PointerEvent) {
+      if (!isDraggingBoard.current) return;
+      isDraggingBoard.current = false;
+      container.style.cursor = '';
+      container.releasePointerCapture(e.pointerId);
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    container.addEventListener('pointerdown', onPointerDown);
+    container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerup', onPointerUp);
+    container.addEventListener('pointercancel', onPointerUp);
+
+    return () => {
+      container.removeEventListener('wheel', onWheel);
+      container.removeEventListener('pointerdown', onPointerDown);
+      container.removeEventListener('pointermove', onPointerMove);
+      container.removeEventListener('pointerup', onPointerUp);
+      container.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, []);
 
   const ALL_LABELS: CardLabel[] = ['red', 'yellow', 'green', 'blue', 'purple', 'gray'];
   const LABEL_COLORS: Record<CardLabel, string> = {
@@ -459,6 +509,17 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
             </PopoverContent>
           </Popover>
 
+          {/* Share Board */}
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setIsShareDialogOpen(true)}
+            className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
+          >
+            <Share2 className="w-4 h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+
           <ArchiveView boardId={board.id} />
 
           {/* Save as Template */}
@@ -541,7 +602,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin">
+        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab">
           <div className="h-full flex items-start gap-4 p-4 min-w-max">
             <SortableContext
               items={visibleColumns.map((c) => c.id)}
@@ -570,6 +631,16 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
           </div>
         </div>
       </DndContext>
+
+      {/* Share Board Dialog */}
+      <ShareBoardDialog
+        boardId={board.id}
+        boardName={board.name}
+        isPublic={board.isPublic ?? false}
+        embedEnabled={board.embedEnabled ?? false}
+        isOpen={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+      />
 
       {/* Add Column Dialog */}
       <Dialog open={isAddColumnDialogOpen} onOpenChange={setIsAddColumnDialogOpen}>

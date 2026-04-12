@@ -75,6 +75,8 @@ export function useBoards({ userId, enabled = true }: UseBoardsOptions) {
         name: newBoard.name,
         description: newBoard.description || null,
         data: { columns: [] },
+        is_public: false,
+        embed_enabled: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }

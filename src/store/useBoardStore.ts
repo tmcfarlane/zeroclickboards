@@ -48,6 +48,9 @@ interface BoardStore extends AppState {
 
   setViewMode: (mode: 'board' | 'timeline') => void;
 
+  toggleBoardPublic: (boardId: string, isPublic: boolean) => void;
+  toggleBoardEmbed: (boardId: string, enabled: boolean) => void;
+
   getActiveBoard: () => Board | null;
   getBoards: () => Board[];
   getBoardsForUser: (userId: string | null) => Board[];
@@ -115,6 +118,8 @@ function ensureBoardsSubscription(userId: string) {
             createdAt: r.created_at,
             updatedAt: r.updated_at,
             userId: r.user_id,
+            isPublic: typeof r.is_public === 'boolean' ? r.is_public : false,
+            embedEnabled: typeof r.embed_enabled === 'boolean' ? r.embed_enabled : false,
           };
         };
 
@@ -231,6 +236,8 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       userId: row.user_id,
+      isPublic: row.is_public ?? false,
+      embedEnabled: row.embed_enabled ?? false,
     }));
 
     set((state) => {
@@ -750,6 +757,50 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
   setViewMode: (mode) => {
     set({ viewMode: mode });
+  },
+
+  toggleBoardPublic: (boardId, isPublic) => {
+    set((state) => ({
+      boards: state.boards.map((b) =>
+        b.id === boardId ? { ...b, isPublic, updatedAt: new Date().toISOString() } : b
+      ),
+    }));
+    const userId = get().currentUserId;
+    if (userId) {
+      supabase
+        .from('boards')
+        .update({ is_public: isPublic, updated_at: new Date().toISOString() })
+        .eq('id', boardId)
+        .eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('[boards] toggle public failed:', error.message);
+            toast.error('Failed to update board visibility');
+          }
+        });
+    }
+  },
+
+  toggleBoardEmbed: (boardId, enabled) => {
+    set((state) => ({
+      boards: state.boards.map((b) =>
+        b.id === boardId ? { ...b, embedEnabled: enabled, updatedAt: new Date().toISOString() } : b
+      ),
+    }));
+    const userId = get().currentUserId;
+    if (userId) {
+      supabase
+        .from('boards')
+        .update({ embed_enabled: enabled, updated_at: new Date().toISOString() })
+        .eq('id', boardId)
+        .eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('[boards] toggle embed failed:', error.message);
+            toast.error('Failed to update embed settings');
+          }
+        });
+    }
   },
 
   getActiveBoard: () => {

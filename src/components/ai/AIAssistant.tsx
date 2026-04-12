@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useAuthContext } from '@/components/auth/AuthProvider';
 import type { AICommand, AIMessage } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +25,20 @@ function validateCommand(v: unknown): AICommand | null {
   };
 }
 
-async function parseCommandWithAI(input: string, context: string, lastCommand?: { type: string; params: Record<string, unknown> }): Promise<AICommand[] | null> {
+async function parseCommandWithAI(input: string, context: string, lastCommand?: { type: string; params: Record<string, unknown> }, accessToken?: string | null): Promise<AICommand[] | null> {
   try {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
     const res = await fetch('/api/ai/command', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers,
       body: JSON.stringify({ text: input, context, lastCommand }),
     });
+    if (res.status === 403) {
+      return [{ type: 'unknown', params: {}, originalText: 'AI_SUBSCRIPTION_REQUIRED' }];
+    }
     if (!res.ok) return null;
     const json: unknown = await res.json();
     if (!json || typeof json !== 'object') return null;
@@ -322,19 +330,20 @@ const QUICK_ACTIONS = [
 ];
 
 export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
-  const { 
-    activeBoardId, 
-    createBoard, 
-    addColumn, 
-    removeColumn, 
+  const {
+    activeBoardId,
+    createBoard,
+    addColumn,
+    removeColumn,
     renameColumn,
-    addCard, 
-    removeCard, 
-    moveCard, 
+    addCard,
+    removeCard,
+    moveCard,
     editCard,
     setViewMode,
     getActiveBoard,
   } = useBoardStore();
+  const { session } = useAuthContext();
   
   const [messages, setMessages] = useState<AIMessage[]>([
     {
@@ -644,7 +653,7 @@ export function AIAssistant({ isOpen, onClose }: AIAssistantProps) {
     const lastMsg = [...messages].reverse().find(m => m.role === 'assistant' && m.command && m.command.type !== 'unknown');
     const lastCommand = lastMsg?.command ? { type: lastMsg.command.type, params: lastMsg.command.params } : undefined;
 
-    const commands = (await parseCommandWithAI(userMessage.content, boardContext, lastCommand)) ?? parseCommandLocal(userMessage.content);
+    const commands = (await parseCommandWithAI(userMessage.content, boardContext, lastCommand, session?.access_token)) ?? parseCommandLocal(userMessage.content);
 
     const results: string[] = [];
     for (let i = 0; i < commands.length; i++) {

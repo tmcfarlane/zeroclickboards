@@ -85,7 +85,7 @@ function claudeLocalPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [inspectAttr(), react(), claudeLocalPlugin()],
   resolve: {
     alias: {

@@ -177,7 +177,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
         {/* Column Content */}
         <div className={`flex-1 bg-[#111515]/50 backdrop-blur-sm border border-t-0 rounded-b-lg overflow-hidden flex flex-col transition-colors duration-200 ${isDragOver ? 'border-[#78fcd6]/40 bg-[#78fcd6]/5' : 'border-white/10'}`}>
           {/* Cards List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin min-h-[100px]">
+          <div data-column-cards className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin min-h-[100px]">
             <SortableContext
               items={column.cards.filter((c) => !c.isArchived).map((c) => c.id)}
               strategy={verticalListSortingStrategy}

@@ -1,3 +1,5 @@
+import { getUserFromRequest, hasActiveSubscription } from '../_lib/auth';
+
 export const config = {
   runtime: 'nodejs',
 };
@@ -59,6 +61,17 @@ function isAICommand(value: unknown): value is AICommand {
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
     return jsonResponse(405, { error: 'Method not allowed' });
+  }
+
+  // Auth + subscription gating
+  const authUser = await getUserFromRequest(req);
+  if (!authUser) {
+    return jsonResponse(401, { error: 'Unauthorized' });
+  }
+
+  const subscribed = await hasActiveSubscription(authUser.userId);
+  if (!subscribed) {
+    return jsonResponse(403, { error: 'AI_SUBSCRIPTION_REQUIRED' });
   }
 
   const apiKey = process.env.AI_GATEWAY_API_KEY;

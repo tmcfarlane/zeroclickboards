@@ -15,6 +15,7 @@ export interface Database {
           email: string
           full_name: string | null
           avatar_url: string | null
+          stripe_customer_id: string | null
           created_at: string
         }
         Insert: {
@@ -22,6 +23,7 @@ export interface Database {
           email: string
           full_name?: string | null
           avatar_url?: string | null
+          stripe_customer_id?: string | null
           created_at?: string
         }
         Update: {
@@ -29,6 +31,7 @@ export interface Database {
           email?: string
           full_name?: string | null
           avatar_url?: string | null
+          stripe_customer_id?: string | null
           created_at?: string
         }
         Relationships: []
@@ -40,6 +43,8 @@ export interface Database {
           name: string
           description: string | null
           data: Json | null
+          is_public: boolean
+          embed_enabled: boolean
           created_at: string
           updated_at: string
         }
@@ -49,6 +54,8 @@ export interface Database {
           name: string
           description?: string | null
           data?: Json | null
+          is_public?: boolean
+          embed_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -58,6 +65,8 @@ export interface Database {
           name?: string
           description?: string | null
           data?: Json | null
+          is_public?: boolean
+          embed_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -165,6 +174,102 @@ export interface Database {
         }
         Relationships: []
       }
+      board_members: {
+        Row: {
+          id: string
+          board_id: string
+          user_id: string
+          role: string
+          invited_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          board_id: string
+          user_id: string
+          role?: string
+          invited_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          board_id?: string
+          user_id?: string
+          role?: string
+          invited_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          status: string
+          current_period_start: string | null
+          current_period_end: string | null
+          cancel_at_period_end: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_customer_id: string
+          stripe_subscription_id: string
+          status?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string
+          status?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          id: string
+          user_id: string | null
+          title: string
+          description: string
+          category: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          title: string
+          description: string
+          category?: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          title?: string
+          description?: string
+          category?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -200,3 +305,15 @@ export type UpdateBoard = UpdateTables<'boards'>
 export type UpdateColumn = UpdateTables<'columns'>
 export type UpdateCard = UpdateTables<'cards'>
 export type UpdateCardActivity = UpdateTables<'card_activities'>
+
+export type BoardMemberRow = Tables<'board_members'>
+export type SubscriptionRow = Tables<'subscriptions'>
+export type FeedbackRow = Tables<'feedback'>
+
+export type InsertBoardMember = InsertTables<'board_members'>
+export type InsertSubscription = InsertTables<'subscriptions'>
+export type InsertFeedback = InsertTables<'feedback'>
+
+export type UpdateBoardMember = UpdateTables<'board_members'>
+export type UpdateSubscription = UpdateTables<'subscriptions'>
+export type UpdateFeedback = UpdateTables<'feedback'>
