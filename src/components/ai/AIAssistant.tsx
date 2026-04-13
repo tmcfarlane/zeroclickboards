@@ -1494,13 +1494,13 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="What should we do next?"
-              className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-10"
+              className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-11 sm:h-10 text-base sm:text-sm"
               disabled={isProcessing}
             />
             <Button
               onClick={() => handleSend()}
               disabled={!input.trim() || isProcessing}
-              className="h-10 w-10 p-0 gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
+              className="h-11 w-11 sm:h-10 sm:w-10 p-0 gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
             </Button>

@@ -430,14 +430,14 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
           )}
 
           {/* Search */}
-          <div className="relative">
+          <div className="relative min-w-0 shrink">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
             <Input
               id="board-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search cards... (press /)"
-              className="w-full sm:w-64 pl-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-9"
+              placeholder="Search... (/)"
+              className="w-32 sm:w-64 pl-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-9"
             />
           </div>
 
