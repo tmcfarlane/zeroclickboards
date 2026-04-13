@@ -57,6 +57,7 @@ export function UserProfile({ onSignInClick }: UserProfileProps) {
               <img
                 src={String(user.user_metadata.avatar_url)}
                 alt="User avatar"
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
               />
             ) : (

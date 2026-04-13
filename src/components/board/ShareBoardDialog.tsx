@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Lock, Copy, Check, X, Code, User, Send } from 'lucide-react';
+import { Globe, Lock, Copy, Check, X, Code, User, Send, Shield } from 'lucide-react';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -108,164 +109,219 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
           <DialogTitle>Share "{boardName}"</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Public / Private Toggle */}
-          <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-            <div className="flex items-center gap-3">
-              {isPublic ? <Globe className="w-4 h-4 text-[#78fcd6]" /> : <Lock className="w-4 h-4 text-[#A8B2B2]" />}
-              <div>
-                <div className="text-sm font-medium">{isPublic ? 'Public' : 'Private'}</div>
-                <div className="text-xs text-[#A8B2B2]">
-                  {isPublic ? 'Anyone with the link can view' : 'Only invited members can access'}
-                </div>
-              </div>
-            </div>
-            <Switch
-              checked={isPublic}
-              onCheckedChange={(checked) => toggleBoardPublic(boardId, checked)}
-            />
-          </div>
+        <Tabs defaultValue="share" className="w-full">
+          <TabsList className="w-full bg-white/5 border border-white/10">
+            <TabsTrigger value="share" className="flex-1 data-[state=active]:bg-white/10 data-[state=active]:text-[#78fcd6]">
+              <Send className="w-3.5 h-3.5 mr-1.5" />
+              Share
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="flex-1 data-[state=active]:bg-white/10 data-[state=active]:text-[#78fcd6]">
+              <Shield className="w-3.5 h-3.5 mr-1.5" />
+              Permissions
+              {members.length > 0 && (
+                <span className="ml-1.5 text-[10px] bg-[#78fcd6]/20 text-[#78fcd6] rounded-full px-1.5">{members.length}</span>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Invite by email */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Invite by email</label>
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="Enter email address..."
-                className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
-              />
-              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as MemberRole)}>
-                <SelectTrigger className="w-28 bg-white/5 border-white/10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#111515] border-white/10">
-                  <SelectItem value="viewer">View</SelectItem>
-                  <SelectItem value="commenter">Comment</SelectItem>
-                  <SelectItem value="editor">Modify</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                size="icon"
-                onClick={handleInviteByEmail}
-                disabled={!inviteEmail.trim() || inviting}
-                className="bg-[#78fcd6] hover:bg-[#78fcd6]/80 text-[#111515] flex-shrink-0"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Shareable Link */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Shareable link</label>
-            <div className="flex gap-2">
-              <Input
-                value={shareUrl}
-                readOnly
-                className="bg-white/5 border-white/10 text-[#A8B2B2] text-sm"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => copyToClipboard(shareUrl, 'link')}
-                className="border-white/10 hover:bg-white/5 flex-shrink-0"
-              >
-                {copied ? <Check className="w-4 h-4 text-[#78fcd6]" /> : <Copy className="w-4 h-4" />}
-              </Button>
-            </div>
-          </div>
-
-          {/* Members list */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Members</label>
-            <div className="space-y-1 max-h-40 overflow-y-auto">
-              {/* Owner */}
-              <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#A8B2B2]" />
-                  <span className="text-sm">You</span>
-                </div>
-                <span className="text-xs text-[#78fcd6] font-medium">Owner</span>
-              </div>
-
-              {/* Other members */}
-              {members.map((member) => (
-                <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <User className="w-4 h-4 text-[#A8B2B2] flex-shrink-0" />
-                    <span className="text-sm truncate">{member.profiles?.email ?? 'Unknown'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={member.role}
-                      onValueChange={(v) => handleUpdateRole(member.id, member.user_id, v as MemberRole)}
-                    >
-                      <SelectTrigger className="w-24 h-7 text-xs bg-white/5 border-white/10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#111515] border-white/10">
-                        <SelectItem value="viewer">View</SelectItem>
-                        <SelectItem value="commenter">Comment</SelectItem>
-                        <SelectItem value="editor">Modify</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMember(member.user_id)}
-                      className="p-1 hover:bg-white/10 rounded text-[#A8B2B2] hover:text-red-400"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+          {/* ── Share Tab ── */}
+          <TabsContent value="share" className="space-y-5 mt-4">
+            {/* Public / Private Toggle */}
+            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+              <div className="flex items-center gap-3">
+                {isPublic ? <Globe className="w-4 h-4 text-[#78fcd6]" /> : <Lock className="w-4 h-4 text-[#A8B2B2]" />}
+                <div>
+                  <div className="text-sm font-medium">{isPublic ? 'Public' : 'Private'}</div>
+                  <div className="text-xs text-[#A8B2B2]">
+                    {isPublic ? 'Anyone with the link can view' : 'Only invited members can access'}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Embed Settings */}
-          <div className="space-y-3 pt-2 border-t border-white/5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Code className="w-4 h-4 text-[#A8B2B2]" />
-                <span className="text-sm font-medium">Enable Embedding</span>
               </div>
               <Switch
-                checked={embedEnabled}
-                onCheckedChange={(checked) => toggleBoardEmbed(boardId, checked)}
+                checked={isPublic}
+                onCheckedChange={(checked) => toggleBoardPublic(boardId, checked)}
               />
             </div>
-            {embedEnabled && (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    value={embedSnippet}
-                    readOnly
-                    className="bg-white/5 border-white/10 text-[#A8B2B2] text-xs font-mono"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => copyToClipboard(embedSnippet, 'embed')}
-                    className="border-white/10 hover:bg-white/5 flex-shrink-0"
-                  >
-                    {embedCopied ? <Check className="w-4 h-4 text-[#78fcd6]" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <a
-                  href={`/embed/${boardId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-[#78fcd6] hover:underline"
+
+            {/* Invite by email */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Invite by email</label>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="Enter email address..."
+                  className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
+                />
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as MemberRole)}>
+                  <SelectTrigger className="w-28 bg-white/5 border-white/10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#111515] border-white/10">
+                    <SelectItem value="viewer">View</SelectItem>
+                    <SelectItem value="commenter">Comment</SelectItem>
+                    <SelectItem value="editor">Modify</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="icon"
+                  onClick={handleInviteByEmail}
+                  disabled={!inviteEmail.trim() || inviting}
+                  className="bg-[#78fcd6] hover:bg-[#78fcd6]/80 text-[#111515] flex-shrink-0"
                 >
-                  Preview embed in new tab
-                </a>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Shareable Link */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Shareable link</label>
+              <div className="flex gap-2">
+                <Input
+                  value={shareUrl}
+                  readOnly
+                  className="bg-white/5 border-white/10 text-[#A8B2B2] text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(shareUrl, 'link')}
+                  className="border-white/10 hover:bg-white/5 flex-shrink-0"
+                >
+                  {copied ? <Check className="w-4 h-4 text-[#78fcd6]" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Embed Settings */}
+            <div className="space-y-3 pt-2 border-t border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Code className="w-4 h-4 text-[#A8B2B2]" />
+                  <span className="text-sm font-medium">Enable Embedding</span>
+                </div>
+                <Switch
+                  checked={embedEnabled}
+                  onCheckedChange={(checked) => toggleBoardEmbed(boardId, checked)}
+                />
+              </div>
+              {embedEnabled && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      value={embedSnippet}
+                      readOnly
+                      className="bg-white/5 border-white/10 text-[#A8B2B2] text-xs font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => copyToClipboard(embedSnippet, 'embed')}
+                      className="border-white/10 hover:bg-white/5 flex-shrink-0"
+                    >
+                      {embedCopied ? <Check className="w-4 h-4 text-[#78fcd6]" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <a
+                    href={`/embed/${boardId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-[#78fcd6] hover:underline"
+                  >
+                    Preview embed in new tab
+                  </a>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* ── Permissions Tab ── */}
+          <TabsContent value="permissions" className="space-y-4 mt-4">
+            {/* Owner */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#78fcd6]/20 flex items-center justify-center">
+                  <User className="w-4 h-4 text-[#78fcd6]" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium">You</div>
+                  <div className="text-xs text-[#A8B2B2]">Board owner</div>
+                </div>
+              </div>
+              <span className="text-xs text-[#78fcd6] font-medium bg-[#78fcd6]/10 px-2.5 py-1 rounded-full">Owner</span>
+            </div>
+
+            {/* Members */}
+            {members.length > 0 ? (
+              <div className="space-y-1">
+                {members.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-[#A8B2B2]" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {member.profiles?.full_name || member.profiles?.email?.split('@')[0] || 'Unknown'}
+                        </div>
+                        <div className="text-xs text-[#A8B2B2] truncate">{member.profiles?.email ?? ''}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={member.role}
+                        onValueChange={(v) => handleUpdateRole(member.id, member.user_id, v as MemberRole)}
+                      >
+                        <SelectTrigger className="w-24 h-7 text-xs bg-white/5 border-white/10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#111515] border-white/10">
+                          <SelectItem value="viewer">View</SelectItem>
+                          <SelectItem value="commenter">Comment</SelectItem>
+                          <SelectItem value="editor">Modify</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(member.user_id)}
+                        className="p-1 hover:bg-white/10 rounded text-[#A8B2B2] hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Shield className="w-8 h-8 text-[#A8B2B2]/30 mx-auto mb-2" />
+                <p className="text-sm text-[#A8B2B2]">No members yet</p>
+                <p className="text-xs text-[#A8B2B2]/60 mt-1">Invite people from the Share tab to collaborate</p>
               </div>
             )}
-          </div>
-        </div>
+
+            {/* Permission legend */}
+            <div className="pt-3 border-t border-white/5 space-y-2">
+              <p className="text-xs font-medium text-[#A8B2B2]">Permission levels</p>
+              <div className="grid grid-cols-3 gap-2 text-xs text-[#A8B2B2]/80">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium text-[#F2F7F7]">View</span>
+                  <span>Can see the board</span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium text-[#F2F7F7]">Comment</span>
+                  <span>View + add comments</span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-medium text-[#F2F7F7]">Modify</span>
+                  <span>Full edit access</span>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

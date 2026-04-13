@@ -153,7 +153,7 @@ export function AdminPage() {
                       <td className="py-2.5 pr-4">
                         <div className="flex items-center gap-2">
                           {u.avatar_url ? (
-                            <img src={u.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                            <img src={u.avatar_url} alt="" referrerPolicy="no-referrer" className="w-6 h-6 rounded-full object-cover" />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center">
                               <Users className="w-3 h-3 text-[#A8B2B2]" />

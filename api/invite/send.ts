@@ -50,7 +50,15 @@ export default async function handler(req: Request) {
     if (inviterProfile?.full_name) inviterName = inviterProfile.full_name
     else if (inviterProfile?.email) inviterName = inviterProfile.email
 
-    // If invitee already has an account, add them as a board member
+    // Always store a pending invite (works for any email)
+    await supabase
+      .from('board_invites')
+      .upsert(
+        { board_id: boardId, email, role, invited_by: user.userId, board_name: boardName },
+        { onConflict: 'board_id,email' }
+      )
+
+    // If invitee already has an account, also add them as a member immediately
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id')
@@ -64,6 +72,12 @@ export default async function handler(req: Request) {
           { board_id: boardId, user_id: existingProfile.id, role, invited_by: user.userId },
           { onConflict: 'board_id,user_id' }
         )
+      // Clean up the invite since they're already a member
+      await supabase
+        .from('board_invites')
+        .delete()
+        .eq('board_id', boardId)
+        .eq('email', email)
     }
   }
 

@@ -90,37 +90,61 @@ create policy "boards_delete_own" on public.boards
 
 drop policy if exists "columns_select_own" on public.columns;
 drop policy if exists "columns_insert_own" on public.columns;
+drop policy if exists "columns_insert_accessible" on public.columns;
 drop policy if exists "columns_update_own" on public.columns;
+drop policy if exists "columns_update_accessible" on public.columns;
 drop policy if exists "columns_delete_own" on public.columns;
+drop policy if exists "columns_delete_accessible" on public.columns;
 
 create policy "columns_select_own" on public.columns
   for select using (auth.uid() = user_id);
 
-create policy "columns_insert_own" on public.columns
-  for insert with check (auth.uid() = user_id);
+create policy "columns_insert_accessible" on public.columns
+  for insert with check (
+    auth.uid() = user_id
+    OR board_id IN (select public.get_editable_board_ids_for_user(auth.uid()))
+  );
 
-create policy "columns_update_own" on public.columns
-  for update using (auth.uid() = user_id);
+create policy "columns_update_accessible" on public.columns
+  for update using (
+    auth.uid() = user_id
+    OR board_id IN (select public.get_editable_board_ids_for_user(auth.uid()))
+  );
 
-create policy "columns_delete_own" on public.columns
-  for delete using (auth.uid() = user_id);
+create policy "columns_delete_accessible" on public.columns
+  for delete using (
+    auth.uid() = user_id
+    OR board_id IN (select public.get_editable_board_ids_for_user(auth.uid()))
+  );
 
 drop policy if exists "cards_select_own" on public.cards;
 drop policy if exists "cards_insert_own" on public.cards;
+drop policy if exists "cards_insert_accessible" on public.cards;
 drop policy if exists "cards_update_own" on public.cards;
+drop policy if exists "cards_update_accessible" on public.cards;
 drop policy if exists "cards_delete_own" on public.cards;
+drop policy if exists "cards_delete_accessible" on public.cards;
 
 create policy "cards_select_own" on public.cards
   for select using (auth.uid() = user_id);
 
-create policy "cards_insert_own" on public.cards
-  for insert with check (auth.uid() = user_id);
+create policy "cards_insert_accessible" on public.cards
+  for insert with check (
+    auth.uid() = user_id
+    OR board_id IN (select public.get_editable_board_ids_for_user(auth.uid()))
+  );
 
-create policy "cards_update_own" on public.cards
-  for update using (auth.uid() = user_id);
+create policy "cards_update_accessible" on public.cards
+  for update using (
+    auth.uid() = user_id
+    OR board_id IN (select public.get_editable_board_ids_for_user(auth.uid()))
+  );
 
-create policy "cards_delete_own" on public.cards
-  for delete using (auth.uid() = user_id);
+create policy "cards_delete_accessible" on public.cards
+  for delete using (
+    auth.uid() = user_id
+    OR board_id IN (select public.get_editable_board_ids_for_user(auth.uid()))
+  );
 
 drop policy if exists "card_activities_select_own" on public.card_activities;
 drop policy if exists "card_activities_insert_own" on public.card_activities;
@@ -181,6 +205,16 @@ security definer
 set search_path = public
 as $$
   select board_id from public.board_members where user_id = p_user_id;
+$$;
+
+create or replace function public.get_editable_board_ids_for_user(p_user_id uuid)
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select board_id from public.board_members where user_id = p_user_id and role = 'editor';
 $$;
 
 drop policy if exists "board_members_select" on public.board_members;

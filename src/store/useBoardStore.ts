@@ -234,19 +234,46 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     if (!userId) return;
     set({ remoteStatus: 'loading', remoteError: null });
 
-    const { data, error } = await supabase
-      .from('boards')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
+    // Fetch owned boards and shared boards in parallel
+    const [ownResult, memberResult] = await Promise.all([
+      supabase
+        .from('boards')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from('board_members')
+        .select('board_id')
+        .eq('user_id', userId),
+    ]);
 
-    if (error) {
-      set({ remoteStatus: 'error', remoteError: error.message });
+    if (ownResult.error) {
+      set({ remoteStatus: 'error', remoteError: ownResult.error.message });
       toast.error('Failed to load boards');
       return;
     }
 
-    const nextBoards: Board[] = (data || []).map((row) => ({
+    let sharedBoards: typeof ownResult.data = [];
+    if (memberResult.data && memberResult.data.length > 0) {
+      const sharedIds = memberResult.data.map((m) => m.board_id);
+      const { data: shared } = await supabase
+        .from('boards')
+        .select('*')
+        .in('id', sharedIds)
+        .order('created_at', { ascending: true });
+      if (shared) sharedBoards = shared;
+    }
+
+    // Merge and deduplicate
+    const allRows = [...(ownResult.data || []), ...sharedBoards];
+    const seen = new Set<string>();
+    const data = allRows.filter((row) => {
+      if (seen.has(row.id)) return false;
+      seen.add(row.id);
+      return true;
+    });
+
+    const nextBoards: Board[] = data.map((row) => ({
       id: row.id,
       name: row.name,
       description: row.description ?? undefined,

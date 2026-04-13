@@ -97,6 +97,7 @@ export function AccountPage() {
                 <img
                   src={String(user.user_metadata.avatar_url)}
                   alt="Avatar"
+                  referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                 />
               ) : (
