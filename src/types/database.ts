@@ -581,3 +581,33 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// Convenience row type aliases
+export type Profile = Tables<'profiles'>
+export type BoardRow = Tables<'boards'>
+export type ColumnRow = Tables<'columns'>
+export type CardRow = Tables<'cards'>
+export type CardActivity = Tables<'card_activities'>
+export type BoardMemberRow = Tables<'board_members'>
+export type SubscriptionRow = Tables<'subscriptions'>
+export type FeedbackRow = Tables<'feedback'>
+
+// Convenience insert type aliases
+export type InsertProfile = TablesInsert<'profiles'>
+export type InsertBoard = TablesInsert<'boards'>
+export type InsertColumn = TablesInsert<'columns'>
+export type InsertCard = TablesInsert<'cards'>
+export type InsertCardActivity = TablesInsert<'card_activities'>
+export type InsertBoardMember = TablesInsert<'board_members'>
+export type InsertSubscription = TablesInsert<'subscriptions'>
+export type InsertFeedback = TablesInsert<'feedback'>
+
+// Convenience update type aliases
+export type UpdateProfile = TablesUpdate<'profiles'>
+export type UpdateBoard = TablesUpdate<'boards'>
+export type UpdateColumn = TablesUpdate<'columns'>
+export type UpdateCard = TablesUpdate<'cards'>
+export type UpdateCardActivity = TablesUpdate<'card_activities'>
+export type UpdateBoardMember = TablesUpdate<'board_members'>
+export type UpdateSubscription = TablesUpdate<'subscriptions'>
+export type UpdateFeedback = TablesUpdate<'feedback'>

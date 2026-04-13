@@ -77,7 +77,7 @@ export async function getMembership(boardId: string, userId: string): Promise<Da
   return { data, error }
 }
 
-export async function searchProfiles(email: string): Promise<DatabaseResponse<{ id: string; email: string; full_name: string | null; avatar_url: string | null }[]>> {
+export async function searchProfiles(email: string): Promise<DatabaseResponse<{ id: string; email: string | null; full_name: string | null; avatar_url: string | null }[]>> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, email, full_name, avatar_url')
