@@ -1,6 +1,6 @@
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, isAdmin, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD, FREE_DAILY_AI_ABUSE_LIMIT } from '../_lib/auth';
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, isAdmin, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD, FREE_DAILY_AI_ABUSE_LIMIT } from '../_lib/auth.js';
 
 export const config = {
   runtime: 'nodejs',

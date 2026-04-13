@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { getUserFromRequest, getHeader, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, getHeader, jsonResponse } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 

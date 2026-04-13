@@ -2,7 +2,7 @@ import {
   getUserFromRequest,
   createServiceClient,
   jsonResponse,
-} from "../_lib/auth";
+} from "../_lib/auth.js";
 import { Resend } from "resend";
 
 export const config = { runtime: "nodejs", maxDuration: 15 };

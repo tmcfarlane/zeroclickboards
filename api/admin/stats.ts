@@ -1,4 +1,4 @@
-import { getUserFromRequest, isAdmin, createServiceClient, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, isAdmin, createServiceClient, jsonResponse } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
@@ -48,7 +48,7 @@ export default async function handler(req: Request) {
     ? await service.from('profiles').select('id, email, full_name').in('id', subUserIds)
     : { data: [] }
 
-  const profileMap = new Map((subProfiles ?? []).map(p => [p.id, p]))
+  const profileMap = new Map((subProfiles ?? []).map(p => [p.id, p as { email?: string; full_name?: string }]))
   const enrichedSubs = recentSubs.map(s => ({
     ...s,
     user_email: profileMap.get(s.user_id)?.email ?? 'Unknown',

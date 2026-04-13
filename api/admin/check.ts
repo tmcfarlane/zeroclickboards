@@ -1,4 +1,4 @@
-import { getUserFromRequest, isAdmin, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, isAdmin, jsonResponse } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 10 }
 

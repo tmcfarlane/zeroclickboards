@@ -1,4 +1,4 @@
-import { getUserFromRequest, hasActiveSubscription, createAuthenticatedClient, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, hasActiveSubscription, createAuthenticatedClient, jsonResponse } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 

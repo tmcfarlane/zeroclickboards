@@ -1,4 +1,4 @@
-import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, isAdmin, jsonResponse, FREE_DAILY_AI_LIMIT } from '../_lib/auth'
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, isAdmin, jsonResponse, FREE_DAILY_AI_LIMIT } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
