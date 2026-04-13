@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Lock, Copy, Check, X, Code, User, Send, Shield } from 'lucide-react';
+import { Globe, Lock, Copy, Check, X, Code, User, Send, Shield, Clock, Mail } from 'lucide-react';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -31,16 +31,22 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
   const [copied, setCopied] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<{ id: string; email: string; role: string; created_at: string }[]>([]);
 
   const shareUrl = `${window.location.origin}/board/${boardId}`;
   const embedSnippet = `<iframe src="${window.location.origin}/embed/${boardId}" width="100%" height="600" frameborder="0"></iframe>`;
 
+  const refreshData = async () => {
+    const [membersResult, invitesResult] = await Promise.all([
+      boardMembers.getMembers(boardId),
+      supabase.from('board_invites').select('id, email, role, created_at').eq('board_id', boardId),
+    ]);
+    if (membersResult.data) setMembers(membersResult.data);
+    if (invitesResult.data) setPendingInvites(invitesResult.data);
+  };
+
   useEffect(() => {
-    if (isOpen) {
-      boardMembers.getMembers(boardId).then(({ data }) => {
-        if (data) setMembers(data);
-      });
-    }
+    if (isOpen) { void refreshData(); }
   }, [isOpen, boardId]);
 
   const handleInviteByEmail = async () => {
@@ -67,9 +73,20 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
 
       toast.success(`Invitation sent to ${email}`);
       setInviteEmail('');
+      void refreshData();
     } finally {
       setInviting(false);
     }
+  };
+
+  const handleRevokeInvite = async (inviteId: string) => {
+    const { error } = await supabase.from('board_invites').delete().eq('id', inviteId);
+    if (error) {
+      toast.error('Failed to revoke invite');
+      return;
+    }
+    setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+    toast.success('Invite revoked');
   };
 
   const handleUpdateRole = async (memberId: string, memberUserId: string, role: MemberRole) => {
@@ -118,8 +135,8 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
             <TabsTrigger value="permissions" className="flex-1 data-[state=active]:bg-white/10 data-[state=active]:text-[#78fcd6]">
               <Shield className="w-3.5 h-3.5 mr-1.5" />
               Permissions
-              {members.length > 0 && (
-                <span className="ml-1.5 text-[10px] bg-[#78fcd6]/20 text-[#78fcd6] rounded-full px-1.5">{members.length}</span>
+              {(members.length + pendingInvites.length) > 0 && (
+                <span className="ml-1.5 text-[10px] bg-[#78fcd6]/20 text-[#78fcd6] rounded-full px-1.5">{members.length + pendingInvites.length}</span>
               )}
             </TabsTrigger>
           </TabsList>
@@ -254,8 +271,9 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
             </div>
 
             {/* Members */}
-            {members.length > 0 ? (
+            {members.length > 0 && (
               <div className="space-y-1">
+                <p className="text-xs font-medium text-[#A8B2B2] mb-2">Active Members</p>
                 {members.map((member) => (
                   <div key={member.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
@@ -294,7 +312,41 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
                   </div>
                 ))}
               </div>
-            ) : (
+            )}
+
+            {/* Pending Invites */}
+            {pendingInvites.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-[#A8B2B2] mb-2">Pending Invites</p>
+                {pendingInvites.map((invite) => (
+                  <div key={invite.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                        <Mail className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{invite.email}</div>
+                        <div className="flex items-center gap-1 text-xs text-amber-400">
+                          <Clock className="w-3 h-3" />
+                          <span>Pending</span>
+                          <span className="text-[#A8B2B2]">as {invite.role === 'editor' ? 'Modify' : invite.role === 'commenter' ? 'Comment' : 'View'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeInvite(invite.id)}
+                      className="p-1 hover:bg-white/10 rounded text-[#A8B2B2] hover:text-red-400 transition-colors"
+                      title="Revoke invite"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {members.length === 0 && pendingInvites.length === 0 && (
               <div className="text-center py-6">
                 <Shield className="w-8 h-8 text-[#A8B2B2]/30 mx-auto mb-2" />
                 <p className="text-sm text-[#A8B2B2]">No members yet</p>

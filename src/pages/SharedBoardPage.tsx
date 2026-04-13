@@ -1,7 +1,8 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useBoardStore } from '@/store/useBoardStore';
 import { ReadOnlyBoard } from '@/components/board/ReadOnlyBoard';
 import { SignInModal } from '@/components/auth/SignInModal';
 import type { Board, Column } from '@/types';
@@ -57,6 +58,7 @@ function AccessBadge({ level }: { level: AccessLevel }) {
 export function SharedBoardPage() {
   const { boardId } = useParams<{ boardId: string }>();
   const { userId, isLoaded } = useAuth();
+  const navigate = useNavigate();
 
   const [board, setBoard] = useState<SharedBoard | null>(null);
   const [accessLevel, setAccessLevel] = useState<AccessLevel | null>(null);
@@ -64,6 +66,24 @@ export function SharedBoardPage() {
   const [noAccess, setNoAccess] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [inviteBoardName, setInviteBoardName] = useState<string | null>(null);
+  const { setCurrentUserId, refreshFromRemote, setActiveBoard, remoteStatus } = useBoardStore();
+
+  // Initialize the store for editors so KanbanBoard mutations work
+  useEffect(() => {
+    if (!userId) return;
+    setCurrentUserId(userId);
+  }, [userId, setCurrentUserId]);
+
+  useEffect(() => {
+    if (!userId || remoteStatus !== 'idle') return;
+    void refreshFromRemote();
+  }, [userId, remoteStatus, refreshFromRemote]);
+
+  // Set active board once store is loaded
+  useEffect(() => {
+    if (!boardId || remoteStatus !== 'ready') return;
+    setActiveBoard(boardId);
+  }, [boardId, remoteStatus, setActiveBoard]);
 
   // Fetch board name from invites for the sign-in screen (no auth needed)
   useEffect(() => {
@@ -157,6 +177,16 @@ export function SharedBoardPage() {
     return () => { cancelled = true; };
   }, [boardId, userId, isLoaded]);
 
+  const canEdit = accessLevel === 'owner' || accessLevel === 'editor';
+
+  // Editors/owners get the full app experience — redirect to /app with the board active
+  useEffect(() => {
+    if (canEdit && boardId && remoteStatus === 'ready') {
+      setActiveBoard(boardId);
+      navigate(`/app?board=${boardId}`, { replace: true });
+    }
+  }, [canEdit, boardId, remoteStatus, setActiveBoard, navigate]);
+
   // ── Render ──
 
   if (!isLoaded) {
@@ -224,14 +254,21 @@ export function SharedBoardPage() {
     );
   }
 
-  const canEdit = accessLevel === 'owner' || accessLevel === 'editor';
+  // While waiting for redirect, show spinner
+  if (canEdit) {
+    return (
+      <div className="min-h-screen bg-[#0B0F0F] flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-[#78fcd6] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
+  // Read-only viewers get a minimal board view
   return (
     <div className="min-h-screen bg-[#0B0F0F] flex flex-col">
-      {/* Minimal header */}
       <header className="flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#111515]">
         <Link to="/" className="flex items-center gap-2 text-[#F2F7F7] hover:text-[#78fcd6] transition-colors">
-          <span className="gradient-cyan text-xl font-black">Z</span>
+          <img src="/logo/logo_color.svg" alt="ZeroBoard" className="w-7 h-7" />
           <span className="text-sm font-semibold">ZeroBoard</span>
         </Link>
         <div className="flex items-center gap-3">
@@ -239,36 +276,9 @@ export function SharedBoardPage() {
           <AccessBadge level={accessLevel} />
         </div>
       </header>
-
-      {/* Board content */}
       <div className="flex-1">
-        {canEdit ? (
-          // Full KanbanBoard — lazy import to avoid pulling in the full store when not needed
-          <FullBoardWrapper board={board} />
-        ) : (
-          <ReadOnlyBoard board={board} />
-        )}
+        <ReadOnlyBoard board={board} />
       </div>
     </div>
-  );
-}
-
-// ─── Lazy full board wrapper ────────────────────────────────────────────────────
-
-const KanbanBoard = lazy(() =>
-  import('@/components/board/KanbanBoard').then((m) => ({ default: m.KanbanBoard }))
-);
-
-function FullBoardWrapper({ board }: { board: SharedBoard }) {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center h-64">
-          <div className="h-8 w-8 rounded-full border-2 border-[#78fcd6] border-t-transparent animate-spin" />
-        </div>
-      }
-    >
-      <KanbanBoard board={board} />
-    </Suspense>
   );
 }

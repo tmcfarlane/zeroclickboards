@@ -54,7 +54,7 @@ interface BoardStore extends AppState {
 
   getActiveBoard: () => Board | null;
   getBoards: () => Board[];
-  getBoardsForUser: (userId: string | null) => Board[];
+  getBoardsForUser: () => Board[];
 }
 
 const createDefaultColumns = (): Column[] => [
@@ -195,7 +195,6 @@ function scheduleBoardSync(boardId: string) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', board.id)
-      .eq('user_id', board.userId)
       .then(({ error }) => {
         if (error) {
           console.error('[boards] sync failed:', error.message);
@@ -857,17 +856,13 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   getActiveBoard: () => {
-    const { boards, activeBoardId, currentUserId } = get();
-    const board = boards.find((b) => b.id === activeBoardId) || null;
-    if (!board) return null;
-    if (!board.userId || board.userId === currentUserId) return board;
-    return null;
+    const { boards, activeBoardId } = get();
+    return boards.find((b) => b.id === activeBoardId) || null;
   },
 
   getBoards: () => get().boards,
 
-  getBoardsForUser: (userId) => {
-    const { boards } = get();
-    return boards.filter((b) => !b.userId || b.userId === userId);
+  getBoardsForUser: () => {
+    return get().boards;
   },
 }));

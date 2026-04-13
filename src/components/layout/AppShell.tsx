@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast, Toaster } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -51,7 +52,7 @@ export function AppShell() {
 
 
   const activeBoard = getActiveBoard();
-  const userBoards = getBoardsForUser(userId);
+  const userBoards = getBoardsForUser();
   const repoUrl = import.meta.env.VITE_GITHUB_REPO_URL as string | undefined;
   const searchInputId = 'board-search-input';
 
@@ -80,6 +81,20 @@ export function AppShell() {
       void refreshFromRemote();
     }
   }, [isSignedIn, remoteStatus, refreshFromRemote]);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Deep-link: /app?board=<id> sets the active board
+  useEffect(() => {
+    const deepLinkBoard = searchParams.get('board');
+    if (deepLinkBoard && remoteStatus === 'ready') {
+      const exists = userBoards.some(b => b.id === deepLinkBoard);
+      if (exists) {
+        setActiveBoard(deepLinkBoard);
+        setSearchParams({}, { replace: true }); // clean the URL
+      }
+    }
+  }, [searchParams, remoteStatus, userBoards, setActiveBoard, setSearchParams]);
 
   useEffect(() => {
     if (!isLoaded) return;
