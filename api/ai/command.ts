@@ -1,7 +1,10 @@
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD } from '../_lib/auth';
 
 export const config = {
   runtime: 'nodejs',
+  maxDuration: 45,
 };
 
 type AICommandType =
@@ -58,6 +61,25 @@ function isAICommand(value: unknown): value is AICommand {
   return typeof v.type === 'string' && typeof v.originalText === 'string' && typeof v.params === 'object' && !!v.params;
 }
 
+const SYSTEM_PROMPT =
+  'You are a command parser for a Trello-like kanban app. ' +
+  'For single operations, return ONLY a JSON object: { "type": "...", "params": {...}, "originalText": "..." }. ' +
+  'For requests involving multiple operations (e.g. "create column Review and add 3 tasks"), return: { "commands": [{ "type": "...", "params": {...}, "originalText": "..." }, ...] }. ' +
+  'Supported types: create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, remove_card, edit_card, move_card, set_target_date, switch_view, extract_card_json, extract_column_json, clear_column, count_cards, rename_card, unknown. ' +
+  'params must be an object with relevant keys. ' +
+  'Always try to map the user\'s intent to the closest matching action. ' +
+  'When the user refers to "it", "that", or "this", resolve it using the last command context provided. For example, if the last command added a card titled "Fix bug", and the user says "move it to Done", the cardTitle should be "Fix bug". ' +
+  'For add_card, if the user requests a checklist or specifies items/steps/tasks, include a "checklistItems" array of strings in params. Example: "Create a checklist \'Sprint tasks\' with items: design, build, test" → add_card with params { title: "Sprint tasks", checklistItems: ["design", "build", "test"] }. ' +
+  'Examples: "Add a TODO item \'X\'" means add_card with title "X". "Put \'Y\' in Done" means add_card or move_card. ' +
+  '"Create a reminder to update docs" means add_card. "Add a quick note \'Z\'" means add_card. ' +
+  'For extract_card_json, params should include "cardTitle". For extract_column_json, params should include "columnTitle". ' +
+  'For clear_column, params should include "columnTitle". For count_cards, params should include "columnTitle" (optional, omit to count all). For rename_card, params should include "cardTitle" and "newTitle". ' +
+  'When the user asks to add N tasks (e.g. "Add 5 tasks to TODO" or "Add 10 random tasks"), return a batch { "commands": [...] } with N separate add_card commands, each with a unique realistic task title. ' +
+  'When the user lists multiple items (e.g. "Add tasks: design, build, test to TODO"), return a batch with one add_card per item. ' +
+  'Examples: "Export the Done column as JSON" → extract_column_json with columnTitle "Done". "Clear the TODO column" → clear_column with columnTitle "TODO". ' +
+  '"How many cards in Done?" → count_cards with columnTitle "Done". "Rename card \'old\' to \'new\'" → rename_card with cardTitle "old" and newTitle "new". ' +
+  'Only use type "unknown" if the request is completely unrelated to board management.';
+
 export default async function handler(req: Request) {
   const t0 = performance.now();
   if (req.method !== 'POST') {
@@ -78,7 +100,6 @@ export default async function handler(req: Request) {
   const tGating = performance.now();
 
   if (!subscribed && currentUsage >= FREE_DAILY_AI_LIMIT) {
-    // Compute next midnight Pacific for resetsAt
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowPacific = tomorrow.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
@@ -98,7 +119,7 @@ export default async function handler(req: Request) {
   }
 
   const apiKey = process.env.AI_GATEWAY_API_KEY;
-  const model = process.env.AI_GATEWAY_MODEL || 'gpt-5.2';
+  const modelId = process.env.AI_GATEWAY_MODEL || 'gpt-5.2';
 
   if (!apiKey) {
     return jsonResponse(500, { error: 'Missing AI_GATEWAY_API_KEY' });
@@ -120,76 +141,50 @@ export default async function handler(req: Request) {
     return jsonResponse(400, { error: 'Missing text' });
   }
 
-  const system =
-    'You are a command parser for a Trello-like kanban app. ' +
-    'For single operations, return ONLY a JSON object: { "type": "...", "params": {...}, "originalText": "..." }. ' +
-    'For requests involving multiple operations (e.g. "create column Review and add 3 tasks"), return: { "commands": [{ "type": "...", "params": {...}, "originalText": "..." }, ...] }. ' +
-    'Supported types: create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, remove_card, edit_card, move_card, set_target_date, switch_view, extract_card_json, extract_column_json, clear_column, count_cards, rename_card, unknown. ' +
-    'params must be an object with relevant keys. ' +
-    'Always try to map the user\'s intent to the closest matching action. ' +
-    'When the user refers to "it", "that", or "this", resolve it using the last command context provided. For example, if the last command added a card titled "Fix bug", and the user says "move it to Done", the cardTitle should be "Fix bug". ' +
-    'For add_card, if the user requests a checklist or specifies items/steps/tasks, include a "checklistItems" array of strings in params. Example: "Create a checklist \'Sprint tasks\' with items: design, build, test" → add_card with params { title: "Sprint tasks", checklistItems: ["design", "build", "test"] }. ' +
-    'Examples: "Add a TODO item \'X\'" means add_card with title "X". "Put \'Y\' in Done" means add_card or move_card. ' +
-    '"Create a reminder to update docs" means add_card. "Add a quick note \'Z\'" means add_card. ' +
-    'For extract_card_json, params should include "cardTitle". For extract_column_json, params should include "columnTitle". ' +
-    'For clear_column, params should include "columnTitle". For count_cards, params should include "columnTitle" (optional, omit to count all). For rename_card, params should include "cardTitle" and "newTitle". ' +
-    'When the user asks to add N tasks (e.g. "Add 5 tasks to TODO" or "Add 10 random tasks"), return a batch { "commands": [...] } with N separate add_card commands, each with a unique realistic task title. ' +
-    'When the user lists multiple items (e.g. "Add tasks: design, build, test to TODO"), return a batch with one add_card per item. ' +
-    'Examples: "Export the Done column as JSON" → extract_column_json with columnTitle "Done". "Clear the TODO column" → clear_column with columnTitle "TODO". ' +
-    '"How many cards in Done?" → count_cards with columnTitle "Done". "Rename card \'old\' to \'new\'" → rename_card with cardTitle "old" and newTitle "new". ' +
-    'Only use type "unknown" if the request is completely unrelated to board management.';
-
-  let user = `User text: ${text}\n\nBoard context (optional):\n${context}`;
+  let userPrompt = `User text: ${text}\n\nBoard context (optional):\n${context}`;
   if (lastCommand) {
-    user += `\n\nLast command context: ${JSON.stringify(lastCommand)}`;
+    userPrompt += `\n\nLast command context: ${JSON.stringify(lastCommand)}`;
   }
 
-  const tPreFetch = performance.now();
-  const upstream = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      temperature: 0.2,
-    }),
+  const gateway = createOpenAI({
+    baseURL: 'https://ai-gateway.vercel.sh/v1',
+    apiKey,
   });
+
+  const tPreFetch = performance.now();
+
+  let aiText: string;
+  try {
+    const result = await generateText({
+      model: gateway(modelId),
+      system: SYSTEM_PROMPT,
+      prompt: userPrompt,
+      temperature: 0.2,
+      abortSignal: AbortSignal.timeout(30_000),
+    });
+    aiText = result.text;
+  } catch (err) {
+    const tFail = performance.now();
+    const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
+    console.error('[ai/command] generateText failed:', isTimeout ? 'timeout after 30s' : err);
+    return jsonResponse(isTimeout ? 504 : 502, {
+      error: isTimeout ? 'AI gateway timed out' : 'AI gateway error',
+      timing: { authMs: Math.round(tAuth - t0), gatewayMs: Math.round(tFail - tPreFetch), totalMs: Math.round(tFail - t0) },
+    });
+  }
 
   const tGateway = performance.now();
 
-  if (!upstream.ok) {
-    const errText = await upstream.text();
-    return jsonResponse(502, { error: 'AI gateway error', detail: errText });
-  }
-
-  const upstreamJson: unknown = await upstream.json();
-
-  const content = (() => {
-    if (!upstreamJson || typeof upstreamJson !== 'object') return null;
-    const root = upstreamJson as Record<string, unknown>;
-    const choices = root.choices;
-    if (!Array.isArray(choices) || choices.length === 0) return null;
-    const first = choices[0];
-    if (!first || typeof first !== 'object') return null;
-    const msg = (first as Record<string, unknown>).message;
-    if (!msg || typeof msg !== 'object') return null;
-    const c = (msg as Record<string, unknown>).content;
-    return typeof c === 'string' ? c : null;
-  })();
-  const parsed = typeof content === 'string' ? safeParseJsonObject(content) : null;
+  const parsed = safeParseJsonObject(aiText);
 
   // Log usage for all users after successful AI response
   const root0 = parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
   const commandType = root0
     ? (isAICommand(parsed) ? (parsed as AICommand).type : Array.isArray(root0.commands) ? (root0.commands[0] as Record<string, unknown>)?.type : 'unknown')
     : 'unknown';
-  await logAIUsage(authUser.token, authUser.userId, text, typeof commandType === 'string' ? commandType : 'unknown');
+  // Fire-and-forget — don't block the response on usage logging
+  logAIUsage(authUser.token, authUser.userId, text, typeof commandType === 'string' ? commandType : 'unknown')
+    .catch((err) => console.error('[ai/command] logAIUsage failed:', err));
   const tEnd = performance.now();
 
   const ms = (a: number, b: number) => Math.round(b - a);
@@ -230,5 +225,5 @@ export default async function handler(req: Request) {
     return jsonResponse(200, { command: parsed, usage, timing });
   }
 
-  return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text }, usage });
+  return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text }, usage, timing });
 }

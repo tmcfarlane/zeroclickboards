@@ -7,12 +7,19 @@ function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise
   return fetch(input, { ...init, signal })
 }
 
+// Serverless functions are stateless — disable auto-refresh and session
+// persistence so the Supabase client doesn't keep the event loop alive.
+const SERVERLESS_AUTH = {
+  autoRefreshToken: false,
+  persistSession: false,
+} as const
+
 // Only used by Stripe webhook (server-to-server, no user JWT)
 export function createServiceClient() {
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { global: { fetch: fetchWithTimeout } })
+  return createClient(url, key, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
 }
 
 export function createAuthenticatedClient(token: string): SupabaseClient {
@@ -20,6 +27,7 @@ export function createAuthenticatedClient(token: string): SupabaseClient {
   const key = process.env.SUPABASE_ANON_KEY
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
   return createClient(url, key, {
+    auth: SERVERLESS_AUTH,
     global: { headers: { Authorization: `Bearer ${token}` }, fetch: fetchWithTimeout },
   })
 }
@@ -28,7 +36,7 @@ export function createAnonClient() {
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_ANON_KEY
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
-  return createClient(url, key, { global: { fetch: fetchWithTimeout } })
+  return createClient(url, key, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
 }
 
 export function getHeader(req: unknown, name: string): string | null {
@@ -54,7 +62,7 @@ export async function getUserFromRequest(req: Request): Promise<{ userId: string
   const key = process.env.SUPABASE_ANON_KEY
   if (!url || !key) return null
 
-  const client = createClient(url, key, { global: { fetch: fetchWithTimeout } })
+  const client = createClient(url, key, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
   const { data, error } = await client.auth.getUser(token)
   if (error || !data.user) return null
 

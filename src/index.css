@@ -225,6 +225,11 @@
   }
 }
 
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Date input native calendar icon */
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7) sepia(0.1) saturate(0.5) hue-rotate(130deg);

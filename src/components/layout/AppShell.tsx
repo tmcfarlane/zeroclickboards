@@ -22,6 +22,7 @@ import { templateToColumns, type BoardTemplate } from '@/lib/templates';
 import { readFileAsJSON, validateBoardJSON, importBoardFromJSON } from '@/lib/board-io';
 import { Footer } from './Footer';
 import { AIUpgradePrompt } from '@/components/billing/AIUpgradePrompt';
+import { UpgradeToProBanner } from '@/components/billing/UpgradeToProBanner';
 
 
 export function AppShell() {
@@ -224,8 +225,13 @@ export function AppShell() {
         </div>
       </header>
 
+      {/* Upgrade to Pro Banner */}
+      <div className="pt-14">
+        <UpgradeToProBanner onUpgradeClick={() => setIsUpgradePromptOpen(true)} />
+      </div>
+
       {/* Main Content Area with AI Side Panel */}
-      <div className="pt-14 flex-1 min-h-0 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} onUpgrade={() => setIsUpgradePromptOpen(true)} />
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <main className="flex-1 min-h-0 overflow-hidden">

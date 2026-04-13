@@ -52,6 +52,7 @@ interface AIResponse {
     resetsAt?: string;
   };
   limitReached?: boolean;
+  timedOut?: boolean;
 }
 
 async function parseCommandWithAI(
@@ -71,6 +72,7 @@ async function parseCommandWithAI(
       method: "POST",
       headers,
       body: JSON.stringify({ text: input, context, lastCommand }),
+      signal: AbortSignal.timeout(35_000),
     });
 
     if (res.status === 429) {
@@ -92,6 +94,7 @@ async function parseCommandWithAI(
         ],
       };
     }
+    if (res.status === 504) return { commands: null, timedOut: true };
     if (!res.ok) return { commands: null };
     const json: unknown = await res.json();
     if (!json || typeof json !== "object") return { commands: null };
@@ -119,8 +122,9 @@ async function parseCommandWithAI(
     // Single response: { command: {...} }
     const cmd = validateCommand(root.command);
     return { commands: cmd ? [cmd] : null, usage: usage ?? undefined };
-  } catch {
-    return { commands: null };
+  } catch (err) {
+    const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
+    return { commands: null, timedOut: isTimeout };
   }
 }
 
@@ -1030,6 +1034,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       updateUsage(aiResponse.usage);
     }
 
+    // Handle timeout — fall back to local parser
+    if (aiResponse.timedOut) {
+      console.warn("[AI Command] Gateway timed out, falling back to local parser");
+    }
+
     // Handle daily limit reached
     if (aiResponse.limitReached) {
       const resetTime = aiResponse.usage?.resetsAt || resetsAt;
@@ -1235,15 +1244,15 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       {/* Quick Actions */}
       <div className="px-4 py-2 border-t border-white/5 bg-[#0B0F0F]/50">
-        <div className="flex gap-2 overflow-x-auto scrollbar-thin pb-2">
+        <div className="flex flex-wrap gap-2 pb-2">
           {quickActions.map((action) => (
             <button
               type="button"
               key={action}
               onClick={() => handleQuickAction(action)}
-              className="flex-shrink-0 text-xs px-3 py-1.5 border border-[#78fcd6]/30 rounded-full hover:bg-[#78fcd6]/10 hover:border-[#78fcd6]/50 transition-all duration-300 bg-gradient-to-r from-black/20 to-transparent backdrop-blur-sm text-[#78fcd6] font-medium"
+              className="text-xs px-3 py-1.5 border border-[#78fcd6]/30 rounded-full hover:bg-[#78fcd6]/10 hover:border-[#78fcd6]/50 transition-all duration-300 bg-gradient-to-r from-black/20 to-transparent backdrop-blur-sm text-[#78fcd6] font-medium"
             >
-              {action.length > 25 ? action.slice(0, 25) + "..." : action}
+              {action}
             </button>
           ))}
         </div>

@@ -1,4 +1,5 @@
 import path from "path"
+import fs from "fs/promises"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import { inspectAttr } from 'kimi-plugin-inspect-react'
@@ -83,10 +84,95 @@ function claudeLocalPlugin() {
   };
 }
 
+function apiRoutesPlugin() {
+  return {
+    name: 'api-routes',
+    configureServer(server: any) {
+      server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: Function) => {
+        const url = req.url || '';
+
+        // Only handle /api/ routes, skip /api/local/ (handled by claudeLocalPlugin)
+        if (!url.startsWith('/api/') || url.startsWith('/api/local/')) {
+          return next();
+        }
+
+        // Map URL to handler file path
+        const routePath = url.split('?')[0].replace(/^\/api\//, '');
+
+        // Don't serve _lib or hidden directories
+        if (routePath.startsWith('_') || routePath.startsWith('.')) {
+          return next();
+        }
+
+        const absPath = path.resolve(__dirname, 'api', routePath + '.ts');
+
+        try {
+          await fs.access(absPath);
+        } catch {
+          return next();
+        }
+
+        try {
+          // Use Vite's SSR module loader (handles TS, caching, HMR)
+          const mod = await server.ssrLoadModule(absPath);
+          const handler = mod.default;
+
+          if (typeof handler !== 'function') {
+            res.statusCode = 500;
+            res.setHeader('content-type', 'application/json');
+            res.end(JSON.stringify({ error: 'Handler is not a function' }));
+            return;
+          }
+
+          // Convert Node IncomingMessage → Web Request
+          const host = req.headers.host || 'localhost';
+          const fullUrl = `http://${host}${req.url}`;
+
+          const headers = new Headers();
+          for (const [key, value] of Object.entries(req.headers)) {
+            if (value) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+          }
+
+          let body: Buffer | undefined;
+          if (req.method !== 'GET' && req.method !== 'HEAD') {
+            body = await new Promise<Buffer>((resolve) => {
+              const chunks: Buffer[] = [];
+              req.on('data', (chunk: Buffer) => chunks.push(chunk));
+              req.on('end', () => resolve(Buffer.concat(chunks)));
+            });
+          }
+
+          const request = new Request(fullUrl, {
+            method: req.method,
+            headers,
+            body: body && body.length > 0 ? body : undefined,
+          });
+
+          // Call the handler and convert Web Response → Node response
+          const response: Response = await handler(request);
+
+          res.statusCode = response.status;
+          response.headers.forEach((value: string, key: string) => {
+            res.setHeader(key, value);
+          });
+
+          const responseBody = await response.arrayBuffer();
+          res.end(Buffer.from(responseBody));
+        } catch (err: any) {
+          console.error(`[api-routes] Error in /api/${routePath}:`, err);
+          res.statusCode = 500;
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify({ error: err.message || 'Internal server error' }));
+        }
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
-  plugins: [inspectAttr(), react(), claudeLocalPlugin()],
+  plugins: [inspectAttr(), react(), claudeLocalPlugin(), apiRoutesPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

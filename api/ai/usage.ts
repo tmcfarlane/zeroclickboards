@@ -1,6 +1,6 @@
 import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, jsonResponse, FREE_DAILY_AI_LIMIT } from '../_lib/auth'
 
-export const config = { runtime: 'nodejs' }
+export const config = { runtime: 'nodejs', maxDuration: 15 }
 
 export default async function handler(req: Request) {
   if (req.method !== 'GET') {

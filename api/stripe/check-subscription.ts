@@ -1,6 +1,6 @@
 import { getUserFromRequest, hasActiveSubscription, createAuthenticatedClient, jsonResponse } from '../_lib/auth'
 
-export const config = { runtime: 'nodejs' }
+export const config = { runtime: 'nodejs', maxDuration: 15 }
 
 export default async function handler(req: Request) {
   if (req.method !== 'GET') return jsonResponse(405, { error: 'Method not allowed' })
