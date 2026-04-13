@@ -1,8 +1,14 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
+// Support both vercel dev (SUPABASE_URL from project settings)
+// and vite dev (VITE_SUPABASE_URL from .env)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
 const FETCH_TIMEOUT_MS = 8_000
 
-function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+function fetchWithTimeout(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS)
   return fetch(input, { ...init, signal })
 }
@@ -16,27 +22,21 @@ const SERVERLESS_AUTH = {
 
 // Only used by Stripe webhook (server-to-server, no user JWT)
 export function createServiceClient() {
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
 }
 
 export function createAuthenticatedClient(token: string): SupabaseClient {
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_ANON_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
-  return createClient(url, key, {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: SERVERLESS_AUTH,
     global: { headers: { Authorization: `Bearer ${token}` }, fetch: fetchWithTimeout },
   })
 }
 
 export function createAnonClient() {
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_ANON_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
-  return createClient(url, key, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY')
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
 }
 
 export function getHeader(req: unknown, name: string): string | null {
@@ -58,11 +58,9 @@ export async function getUserFromRequest(req: Request): Promise<{ userId: string
   if (!authHeader?.startsWith('Bearer ')) return null
   const token = authHeader.slice(7)
 
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_ANON_KEY
-  if (!url || !key) return null
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null
 
-  const client = createClient(url, key, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
   const { data, error } = await client.auth.getUser(token)
   if (error || !data.user) return null
 

@@ -43,6 +43,7 @@ export default async function handler(req: Request) {
 
       // Get subscription details
       const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      const item = subscription.items.data[0]
 
       // Upsert subscription record
       await service.from('subscriptions').upsert({
@@ -50,8 +51,8 @@ export default async function handler(req: Request) {
         stripe_customer_id: customerId,
         stripe_subscription_id: subscriptionId,
         status: subscription.status,
-        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        current_period_start: new Date(item.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(item.current_period_end * 1000).toISOString(),
         cancel_at_period_end: subscription.cancel_at_period_end,
       }, { onConflict: 'stripe_subscription_id' })
 
@@ -60,12 +61,13 @@ export default async function handler(req: Request) {
 
     case 'customer.subscription.updated': {
       const subscription = event.data.object as Stripe.Subscription
+      const updatedItem = subscription.items.data[0]
       await service
         .from('subscriptions')
         .update({
           status: subscription.status,
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          current_period_start: new Date(updatedItem.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(updatedItem.current_period_end * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end,
           updated_at: new Date().toISOString(),
         })
@@ -87,7 +89,8 @@ export default async function handler(req: Request) {
 
     case 'invoice.payment_failed': {
       const invoice = event.data.object as Stripe.Invoice
-      const subscriptionId = invoice.subscription as string
+      const sub = invoice.parent?.subscription_details?.subscription
+      const subscriptionId = typeof sub === 'string' ? sub : sub?.id
       if (subscriptionId) {
         await service
           .from('subscriptions')
