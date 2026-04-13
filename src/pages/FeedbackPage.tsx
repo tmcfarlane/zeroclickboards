@@ -43,6 +43,7 @@ export function FeedbackPage() {
   const { isSignedIn, session } = useAuthContext();
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const {
     register,
@@ -79,8 +80,8 @@ export function FeedbackPage() {
         throw new Error((body as { message?: string }).message ?? 'Failed to submit feedback');
       }
 
-      toast.success('Feedback submitted! Thanks for helping make ZeroBoard better.');
       reset();
+      setIsSubmitted(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
@@ -128,7 +129,26 @@ export function FeedbackPage() {
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8">
           <h2 className="mb-6 text-2xl font-bold text-[#F2F7F7]">Submit a Feature Request</h2>
 
-          {!isSignedIn ? (
+          {isSubmitted ? (
+            <div className="flex flex-col items-center gap-4 py-10 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#78fcd6]/15 border border-[#78fcd6]/40">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-[#78fcd6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-[#F2F7F7]">Thank you!</h3>
+              <p className="text-[#A8B2B2] max-w-md">
+                Your feedback has been submitted. We appreciate you helping make ZeroBoard better.
+              </p>
+              <Button
+                onClick={() => setIsSubmitted(false)}
+                variant="outline"
+                className="mt-2 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
+              >
+                Submit another
+              </Button>
+            </div>
+          ) : !isSignedIn ? (
             <div className="flex flex-col items-center gap-4 py-8 text-center">
               <p className="text-[#A8B2B2]">Please sign in to submit feedback.</p>
               <Button

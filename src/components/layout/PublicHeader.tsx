@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { LogIn, Github } from 'lucide-react';
+import { Github } from 'lucide-react';
+import { UserProfile } from '@/components/auth/UserProfile';
 import { SignInModal } from '@/components/auth/SignInModal';
 
 export function PublicHeader() {
@@ -44,13 +44,7 @@ export function PublicHeader() {
                 <Github className="w-4 h-4 text-[#A8B2B2]" />
               </a>
             )}
-            <Button
-              onClick={() => setIsSignInModalOpen(true)}
-              className="h-9 px-4 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-medium rounded-lg"
-            >
-              <LogIn className="w-4 h-4 mr-1.5" />
-              Sign In
-            </Button>
+            <UserProfile onSignInClick={() => setIsSignInModalOpen(true)} />
           </div>
         </div>
       </header>
