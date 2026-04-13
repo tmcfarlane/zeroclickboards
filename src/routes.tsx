@@ -9,6 +9,8 @@ import { FeedbackPage } from '@/pages/FeedbackPage';
 import { SharedBoardPage } from '@/pages/SharedBoardPage';
 import { EmbedBoardPage } from '@/pages/EmbedBoardPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { AccountPage } from '@/pages/AccountPage';
+import { AdminPage } from '@/pages/AdminPage';
 
 export function AppRoutes() {
   return (
@@ -23,6 +25,8 @@ export function AppRoutes() {
 
       {/* Authenticated app */}
       <Route path="/app" element={<AuthRedirect requireAuth><AppShell /></AuthRedirect>} />
+      <Route path="/account" element={<AuthRedirect requireAuth><AccountPage /></AuthRedirect>} />
+      <Route path="/admin" element={<AuthRedirect requireAuth><AdminPage /></AuthRedirect>} />
 
       {/* Shared board (auth-aware, no public layout chrome) */}
       <Route path="/board/:boardId" element={<SharedBoardPage />} />

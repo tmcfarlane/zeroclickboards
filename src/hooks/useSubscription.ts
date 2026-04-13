@@ -6,8 +6,11 @@ interface SubscriptionData {
   subscription: {
     id: string
     status: string
+    stripe_subscription_id: string
+    current_period_start: string | null
     current_period_end: string
     cancel_at_period_end: boolean
+    created_at: string
   } | null
 }
 

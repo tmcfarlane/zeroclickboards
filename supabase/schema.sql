@@ -211,6 +211,7 @@ create table if not exists public.subscriptions (
   user_id uuid not null references auth.users(id) on delete cascade,
   stripe_customer_id text not null,
   stripe_subscription_id text not null unique,
+  stripe_price_id text,
   status text not null default 'active',
   current_period_start timestamptz,
   current_period_end timestamptz,

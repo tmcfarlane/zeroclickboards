@@ -50,6 +50,7 @@ interface AIResponse {
     limit: number | null;
     warning?: boolean;
     resetsAt?: string;
+    charged?: boolean;
   };
   limitReached?: boolean;
   timedOut?: boolean;
@@ -242,8 +243,8 @@ function parseCommandLocal(input: string): AICommand[] {
     ];
   }
 
-  // --- Count cards: "How many cards in Done?", "Count tasks" ---
-  if (lower.match(/(?:how many|count|total)\s+(?:cards?|tasks?|items?)/)) {
+  // --- Count cards: "How many cards in Done?", "Count tasks", "Board summary" ---
+  if (lower.match(/^board summary$/) || lower.match(/(?:how many|count|total)\s+(?:cards?|tasks?|items?)/)) {
     const colMatch = input.match(
       /(?:in|from)\s+(?:the\s+)?["']?([^"'?]+?)["']?(?:\s+column)?[?]?$/i,
     );
@@ -470,7 +471,7 @@ function parseCommandLocal(input: string): AICommand[] {
   }
 
   // Switch view
-  if (lower.match(/show (the )?timeline|switch to timeline|timeline view/)) {
+  if (lower.match(/show (the )?timeline|switch to timeline|^timeline view$/)) {
     return [
       {
         type: "switch_view",
@@ -516,61 +517,84 @@ function parseCommandLocal(input: string): AICommand[] {
   ];
 }
 
+interface QuickAction {
+  label: string;   // Short display text for the pill
+  command: string;  // Full command sent to the parser
+}
+
+function truncate(text: string, max = 16): string {
+  return text.length > max ? text.slice(0, max - 1) + "\u2026" : text;
+}
+
 // Generate board-aware quick action suggestions
 function getQuickActions(
   board:
     | ReturnType<typeof useBoardStore.getState>["boards"][number]
     | undefined
     | null,
-): string[] {
+): QuickAction[] {
   if (!board || board.columns.length === 0) {
     return [
-      "Add a column called 'To Do'",
-      "Add a column called 'In Progress'",
-      "Add a column called 'Done'",
+      { label: "Set up columns", command: "Add columns: To Do, In Progress, Done" },
+      { label: "Create starter tasks", command: "Create 5 random tasks" },
     ];
   }
 
   const columns = board.columns;
   const allCards = columns.flatMap((c) => c.cards.filter((x) => !x.isArchived));
-  const actions: string[] = [];
+  const actions: QuickAction[] = [];
 
-  // Suggest adding a card to the first column (typically the backlog/todo)
+  // Core action: add a task to the first column
   const firstCol = columns[0];
   if (firstCol) {
-    actions.push(`Add a task to ${firstCol.title}`);
+    actions.push({
+      label: `New task in ${truncate(firstCol.title, 14)}`,
+      command: `Add a task to ${firstCol.title}`,
+    });
   }
 
-  // If there are cards, suggest moving one forward
+  // Move a card forward
   for (const col of columns) {
     const activeCards = col.cards.filter((c) => !c.isArchived);
     const nextCol = columns[columns.indexOf(col) + 1];
     if (activeCards.length > 0 && nextCol) {
       const card = activeCards[0];
-      actions.push(`Move '${card.title}' to ${nextCol.title}`);
+      actions.push({
+        label: `Move '${truncate(card.title)}' \u2192 ${truncate(nextCol.title, 12)}`,
+        command: `Move '${card.title}' to ${nextCol.title}`,
+      });
       break;
     }
   }
 
-  // Suggest setting a due date on a card without one
+  // Label suggestion — prefer bulk if no cards have labels
+  const hasAnyLabels = allCards.some((c) => c.labels && c.labels.length > 0);
+  if (allCards.length > 0 && !hasAnyLabels) {
+    actions.push({ label: "Label all cards green", command: "Label all cards green" });
+  } else if (allCards.length > 0) {
+    const unlabeled = allCards.find((c) => !c.labels || c.labels.length === 0);
+    if (unlabeled) {
+      actions.push({
+        label: `Label '${truncate(unlabeled.title)}' red`,
+        command: `Add red label to '${unlabeled.title}'`,
+      });
+    }
+  }
+
+  // Due date on a card without one
   const noDueDate = allCards.find((c) => !c.targetDate);
   if (noDueDate) {
-    actions.push(`Set due Friday for '${noDueDate.title}'`);
+    actions.push({
+      label: `Due Friday: '${truncate(noDueDate.title)}'`,
+      command: `Set due Friday for '${noDueDate.title}'`,
+    });
   }
 
-  // If a "done" style column has cards, suggest exporting or clearing
-  const doneCol = columns.find((c) => /done|complete|finish/i.test(c.title));
-  if (doneCol && doneCol.cards.filter((c) => !c.isArchived).length > 0) {
-    actions.push(`Export ${doneCol.title} as JSON`);
+  // Board summary or timeline
+  if (allCards.length > 2) {
+    actions.push({ label: "Board summary", command: "How many cards total?" });
   }
-
-  // Suggest card count if board has cards
-  if (allCards.length > 0) {
-    actions.push(`How many cards total?`);
-  }
-
-  // Always offer timeline as an option
-  actions.push("Show the timeline");
+  actions.push({ label: "Timeline view", command: "Show the timeline" });
 
   return actions.slice(0, 5);
 }
@@ -631,6 +655,9 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
     editCard,
     setViewMode,
     getActiveBoard,
+    archiveCard,
+    restoreCard,
+    duplicateCard,
   } = useBoardStore();
   const { session } = useAuthContext();
   const { limit, remaining, isLimitReached, isPaid, resetsAt, updateUsage } =
@@ -654,8 +681,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
           id: "welcome",
           role: "assistant",
           content:
-            "Hi! I'm your ZeroBoard AI assistant. I can help you manage your boards, columns, and cards using natural language. Try saying:\n\n• " +
-            quickActions.join("\n• "),
+            "Hi! I'm your ZeroBoard AI assistant. I can help you manage your board using natural language.\n\nTry things like:\n\n• Add a task to To Do\n• Move 'My Task' to Done\n• Label all cards red\n• Add a checklist to 'My Task'\n• Due Friday for 'My Task'\n• Archive old tasks",
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -979,8 +1005,187 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
         return `Switched to ${view} view`;
       }
 
+      case "add_label": {
+        if (!activeBoardId) return "No active board.";
+        const label = getString("label") as import("@/types").CardLabel | undefined;
+        if (!label || !["red", "yellow", "green", "blue", "purple", "gray"].includes(label))
+          return "Please specify a valid label color: red, yellow, green, blue, purple, or gray.";
+        const allCards = command.params.allCards === true;
+        const cardTitle = getString("cardTitle") || (allCards ? undefined : lastCardTitle.current || undefined);
+
+        if (allCards) {
+          let count = 0;
+          activeBoard?.columns.forEach((column) => {
+            column.cards.filter((c) => !c.isArchived).forEach((card) => {
+              const existing = card.labels ?? [];
+              if (!existing.includes(label)) {
+                editCard(activeBoardId, column.id, card.id, { labels: [...existing, label] });
+                count++;
+              }
+            });
+          });
+          return count > 0
+            ? `Added ${label} label to ${count} card${count !== 1 ? "s" : ""}`
+            : `All cards already have the ${label} label`;
+        }
+
+        if (!cardTitle) return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
+          if (card) {
+            const existing = card.labels ?? [];
+            if (existing.includes(label)) return `"${card.title}" already has the ${label} label`;
+            editCard(activeBoardId, column.id, card.id, { labels: [...existing, label] });
+            lastCardTitle.current = card.title;
+            return `Added ${label} label to "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
+      case "remove_label": {
+        if (!activeBoardId) return "No active board.";
+        const label = getString("label") as import("@/types").CardLabel | undefined;
+        if (!label || !["red", "yellow", "green", "blue", "purple", "gray"].includes(label))
+          return "Please specify a valid label color: red, yellow, green, blue, purple, or gray.";
+        const allCards = command.params.allCards === true;
+        const cardTitle = getString("cardTitle") || (allCards ? undefined : lastCardTitle.current || undefined);
+
+        if (allCards) {
+          let count = 0;
+          activeBoard?.columns.forEach((column) => {
+            column.cards.filter((c) => !c.isArchived).forEach((card) => {
+              const existing = card.labels ?? [];
+              if (existing.includes(label)) {
+                editCard(activeBoardId, column.id, card.id, { labels: existing.filter((l) => l !== label) });
+                count++;
+              }
+            });
+          });
+          return count > 0
+            ? `Removed ${label} label from ${count} card${count !== 1 ? "s" : ""}`
+            : `No cards have the ${label} label`;
+        }
+
+        if (!cardTitle) return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
+          if (card) {
+            const existing = card.labels ?? [];
+            if (!existing.includes(label)) return `"${card.title}" doesn't have the ${label} label`;
+            editCard(activeBoardId, column.id, card.id, { labels: existing.filter((l) => l !== label) });
+            lastCardTitle.current = card.title;
+            return `Removed ${label} label from "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
+      case "add_checklist": {
+        if (!activeBoardId) return "No active board.";
+        const rawItems = command.params.checklistItems;
+        const items = Array.isArray(rawItems) ? rawItems.filter((i): i is string => typeof i === "string") : [];
+        if (items.length === 0) return "Please specify checklist items.";
+        const allCards = command.params.allCards === true;
+        const cardTitle = getString("cardTitle") || (allCards ? undefined : lastCardTitle.current || undefined);
+
+        const buildChecklist = (existingContent: import("@/types").CardContent) => {
+          const newItems = items.map((text) => ({ id: uuidv4(), text, completed: false }));
+          if (existingContent.type === "checklist" && existingContent.checklist) {
+            return { type: "checklist" as const, checklist: [...existingContent.checklist, ...newItems] };
+          }
+          return { type: "checklist" as const, checklist: newItems };
+        };
+
+        if (allCards) {
+          let count = 0;
+          activeBoard?.columns.forEach((column) => {
+            column.cards.filter((c) => !c.isArchived).forEach((card) => {
+              editCard(activeBoardId, column.id, card.id, { content: buildChecklist(card.content) });
+              count++;
+            });
+          });
+          return count > 0
+            ? `Added checklist (${items.length} items) to ${count} card${count !== 1 ? "s" : ""}`
+            : "No cards found to update.";
+        }
+
+        if (!cardTitle) return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
+          if (card) {
+            editCard(activeBoardId, column.id, card.id, { content: buildChecklist(card.content) });
+            lastCardTitle.current = card.title;
+            return `Added checklist (${items.length} items) to "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
+      case "set_description": {
+        if (!activeBoardId) return "No active board.";
+        const description = getString("description");
+        if (!description) return "Please specify a description.";
+        const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
+        if (!cardTitle) return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
+          if (card) {
+            editCard(activeBoardId, column.id, card.id, { description });
+            lastCardTitle.current = card.title;
+            return `Set description for "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
+      case "archive_card": {
+        if (!activeBoardId) return "No active board.";
+        const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
+        if (!cardTitle) return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()) && !c.isArchived);
+          if (card) {
+            archiveCard(activeBoardId, column.id, card.id);
+            lastCardTitle.current = card.title;
+            return `Archived "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
+      case "restore_card": {
+        if (!activeBoardId) return "No active board.";
+        const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
+        if (!cardTitle) return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()) && c.isArchived);
+          if (card) {
+            restoreCard(activeBoardId, column.id, card.id);
+            lastCardTitle.current = card.title;
+            return `Restored "${card.title}"`;
+          }
+        }
+        return `Archived card "${cardTitle}" not found.`;
+      }
+
+      case "duplicate_card": {
+        if (!activeBoardId) return "No active board.";
+        const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
+        if (!cardTitle) return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()) && !c.isArchived);
+          if (card) {
+            duplicateCard(activeBoardId, column.id, card.id);
+            lastCardTitle.current = card.title;
+            return `Duplicated "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
       default:
-        return "I'm not sure how to help with that. Try commands like:\n• Add 5 random tasks to TODO\n• Add tasks: design, build, test to Done\n• Clear the TODO column\n• How many cards in Done?\n• Rename card 'old' to 'new'\n• Export the Done column as JSON\n• Show the timeline";
+        return "I'm not sure how to help with that. Try commands like:\n• Add 5 random tasks to TODO\n• Add a red label to 'My Task'\n• Label all cards green\n• Add a checklist to 'My Task'\n• Set description of 'My Task' to '...'\n• Archive 'Old Task'\n• Duplicate 'My Task'\n• Clear the TODO column\n• How many cards in Done?\n• Show the timeline";
     }
   };
 
@@ -1029,8 +1234,8 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       session?.access_token,
     );
 
-    // Update usage from response
-    if (aiResponse.usage) {
+    // Update usage from response — only update counter when charged
+    if (aiResponse.usage && aiResponse.usage.charged !== false) {
       updateUsage(aiResponse.usage);
     }
 
@@ -1072,10 +1277,17 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       }
     }
 
-    const content =
+    const isUncharged = aiResponse.usage?.charged === false;
+
+    let content =
       commands.length > 1
         ? results.map((r, i) => `${i + 1}. ${r}`).join("\n")
         : results[0];
+
+    // Append "not charged" note for unknown/unsupported commands
+    if (isUncharged && !isPaid) {
+      content += "\n\n_This query was not counted toward your daily limit._";
+    }
 
     const assistantMessage: AIMessage = {
       id: uuidv4(),
@@ -1088,8 +1300,8 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
     setMessages((prev) => [...prev, assistantMessage]);
 
-    // Show warning if approaching limit
-    if (aiResponse.usage?.warning && !isPaid) {
+    // Show warning if approaching limit (only for charged queries)
+    if (aiResponse.usage?.warning && aiResponse.usage?.charged !== false && !isPaid) {
       const queriesRemaining = (limit ?? 5) - aiResponse.usage.used;
       const warningMessage: AIMessage = {
         id: uuidv4(),
@@ -1106,9 +1318,9 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
     setIsProcessing(false);
   };
 
-  const handleQuickAction = (action: string) => {
-    setInput(action);
-    handleSend(action);
+  const handleQuickAction = (action: QuickAction) => {
+    setInput(action.label);
+    handleSend(action.command);
   };
 
   if (!isOpen) return null;
@@ -1147,8 +1359,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
                   id: "welcome",
                   role: "assistant",
                   content:
-                    "Hi! I'm your ZeroBoard AI assistant. I can help you manage your boards, columns, and cards using natural language. Try saying:\n\n• " +
-                    quickActions.join("\n• "),
+                    "Hi! I'm your ZeroBoard AI assistant. I can help you manage your board using natural language.\n\nTry things like:\n\n• Add a task to To Do\n• Move 'My Task' to Done\n• Label all cards red\n• Add a checklist to 'My Task'\n• Due Friday for 'My Task'\n• Archive old tasks",
                   timestamp: new Date().toISOString(),
                 },
               ])
@@ -1199,9 +1410,16 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
               >
                 {message.command?.type === "unknown" &&
                 message.role === "assistant" ? (
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
-                    <span>{message.content}</span>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <span>{message.content.replace(/\n\n_.*_$/, "")}</span>
+                    </div>
+                    {message.content.includes("_This query was not counted") && (
+                      <p className="text-[10px] text-[#A8B2B2]/60 italic ml-6">
+                        This query was not counted toward your daily limit.
+                      </p>
+                    )}
                   </div>
                 ) : message.command && message.role === "assistant" ? (
                   <div className="flex items-start gap-2 min-w-0">
@@ -1248,11 +1466,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
           {quickActions.map((action) => (
             <button
               type="button"
-              key={action}
+              key={action.label}
               onClick={() => handleQuickAction(action)}
               className="text-xs px-3 py-1.5 border border-[#78fcd6]/30 rounded-full hover:bg-[#78fcd6]/10 hover:border-[#78fcd6]/50 transition-all duration-300 bg-gradient-to-r from-black/20 to-transparent backdrop-blur-sm text-[#78fcd6] font-medium"
             >
-              {action}
+              {action.label}
             </button>
           ))}
         </div>

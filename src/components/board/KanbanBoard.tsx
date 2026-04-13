@@ -7,7 +7,7 @@ import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles } from 'lucide-react';
 import { ShareBoardDialog } from './ShareBoardDialog';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
 import { downloadBoardJSON } from '@/lib/board-io';
@@ -39,9 +39,10 @@ import {
 
 interface KanbanBoardProps {
   board: Board;
+  onAIClick?: () => void;
 }
 
-export function KanbanBoard({ board }: KanbanBoardProps) {
+export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
   const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
@@ -417,6 +418,17 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
         </div>
         
         <div className="flex items-center gap-1.5">
+          {/* Ask AI */}
+          {onAIClick && (
+            <button
+              onClick={onAIClick}
+              className="mr-2 flex items-center gap-1.5 h-9 px-4 font-medium text-sm text-[#78fcd6] hover:text-[#00ffb6] transition-colors bg-white/5 border border-white/10 rounded-lg hover:bg-white/10"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Ask AI</span>
+            </button>
+          )}
+
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />

@@ -13,7 +13,7 @@ import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { Button } from '@/components/ui/button';
-import { Plus, Layout, Clock, Sparkles, Github, Upload } from 'lucide-react';
+import { Plus, Layout, Clock, Github, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,9 +60,9 @@ export function AppShell() {
       const el = document.getElementById(searchInputId) as HTMLInputElement | null;
       el?.focus();
     },
-    onToggleAI: () => setIsAIOpen((v) => !v),
+    onToggleAI: () => setIsAIOpen((v) => { if (!v && viewMode === 'timeline') setViewMode('board'); return !v; }),
     onBoardView: () => setViewMode('board'),
-    onTimelineView: () => setViewMode('timeline'),
+    onTimelineView: () => { setViewMode('timeline'); setIsAIOpen(false); },
     onNewBoard: () => setIsCreateDialogOpen(true),
     onShowShortcuts: () => setIsShortcutsOpen(true),
     onUndo: () => useUndoStore.getState().undo(),
@@ -172,7 +172,7 @@ export function AppShell() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setViewMode('timeline')}
+                    onClick={() => { setViewMode('timeline'); setIsAIOpen(false); }}
                     className={`h-8 px-3 rounded-md transition-all ${
                       viewMode === 'timeline'
                         ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
@@ -188,15 +188,6 @@ export function AppShell() {
           )}
 
           <div className="flex items-center gap-2">
-            {activeBoard && (
-              <div className="awesome-border cursor-pointer" onClick={handleAIClick}>
-                <div className="awesome-border-inner flex items-center gap-1.5 h-9 px-4 font-medium text-sm text-[#78fcd6] hover:text-[#00ffb6] transition-colors">
-                  <Sparkles className="w-4 h-4" />
-                  <span>Ask AI</span>
-                </div>
-              </div>
-            )}
-
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
               variant="ghost"
@@ -227,7 +218,7 @@ export function AppShell() {
 
       {/* Upgrade to Pro Banner */}
       <div className="pt-14">
-        <UpgradeToProBanner onUpgradeClick={() => setIsUpgradePromptOpen(true)} />
+        <UpgradeToProBanner onLearnMore={() => setIsUpgradePromptOpen(true)} />
       </div>
 
       {/* Main Content Area with AI Side Panel */}
@@ -239,7 +230,7 @@ export function AppShell() {
               <BoardSkeleton />
             ) : activeBoard ? (
               viewMode === 'board' ? (
-                <KanbanBoard board={activeBoard} />
+                <KanbanBoard board={activeBoard} onAIClick={handleAIClick} />
               ) : (
                 <TimelineView board={activeBoard} />
               )

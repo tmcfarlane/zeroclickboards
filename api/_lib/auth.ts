@@ -53,7 +53,7 @@ export function getHeader(req: unknown, name: string): string | null {
   return null
 }
 
-export async function getUserFromRequest(req: Request): Promise<{ userId: string; token: string } | null> {
+export async function getUserFromRequest(req: Request): Promise<{ userId: string; email: string; token: string } | null> {
   const authHeader = getHeader(req, 'authorization')
   if (!authHeader?.startsWith('Bearer ')) return null
   const token = authHeader.slice(7)
@@ -64,18 +64,23 @@ export async function getUserFromRequest(req: Request): Promise<{ userId: string
   const { data, error } = await client.auth.getUser(token)
   if (error || !data.user) return null
 
-  return { userId: data.user.id, token }
+  return { userId: data.user.id, email: data.user.email ?? '', token }
 }
 
-export async function hasActiveSubscription(token: string, userId: string): Promise<boolean> {
+export function isAdmin(email: string): boolean {
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+  return adminEmails.includes(email.toLowerCase())
+}
+
+export async function hasActiveSubscription(token: string, userId: string, priceId?: string): Promise<boolean> {
   const client = createAuthenticatedClient(token)
-  const { data, error } = await client
+  let query = client
     .from('subscriptions')
     .select('id, status')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .limit(1)
-    .maybeSingle()
+  if (priceId) query = query.eq('stripe_price_id', priceId)
+  const { data, error } = await query.limit(1).maybeSingle()
 
   return !error && !!data
 }
@@ -95,18 +100,27 @@ function getMidnightPacificUTC(): string {
   return midnightUTC.toISOString()
 }
 
-export async function getDailyAIUsage(token: string, userId: string): Promise<number> {
+export async function getDailyAIUsage(token: string, userId: string): Promise<{ charged: number; total: number }> {
   const client = createAuthenticatedClient(token)
   const midnight = getMidnightPacificUTC()
 
-  const { count, error } = await client
-    .from('ai_usage')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', midnight)
+  const [allResult, unknownResult] = await Promise.all([
+    client
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', midnight),
+    client
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', midnight)
+      .eq('command_type', 'unknown'),
+  ])
 
-  if (error) return 0
-  return count ?? 0
+  const total = allResult.error ? 0 : (allResult.count ?? 0)
+  const unknown = unknownResult.error ? 0 : (unknownResult.count ?? 0)
+  return { charged: total - unknown, total }
 }
 
 export async function logAIUsage(token: string, userId: string, queryText: string, commandType?: string): Promise<void> {
@@ -118,6 +132,7 @@ export async function logAIUsage(token: string, userId: string, queryText: strin
 
 export const FREE_DAILY_AI_LIMIT = 5
 export const AI_WARNING_THRESHOLD = 3
+export const FREE_DAILY_AI_ABUSE_LIMIT = 15
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {

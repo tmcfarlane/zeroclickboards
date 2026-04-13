@@ -1,4 +1,4 @@
-import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, jsonResponse, FREE_DAILY_AI_LIMIT } from '../_lib/auth'
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, isAdmin, jsonResponse, FREE_DAILY_AI_LIMIT } from '../_lib/auth'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
@@ -12,11 +12,16 @@ export default async function handler(req: Request) {
     return jsonResponse(401, { error: 'Unauthorized' })
   }
 
+  // Admins have no caps — treat as paid
+  const admin = isAdmin(authUser.email)
+
   try {
-    const [subscribed, used] = await Promise.all([
-      hasActiveSubscription(authUser.token, authUser.userId),
+    const [subscribed, dailyUsage] = await Promise.all([
+      hasActiveSubscription(authUser.token, authUser.userId, process.env.STRIPE_PRICE_ID),
       getDailyAIUsage(authUser.token, authUser.userId),
     ])
+
+    const uncapped = subscribed || admin
 
     // Calculate next midnight Pacific in UTC
     const tomorrow = new Date()
@@ -32,8 +37,8 @@ export default async function handler(req: Request) {
     resetsAtDate.setUTCHours(resetsAtDate.getUTCHours() - offsetHours)
 
     return jsonResponse(200, {
-      used,
-      limit: subscribed ? null : FREE_DAILY_AI_LIMIT,
+      used: dailyUsage.charged,
+      limit: uncapped ? null : FREE_DAILY_AI_LIMIT,
       resetsAt: resetsAtDate.toISOString(),
     })
   } catch {

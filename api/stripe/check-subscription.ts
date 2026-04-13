@@ -8,15 +8,18 @@ export default async function handler(req: Request) {
   const user = await getUserFromRequest(req)
   if (!user) return jsonResponse(401, { error: 'Unauthorized' })
 
+  const priceId = process.env.STRIPE_PRICE_ID
   const [active, client] = [
-    await hasActiveSubscription(user.token, user.userId),
+    await hasActiveSubscription(user.token, user.userId, priceId),
     createAuthenticatedClient(user.token),
   ]
 
-  const { data: subscription } = await client
+  let query = client
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.userId)
+  if (priceId) query = query.eq('stripe_price_id', priceId)
+  const { data: subscription } = await query
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()

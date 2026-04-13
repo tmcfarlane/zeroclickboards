@@ -50,6 +50,7 @@ export default async function handler(req: Request) {
         user_id: userId,
         stripe_customer_id: customerId,
         stripe_subscription_id: subscriptionId,
+        stripe_price_id: item.price.id,
         status: subscription.status,
         current_period_start: new Date(item.current_period_start * 1000).toISOString(),
         current_period_end: new Date(item.current_period_end * 1000).toISOString(),
@@ -66,6 +67,7 @@ export default async function handler(req: Request) {
         .from('subscriptions')
         .update({
           status: subscription.status,
+          stripe_price_id: updatedItem.price.id,
           current_period_start: new Date(updatedItem.current_period_start * 1000).toISOString(),
           current_period_end: new Date(updatedItem.current_period_end * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end,

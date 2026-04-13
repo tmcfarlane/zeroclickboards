@@ -1,6 +1,6 @@
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD } from '../_lib/auth';
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, isAdmin, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD, FREE_DAILY_AI_ABUSE_LIMIT } from '../_lib/auth';
 
 export const config = {
   runtime: 'nodejs',
@@ -25,6 +25,13 @@ type AICommandType =
   | 'clear_column'
   | 'count_cards'
   | 'rename_card'
+  | 'add_label'
+  | 'remove_label'
+  | 'add_checklist'
+  | 'set_description'
+  | 'archive_card'
+  | 'restore_card'
+  | 'duplicate_card'
   | 'unknown';
 
 type AICommand = {
@@ -65,7 +72,7 @@ const SYSTEM_PROMPT =
   'You are a command parser for a Trello-like kanban app. ' +
   'For single operations, return ONLY a JSON object: { "type": "...", "params": {...}, "originalText": "..." }. ' +
   'For requests involving multiple operations (e.g. "create column Review and add 3 tasks"), return: { "commands": [{ "type": "...", "params": {...}, "originalText": "..." }, ...] }. ' +
-  'Supported types: create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, remove_card, edit_card, move_card, set_target_date, switch_view, extract_card_json, extract_column_json, clear_column, count_cards, rename_card, unknown. ' +
+  'Supported types: create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, remove_card, edit_card, move_card, set_target_date, switch_view, extract_card_json, extract_column_json, clear_column, count_cards, rename_card, add_label, remove_label, add_checklist, set_description, archive_card, restore_card, duplicate_card, unknown. ' +
   'params must be an object with relevant keys. ' +
   'Always try to map the user\'s intent to the closest matching action. ' +
   'When the user refers to "it", "that", or "this", resolve it using the last command context provided. For example, if the last command added a card titled "Fix bug", and the user says "move it to Done", the cardTitle should be "Fix bug". ' +
@@ -78,6 +85,22 @@ const SYSTEM_PROMPT =
   'When the user lists multiple items (e.g. "Add tasks: design, build, test to TODO"), return a batch with one add_card per item. ' +
   'Examples: "Export the Done column as JSON" → extract_column_json with columnTitle "Done". "Clear the TODO column" → clear_column with columnTitle "TODO". ' +
   '"How many cards in Done?" → count_cards with columnTitle "Done". "Rename card \'old\' to \'new\'" → rename_card with cardTitle "old" and newTitle "new". ' +
+  // Label commands
+  'For add_label, params: { "cardTitle": "..." (optional), "label": "red"|"yellow"|"green"|"blue"|"purple"|"gray", "allCards": true|false }. ' +
+  'Use allCards:true when the user says "all tasks", "every card", "each card", etc. ' +
+  'Examples: "Give each card a red label" → add_label with { label: "red", allCards: true }. "Add a blue label to \'Fix bug\'" → add_label with { cardTitle: "Fix bug", label: "blue" }. "Label all tasks green" → add_label with { label: "green", allCards: true }. ' +
+  'For remove_label, params: { "cardTitle": "..." (optional), "label": "red"|"yellow"|"green"|"blue"|"purple"|"gray", "allCards": true|false }. ' +
+  // Checklist commands
+  'For add_checklist (adding a checklist to an EXISTING card), params: { "cardTitle": "..." (optional), "checklistItems": ["item1", "item2", ...], "allCards": true|false }. ' +
+  'Use add_checklist when the user wants to add a checklist to existing cards. Use add_card when creating a NEW card with a checklist. ' +
+  'Examples: "Add a checklist to \'Fix bug\' with items: investigate, fix, test" → add_checklist with { cardTitle: "Fix bug", checklistItems: ["investigate", "fix", "test"] }. ' +
+  '"Add checklists to every task" → add_checklist with { checklistItems: ["To do", "In progress", "Done"], allCards: true }. ' +
+  // Description commands
+  'For set_description, params: { "cardTitle": "..." (optional), "description": "..." }. ' +
+  'Example: "Set description of \'Fix bug\' to \'Investigate the login timeout issue\'" → set_description with { cardTitle: "Fix bug", description: "Investigate the login timeout issue" }. ' +
+  // Archive/restore/duplicate commands
+  'For archive_card, params: { "cardTitle": "..." }. For restore_card, params: { "cardTitle": "..." }. For duplicate_card, params: { "cardTitle": "..." }. ' +
+  'Examples: "Archive \'Old task\'" → archive_card. "Restore \'Old task\'" → restore_card. "Duplicate \'Design review\'" → duplicate_card. ' +
   'Only use type "unknown" if the request is completely unrelated to board management.';
 
 export default async function handler(req: Request) {
@@ -93,13 +116,15 @@ export default async function handler(req: Request) {
     return jsonResponse(401, { error: 'Unauthorized' });
   }
 
-  const [subscribed, currentUsage] = await Promise.all([
-    hasActiveSubscription(authUser.token, authUser.userId),
+  const admin = isAdmin(authUser.email);
+  const [subscribed, dailyUsage] = await Promise.all([
+    hasActiveSubscription(authUser.token, authUser.userId, process.env.STRIPE_PRICE_ID),
     getDailyAIUsage(authUser.token, authUser.userId),
   ]);
+  const uncapped = subscribed || admin;
   const tGating = performance.now();
 
-  if (!subscribed && currentUsage >= FREE_DAILY_AI_LIMIT) {
+  if (!uncapped && (dailyUsage.charged >= FREE_DAILY_AI_LIMIT || dailyUsage.total >= FREE_DAILY_AI_ABUSE_LIMIT)) {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowPacific = tomorrow.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
@@ -114,7 +139,7 @@ export default async function handler(req: Request) {
 
     return jsonResponse(429, {
       error: 'AI_DAILY_LIMIT_REACHED',
-      usage: { used: currentUsage, limit: FREE_DAILY_AI_LIMIT, resetsAt: resetsAtDate.toISOString() },
+      usage: { used: dailyUsage.charged, limit: FREE_DAILY_AI_LIMIT, resetsAt: resetsAtDate.toISOString() },
     });
   }
 
@@ -177,13 +202,16 @@ export default async function handler(req: Request) {
 
   const parsed = safeParseJsonObject(aiText);
 
-  // Log usage for all users after successful AI response
+  // Determine the resolved command type to decide whether to charge
   const root0 = parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
   const commandType = root0
     ? (isAICommand(parsed) ? (parsed as AICommand).type : Array.isArray(root0.commands) ? (root0.commands[0] as Record<string, unknown>)?.type : 'unknown')
     : 'unknown';
-  // Fire-and-forget — don't block the response on usage logging
-  logAIUsage(authUser.token, authUser.userId, text, typeof commandType === 'string' ? commandType : 'unknown')
+  const resolvedType = typeof commandType === 'string' ? commandType : 'unknown';
+  const isCharged = resolvedType !== 'unknown';
+
+  // Fire-and-forget — always log for analytics, but command_type determines charged vs uncharged
+  logAIUsage(authUser.token, authUser.userId, text, resolvedType)
     .catch((err) => console.error('[ai/command] logAIUsage failed:', err));
   const tEnd = performance.now();
 
@@ -197,12 +225,13 @@ export default async function handler(req: Request) {
   };
   console.log('[ai/command] timing:', JSON.stringify(timing));
 
-  // Compute usage metadata
-  const used = currentUsage + 1;
+  // Compute usage metadata — only increment 'used' for charged (non-unknown) commands
+  const used = isCharged ? dailyUsage.charged + 1 : dailyUsage.charged;
   const usage = {
     used,
-    limit: subscribed ? null : FREE_DAILY_AI_LIMIT,
-    warning: !subscribed && used >= AI_WARNING_THRESHOLD,
+    limit: uncapped ? null : FREE_DAILY_AI_LIMIT,
+    warning: !uncapped && used >= AI_WARNING_THRESHOLD,
+    charged: isCharged,
   };
 
   if (!parsed || typeof parsed !== 'object') {
