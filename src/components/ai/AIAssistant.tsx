@@ -371,7 +371,8 @@ function parseCommandLocal(input: string): AICommand[] {
     lower.match(
       /(?:move|put|send|transfer)\s+(?:the\s+|a\s+)?(?:(?:\w+\s+)*?(?:task|card|item)|it|that|this)\b/,
     ) ||
-    lower.match(/(?:move|put|send|transfer)\s+(?:to|into)\s+/)
+    lower.match(/(?:move|put|send|transfer)\s+(?:to|into)\s+/) ||
+    lower.match(/(?:move|put|send|transfer)\s+.+?\s+(?:to|into)\s+\S/)
   ) {
     const titleMatch = input.match(/["']([^"']+)["']/);
     const toColumnMatch = input.match(

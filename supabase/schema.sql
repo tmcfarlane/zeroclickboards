@@ -219,7 +219,11 @@ $$;
 
 drop policy if exists "board_members_select" on public.board_members;
 create policy "board_members_select" on public.board_members
-  for select using (auth.uid() = user_id);
+  for select using (
+    auth.uid() = user_id
+    OR board_id IN (select id from public.boards where user_id = auth.uid())
+    OR board_id IN (select public.get_board_ids_for_user(auth.uid()))
+  );
 
 drop policy if exists "board_members_insert" on public.board_members;
 create policy "board_members_insert" on public.board_members

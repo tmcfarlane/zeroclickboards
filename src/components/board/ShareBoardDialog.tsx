@@ -434,7 +434,7 @@ export function ShareBoardDialog({
                         <div className="text-sm font-medium truncate">
                           {invite.email}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-amber-400">
+                        <div className="flex items-center gap-1 text-xs text-amber-400 flex-wrap">
                           <Clock className="w-3 h-3" />
                           <span>Pending</span>
                           <span className="text-[#A8B2B2]">
@@ -444,6 +444,9 @@ export function ShareBoardDialog({
                               : invite.role === "commenter"
                                 ? "Comment"
                                 : "View"}
+                          </span>
+                          <span className="text-[#A8B2B2]">
+                            &middot; Sent {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(invite.created_at))}
                           </span>
                         </div>
                       </div>
