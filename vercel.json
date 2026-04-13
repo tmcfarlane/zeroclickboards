@@ -1,4 +1,5 @@
 {
+  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "headers": [
@@ -23,7 +24,31 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/app/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/board/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/shared/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/embed/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/feedback",
       "destination": "/index.html"
     }
   ]

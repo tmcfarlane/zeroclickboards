@@ -39,10 +39,10 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
   };
 
   const features = [
+    'Unlimited AI queries (free plan: 5/day)',
     'Natural language board management',
     'AI-powered card creation & organization',
     'Batch operations via chat',
-    'Smart task suggestions',
   ];
 
   return (
@@ -54,9 +54,9 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
               <Sparkles className="w-5 h-5 text-[#0B0F0F]" />
             </div>
             <div>
-              <DialogTitle className="text-lg">Upgrade to AI Pro</DialogTitle>
+              <DialogTitle className="text-lg">Upgrade to Pro</DialogTitle>
               <DialogDescription className="text-[#A8B2B2]">
-                Unlock the AI Assistant
+                Unlimited AI queries, every day
               </DialogDescription>
             </div>
           </div>

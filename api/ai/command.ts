@@ -1,4 +1,4 @@
-import { getUserFromRequest, hasActiveSubscription } from '../_lib/auth';
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD } from '../_lib/auth';
 
 export const config = {
   runtime: 'nodejs',
@@ -59,19 +59,42 @@ function isAICommand(value: unknown): value is AICommand {
 }
 
 export default async function handler(req: Request) {
+  const t0 = performance.now();
   if (req.method !== 'POST') {
     return jsonResponse(405, { error: 'Method not allowed' });
   }
 
   // Auth + subscription gating
   const authUser = await getUserFromRequest(req);
+  const tAuth = performance.now();
   if (!authUser) {
     return jsonResponse(401, { error: 'Unauthorized' });
   }
 
-  const subscribed = await hasActiveSubscription(authUser.userId);
-  if (!subscribed) {
-    return jsonResponse(403, { error: 'AI_SUBSCRIPTION_REQUIRED' });
+  const [subscribed, currentUsage] = await Promise.all([
+    hasActiveSubscription(authUser.token, authUser.userId),
+    getDailyAIUsage(authUser.token, authUser.userId),
+  ]);
+  const tGating = performance.now();
+
+  if (!subscribed && currentUsage >= FREE_DAILY_AI_LIMIT) {
+    // Compute next midnight Pacific for resetsAt
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowPacific = tomorrow.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'shortOffset',
+    }).formatToParts(new Date());
+    const offsetPart = parts.find(p => p.type === 'timeZoneName')?.value || 'GMT-8';
+    const offsetHours = parseInt(offsetPart.replace('GMT', ''), 10);
+    const resetsAtDate = new Date(tomorrowPacific + 'T00:00:00Z');
+    resetsAtDate.setUTCHours(resetsAtDate.getUTCHours() - offsetHours);
+
+    return jsonResponse(429, {
+      error: 'AI_DAILY_LIMIT_REACHED',
+      usage: { used: currentUsage, limit: FREE_DAILY_AI_LIMIT, resetsAt: resetsAtDate.toISOString() },
+    });
   }
 
   const apiKey = process.env.AI_GATEWAY_API_KEY;
@@ -121,6 +144,7 @@ export default async function handler(req: Request) {
     user += `\n\nLast command context: ${JSON.stringify(lastCommand)}`;
   }
 
+  const tPreFetch = performance.now();
   const upstream = await fetch('https://ai-gateway.vercel.sh/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -136,6 +160,8 @@ export default async function handler(req: Request) {
       temperature: 0.2,
     }),
   });
+
+  const tGateway = performance.now();
 
   if (!upstream.ok) {
     const errText = await upstream.text();
@@ -158,8 +184,34 @@ export default async function handler(req: Request) {
   })();
   const parsed = typeof content === 'string' ? safeParseJsonObject(content) : null;
 
+  // Log usage for all users after successful AI response
+  const root0 = parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+  const commandType = root0
+    ? (isAICommand(parsed) ? (parsed as AICommand).type : Array.isArray(root0.commands) ? (root0.commands[0] as Record<string, unknown>)?.type : 'unknown')
+    : 'unknown';
+  await logAIUsage(authUser.token, authUser.userId, text, typeof commandType === 'string' ? commandType : 'unknown');
+  const tEnd = performance.now();
+
+  const ms = (a: number, b: number) => Math.round(b - a);
+  const timing = {
+    authMs: ms(t0, tAuth),
+    gatingMs: ms(tAuth, tGating),
+    gatewayMs: ms(tPreFetch, tGateway),
+    logMs: ms(tGateway, tEnd),
+    totalMs: ms(t0, tEnd),
+  };
+  console.log('[ai/command] timing:', JSON.stringify(timing));
+
+  // Compute usage metadata
+  const used = currentUsage + 1;
+  const usage = {
+    used,
+    limit: subscribed ? null : FREE_DAILY_AI_LIMIT,
+    warning: !subscribed && used >= AI_WARNING_THRESHOLD,
+  };
+
   if (!parsed || typeof parsed !== 'object') {
-    return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text } });
+    return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text }, usage, timing });
   }
 
   const root = parsed as Record<string, unknown>;
@@ -168,15 +220,15 @@ export default async function handler(req: Request) {
   if (Array.isArray(root.commands)) {
     const valid = root.commands.filter(isAICommand);
     if (valid.length > 0) {
-      return jsonResponse(200, { commands: valid });
+      return jsonResponse(200, { commands: valid, usage, timing });
     }
-    return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text } });
+    return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text }, usage, timing });
   }
 
   // Single response: { type, params, originalText }
   if (isAICommand(parsed)) {
-    return jsonResponse(200, { command: parsed });
+    return jsonResponse(200, { command: parsed, usage, timing });
   }
 
-  return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text } });
+  return jsonResponse(200, { command: { type: 'unknown', params: {}, originalText: text }, usage });
 }

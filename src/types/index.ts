@@ -65,6 +65,7 @@ export interface Board {
   userId?: string; // Optional for backward compatibility
   isPublic?: boolean;
   embedEnabled?: boolean;
+  background?: string;
 }
 
 export interface AppState {

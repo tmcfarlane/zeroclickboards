@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { getUserFromRequest, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, getHeader, jsonResponse } from '../_lib/auth'
 
 export const config = { runtime: 'nodejs' }
 
@@ -16,7 +16,7 @@ export default async function handler(req: Request) {
   const stripe = new Stripe(stripeKey)
 
   try {
-    const origin = req.headers.get('origin') || 'https://boards.zeroclickdev.ai'
+    const origin = getHeader(req, 'origin') || 'https://boards.zeroclickdev.ai'
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',

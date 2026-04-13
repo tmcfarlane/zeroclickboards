@@ -307,3 +307,25 @@ begin
     end;
   end if;
 end $$;
+
+-- AI usage tracking table
+create table if not exists public.ai_usage (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  query_text text,
+  command_type text,
+  token_count integer,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_ai_usage_user_created on public.ai_usage(user_id, created_at desc);
+
+alter table public.ai_usage enable row level security;
+
+drop policy if exists "ai_usage_select_own" on public.ai_usage;
+create policy "ai_usage_select_own" on public.ai_usage
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "ai_usage_insert_service" on public.ai_usage;
+create policy "ai_usage_insert_service" on public.ai_usage
+  for insert with check (true);

@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { getUserFromRequest, createServiceClient, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, getHeader, createAuthenticatedClient, jsonResponse } from '../_lib/auth'
 
 export const config = { runtime: 'nodejs' }
 
@@ -13,10 +13,11 @@ export default async function handler(req: Request) {
   if (!stripeKey) return jsonResponse(500, { error: 'Stripe not configured' })
 
   const stripe = new Stripe(stripeKey)
-  const service = createServiceClient()
+
+  const client = createAuthenticatedClient(user.token)
 
   // Get customer ID from profiles
-  const { data: profile } = await service
+  const { data: profile } = await client
     .from('profiles')
     .select('stripe_customer_id')
     .eq('id', user.userId)
@@ -27,7 +28,7 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const origin = req.headers.get('origin') || 'https://boards.zeroclickdev.ai'
+    const origin = getHeader(req, 'origin') || 'https://boards.zeroclickdev.ai'
 
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,

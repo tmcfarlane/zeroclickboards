@@ -18,6 +18,7 @@ interface BoardStore extends AppState {
   createBoard: (name: string, description?: string, columns?: Column[]) => string;
   deleteBoard: (boardId: string) => void;
   renameBoard: (boardId: string, newName: string) => void;
+  setBoardBackground: (boardId: string, background: string | undefined) => void;
   setActiveBoard: (boardId: string) => void;
 
   addColumn: (boardId: string, title: string) => void;
@@ -68,8 +69,8 @@ type BoardData = {
   columns: Column[];
 };
 
-function boardToData(board: Board): BoardData {
-  return { columns: board.columns };
+function boardToData(board: Board): BoardData & { background?: string } {
+  return { columns: board.columns, ...(board.background ? { background: board.background } : {}) };
 }
 
 function dataToColumns(data: Json | null | undefined): Column[] {
@@ -77,6 +78,12 @@ function dataToColumns(data: Json | null | undefined): Column[] {
   const columns = (data as Record<string, unknown>).columns;
   if (!Array.isArray(columns)) return createDefaultColumns();
   return columns as unknown as Column[];
+}
+
+function dataToBackground(data: Json | null | undefined): string | undefined {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined;
+  const bg = (data as Record<string, unknown>).background;
+  return typeof bg === 'string' ? bg : undefined;
 }
 
 const pendingBoardSync = new Map<string, ReturnType<typeof setTimeout>>();
@@ -115,6 +122,7 @@ function ensureBoardsSubscription(userId: string) {
             name: r.name,
             description,
             columns: dataToColumns(r.data as Json | null | undefined),
+            background: dataToBackground(r.data as Json | null | undefined),
             createdAt: r.created_at,
             updatedAt: r.updated_at,
             userId: r.user_id,
@@ -136,7 +144,15 @@ function ensureBoardsSubscription(userId: string) {
           const next = rowToBoard(payload.new);
           if (!next) return;
           useBoardStore.setState({
-            boards: state.boards.map((b) => (b.id === next.id ? next : b)),
+            boards: state.boards.map((b) => {
+              if (b.id !== next.id) return b;
+              // Merge: keep local fields that the realtime payload may not include
+              return {
+                ...b,
+                ...next,
+                background: next.background ?? b.background,
+              };
+            }),
           });
         }
         if (payload.eventType === 'DELETE') {
@@ -235,6 +251,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       name: row.name,
       description: row.description ?? undefined,
       columns: dataToColumns(row.data),
+      background: dataToBackground(row.data),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       userId: row.user_id,
@@ -323,6 +340,13 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       boards: state.boards.map((b) => (b.id === boardId ? { ...b, name: newName, updatedAt: new Date().toISOString() } : b)),
     }));
     toast.success('Board renamed');
+    scheduleBoardSync(boardId);
+  },
+
+  setBoardBackground: (boardId, background) => {
+    set((state) => ({
+      boards: state.boards.map((b) => (b.id === boardId ? { ...b, background, updatedAt: new Date().toISOString() } : b)),
+    }));
     scheduleBoardSync(boardId);
   },
 

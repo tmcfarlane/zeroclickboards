@@ -1,4 +1,4 @@
-import { getUserFromRequest, hasActiveSubscription, createServiceClient, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, hasActiveSubscription, createAuthenticatedClient, jsonResponse } from '../_lib/auth'
 
 export const config = { runtime: 'nodejs' }
 
@@ -8,16 +8,18 @@ export default async function handler(req: Request) {
   const user = await getUserFromRequest(req)
   if (!user) return jsonResponse(401, { error: 'Unauthorized' })
 
-  const active = await hasActiveSubscription(user.userId)
+  const [active, client] = [
+    await hasActiveSubscription(user.token, user.userId),
+    createAuthenticatedClient(user.token),
+  ]
 
-  const service = createServiceClient()
-  const { data: subscription } = await service
+  const { data: subscription } = await client
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.userId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   return jsonResponse(200, {
     hasActiveSubscription: active,

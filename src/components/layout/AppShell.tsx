@@ -21,8 +21,8 @@ import { TemplatePicker } from '@/components/board/TemplatePicker';
 import { templateToColumns, type BoardTemplate } from '@/lib/templates';
 import { readFileAsJSON, validateBoardJSON, importBoardFromJSON } from '@/lib/board-io';
 import { Footer } from './Footer';
-import { useSubscription } from '@/hooks/useSubscription';
 import { AIUpgradePrompt } from '@/components/billing/AIUpgradePrompt';
+
 
 export function AppShell() {
   const {
@@ -47,7 +47,7 @@ export function AppShell() {
   const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
   const importFileRef = useRef<HTMLInputElement>(null);
   const { isSignedIn, isLoaded, userId } = useAuth();
-  const { hasSubscription } = useSubscription();
+
 
   const activeBoard = getActiveBoard();
   const userBoards = getBoardsForUser(userId);
@@ -59,13 +59,7 @@ export function AppShell() {
       const el = document.getElementById(searchInputId) as HTMLInputElement | null;
       el?.focus();
     },
-    onToggleAI: () => {
-      if (hasSubscription) {
-        setIsAIOpen((v) => !v);
-      } else {
-        setIsUpgradePromptOpen(true);
-      }
-    },
+    onToggleAI: () => setIsAIOpen((v) => !v),
     onBoardView: () => setViewMode('board'),
     onTimelineView: () => setViewMode('timeline'),
     onNewBoard: () => setIsCreateDialogOpen(true),
@@ -132,11 +126,7 @@ export function AppShell() {
   };
 
   const handleAIClick = () => {
-    if (hasSubscription) {
-      setIsAIOpen(true);
-    } else {
-      setIsUpgradePromptOpen(true);
-    }
+    setIsAIOpen((v) => !v);
   };
 
   if (!isLoaded) {
@@ -156,53 +146,60 @@ export function AppShell() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F0F]/90 backdrop-blur-md border-b border-white/5">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-cyan flex items-center justify-center">
-              <span className="text-[#0B0F0F] font-bold text-sm">Z</span>
-            </div>
+            <img src="/logo/logo_color.svg" alt="ZeroBoard" className="w-8 h-8" />
             <span className="font-semibold text-lg">ZeroBoard</span>
           </div>
 
           {userBoards.length > 0 && (
-            <div className="flex-1 mx-2 min-w-0">
+            <div className="flex-1 mx-2 min-w-0 flex items-center gap-2">
               <BoardSelector />
+              {activeBoard && (
+                <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('board')}
+                    className={`h-8 px-3 rounded-md transition-all ${
+                      viewMode === 'board'
+                        ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
+                        : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Layout className="w-4 h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Board</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setViewMode('timeline')}
+                    className={`h-8 px-3 rounded-md transition-all ${
+                      viewMode === 'timeline'
+                        ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
+                        : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Timeline</span>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
           <div className="flex items-center gap-2">
             {activeBoard && (
-              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 mr-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('board')}
-                  className={`h-8 px-3 rounded-md transition-all ${
-                    viewMode === 'board'
-                      ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                      : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Layout className="w-4 h-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Board</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('timeline')}
-                  className={`h-8 px-3 rounded-md transition-all ${
-                    viewMode === 'timeline'
-                      ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                      : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Clock className="w-4 h-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Timeline</span>
-                </Button>
+              <div className="awesome-border cursor-pointer" onClick={handleAIClick}>
+                <div className="awesome-border-inner flex items-center gap-1.5 h-9 px-4 font-medium text-sm text-[#78fcd6] hover:text-[#00ffb6] transition-colors">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Ask AI</span>
+                </div>
               </div>
             )}
 
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
-              className="h-9 px-4 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-medium rounded-lg"
+              variant="ghost"
+              className="h-9 px-4 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-lg"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline ml-1.5">New Board</span>
@@ -227,51 +224,43 @@ export function AppShell() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-14 flex-1 min-h-0 overflow-hidden">
-        {remoteStatus === 'loading' && !activeBoard ? (
-          <BoardSkeleton />
-        ) : activeBoard ? (
-          viewMode === 'board' ? (
-            <KanbanBoard board={activeBoard} />
-          ) : (
-            <TimelineView board={activeBoard} />
-          )
-        ) : (
-          <div className="h-full flex items-center justify-center" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <Layout className="w-8 h-8 text-[#78fcd6]" />
+      {/* Main Content Area with AI Side Panel */}
+      <div className="pt-14 flex-1 min-h-0 flex overflow-hidden">
+        <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} onUpgrade={() => setIsUpgradePromptOpen(true)} />
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          <main className="flex-1 min-h-0 overflow-hidden">
+            {remoteStatus === 'loading' && !activeBoard ? (
+              <BoardSkeleton />
+            ) : activeBoard ? (
+              viewMode === 'board' ? (
+                <KanbanBoard board={activeBoard} />
+              ) : (
+                <TimelineView board={activeBoard} />
+              )
+            ) : (
+              <div className="h-full flex items-center justify-center" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <Layout className="w-8 h-8 text-[#78fcd6]" />
+                  </div>
+                  <h2 className="text-xl font-semibold mb-2">No board selected</h2>
+                  <p className="text-[#A8B2B2] mb-4">Create a new board to get started</p>
+                  <Button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="gradient-cyan text-[#0B0F0F] hover:opacity-90"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Board
+                  </Button>
+                </div>
               </div>
-              <h2 className="text-xl font-semibold mb-2">No board selected</h2>
-              <p className="text-[#A8B2B2] mb-4">Create a new board to get started</p>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="gradient-cyan text-[#0B0F0F] hover:opacity-90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Board
-              </Button>
-            </div>
-          </div>
-        )}
-      </main>
+            )}
+          </main>
+          <Footer variant="compact" />
+        </div>
+      </div>
 
-      <Footer variant="compact" />
 
-      {/* AI Assistant Floating Button */}
-      <button
-        type="button"
-        onClick={handleAIClick}
-        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full gradient-cyan flex items-center justify-center shadow-lg hover:scale-105 transition-transform z-40 group"
-        style={{
-          boxShadow: '0 0 0 1px rgba(120, 252, 214, 0.35), 0 20px 50px rgba(120, 252, 214, 0.18)',
-        }}
-      >
-        <Sparkles className="w-6 h-6 text-[#0B0F0F] group-hover:animate-pulse" />
-      </button>
-
-      <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
       <AIUpgradePrompt isOpen={isUpgradePromptOpen} onOpenChange={setIsUpgradePromptOpen} />
       <KeyboardShortcutsHelp isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <SignInModal isOpen={isSignInModalOpen} onOpenChange={setIsSignInModalOpen} />

@@ -1,4 +1,4 @@
-import { getUserFromRequest, createServiceClient, jsonResponse } from '../_lib/auth'
+import { getUserFromRequest, createAuthenticatedClient, jsonResponse } from '../_lib/auth'
 
 export const config = { runtime: 'nodejs' }
 
@@ -24,10 +24,10 @@ export default async function handler(req: Request) {
     return jsonResponse(400, { error: 'Title and description are required' })
   }
 
-  const service = createServiceClient()
+  const client = createAuthenticatedClient(user.token)
 
   // Save to database
-  const { error: dbError } = await service
+  const { error: dbError } = await client
     .from('feedback')
     .insert({
       user_id: user.userId,

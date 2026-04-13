@@ -7,10 +7,11 @@ import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette } from 'lucide-react';
 import { ShareBoardDialog } from './ShareBoardDialog';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
 import { downloadBoardJSON } from '@/lib/board-io';
+import { BackgroundPicker } from './BackgroundPicker';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import {
@@ -41,7 +42,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ board }: KanbanBoardProps) {
-  const { addColumn, moveCard, reorderColumns, reorderCards } = useBoardStore();
+  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,6 +54,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
   const [hiddenColumnIds, setHiddenColumnIds] = useState<string[]>(() => {
     try {
       const stored = localStorage.getItem(`zcb-hidden-cols-${board.id}`);
@@ -407,14 +409,11 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   }));
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
       {/* Board Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 border-b border-white/5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
         <div>
           <h1 className="text-lg font-semibold">{board.name}</h1>
-          {board.description && (
-            <p className="text-sm text-[#A8B2B2]">{board.description}</p>
-          )}
         </div>
         
         <div className="flex items-center gap-1.5">
@@ -568,6 +567,13 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
                 Export to JSON
               </DropdownMenuItem>
               <DropdownMenuItem
+                onClick={() => setIsBackgroundPickerOpen(true)}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Palette className="w-4 h-4" />
+                Change Background
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={() => setIsArchiveOpen(true)}
                 className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
               >
@@ -604,6 +610,15 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
           </DropdownMenu>
 
           <ArchiveView boardId={board.id} open={isArchiveOpen} onOpenChange={setIsArchiveOpen} />
+          <BackgroundPicker
+            open={isBackgroundPickerOpen}
+            onOpenChange={setIsBackgroundPickerOpen}
+            currentBackground={board.background}
+            onSelect={(bg) => {
+              setBoardBackground(board.id, bg);
+              setIsBackgroundPickerOpen(false);
+            }}
+          />
         </div>
       </div>
 

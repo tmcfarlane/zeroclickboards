@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { createServiceClient, jsonResponse } from '../_lib/auth'
+import { createServiceClient, getHeader, jsonResponse } from '../_lib/auth'
 
 export const config = { runtime: 'nodejs' }
 
@@ -12,7 +12,7 @@ export default async function handler(req: Request) {
 
   const stripe = new Stripe(stripeKey)
   const body = await req.text()
-  const signature = req.headers.get('stripe-signature')
+  const signature = getHeader(req, 'stripe-signature')
 
   if (!signature) return jsonResponse(400, { error: 'Missing stripe-signature' })
 
