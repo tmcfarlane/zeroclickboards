@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Globe, Lock, Copy, Check, X, Code, User } from 'lucide-react';
+import { Globe, Lock, Copy, Check, X, Code, User, Send } from 'lucide-react';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 import * as boardMembers from '@/lib/database/board-members';
 import type { BoardMemberWithProfile, MemberRole } from '@/lib/database/board-members';
 import { toast } from 'sonner';
@@ -26,9 +27,9 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
   const [members, setMembers] = useState<BoardMemberWithProfile[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<MemberRole>('viewer');
-  const [searchResults, setSearchResults] = useState<{ id: string; email: string; full_name: string | null }[]>([]);
   const [copied, setCopied] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   const shareUrl = `${window.location.origin}/board/${boardId}`;
   const embedSnippet = `<iframe src="${window.location.origin}/embed/${boardId}" width="100%" height="600" frameborder="0"></iframe>`;
@@ -41,30 +42,33 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
     }
   }, [isOpen, boardId]);
 
-  const handleSearchProfiles = async (email: string) => {
-    setInviteEmail(email);
-    if (email.length < 3) {
-      setSearchResults([]);
-      return;
-    }
-    const { data } = await boardMembers.searchProfiles(email);
-    if (data) {
-      setSearchResults(data.filter(p => p.id !== userId));
-    }
-  };
+  const handleInviteByEmail = async () => {
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email) return;
 
-  const handleInvite = async (profileId: string) => {
-    const { error } = await boardMembers.addMember(boardId, profileId, inviteRole, userId ?? undefined);
-    if (error) {
-      toast.error('Failed to invite member');
-      return;
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/invite/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ email, boardId, boardName, role: inviteRole }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error || 'Failed to send invite');
+        return;
+      }
+
+      toast.success(`Invitation sent to ${email}`);
+      setInviteEmail('');
+    } finally {
+      setInviting(false);
     }
-    toast.success('Member invited');
-    setInviteEmail('');
-    setSearchResults([]);
-    // Refresh members
-    const { data } = await boardMembers.getMembers(boardId);
-    if (data) setMembers(data);
   };
 
   const handleUpdateRole = async (memberId: string, memberUserId: string, role: MemberRole) => {
@@ -126,30 +130,13 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
           <div className="space-y-2">
             <label className="text-sm font-medium">Invite by email</label>
             <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <Input
-                  value={inviteEmail}
-                  onChange={(e) => handleSearchProfiles(e.target.value)}
-                  placeholder="Search by email..."
-                  className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
-                />
-                {searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-[#1a1f1f] border border-white/10 rounded-lg overflow-hidden z-10">
-                    {searchResults.map((profile) => (
-                      <button
-                        key={profile.id}
-                        type="button"
-                        onClick={() => handleInvite(profile.id)}
-                        className="w-full px-3 py-2 text-left hover:bg-white/5 flex items-center gap-2"
-                      >
-                        <User className="w-4 h-4 text-[#A8B2B2]" />
-                        <span className="text-sm">{profile.email}</span>
-                        {profile.full_name && <span className="text-xs text-[#A8B2B2]">({profile.full_name})</span>}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <Input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="Enter email address..."
+                className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
+              />
               <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as MemberRole)}>
                 <SelectTrigger className="w-28 bg-white/5 border-white/10">
                   <SelectValue />
@@ -160,6 +147,14 @@ export function ShareBoardDialog({ boardId, boardName, isPublic, embedEnabled, i
                   <SelectItem value="editor">Modify</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                size="icon"
+                onClick={handleInviteByEmail}
+                disabled={!inviteEmail.trim() || inviting}
+                className="bg-[#78fcd6] hover:bg-[#78fcd6]/80 text-[#111515] flex-shrink-0"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 

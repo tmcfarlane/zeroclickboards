@@ -160,7 +160,7 @@ alter table public.profiles add column if not exists stripe_customer_id text;
 create table if not exists public.board_members (
   id uuid primary key default gen_random_uuid(),
   board_id uuid not null references public.boards(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade references public.profiles(id) on delete cascade,
   role text not null default 'viewer',
   invited_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
