@@ -7,6 +7,8 @@ interface KeyboardShortcutsHelpProps {
 }
 
 const shortcuts = [
+  { key: 'Ctrl + Z', description: 'Undo last action' },
+  { key: 'Ctrl + Shift + Z', description: 'Redo last action' },
   { key: 'N', description: 'Add new card' },
   { key: 'Shift + N', description: 'Create new board' },
   { key: '/', description: 'Focus search' },

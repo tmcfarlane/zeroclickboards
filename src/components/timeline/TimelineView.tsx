@@ -95,7 +95,7 @@ export function TimelineView({ board }: TimelineViewProps) {
             variant="outline"
             className="h-9 border-white/10 text-[#F2F7F7] hover:bg-white/5"
           >
-            <Calendar className="w-4 h-4 sm:mr-1.5" />
+            <Calendar className="w-4 h-4 sm:mr-1.5 text-[#A8B2B2]" />
             <span className="hidden sm:inline">Today</span>
           </Button>
           <div className="flex items-center bg-white/5 rounded-lg">

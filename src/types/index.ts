@@ -17,6 +17,21 @@ export interface CardContent {
   imageUrl?: string;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  addedAt: string;
+  isCover?: boolean;
+}
+
+export interface RecurrenceConfig {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  interval: number;
+  daysOfWeek?: number[]; // 0=Sun..6=Sat, only for 'weekly'
+  dayOfMonth?: number;   // 1-31, only for 'monthly'
+}
+
 export interface Card {
   id: string;
   title: string;
@@ -25,6 +40,8 @@ export interface Card {
   targetDate?: string;
   labels?: CardLabel[];
   coverImage?: string;
+  attachments?: Attachment[];
+  recurrence?: RecurrenceConfig;
   isArchived?: boolean;
   archivedAt?: string;
   createdAt: string;
@@ -46,6 +63,9 @@ export interface Board {
   createdAt: string;
   updatedAt: string;
   userId?: string; // Optional for backward compatibility
+  isPublic?: boolean;
+  embedEnabled?: boolean;
+  background?: string;
 }
 
 export interface AppState {
@@ -56,7 +76,7 @@ export interface AppState {
 
 // AI Assistant types
 export interface AICommand {
-  type: 'create_board' | 'delete_board' | 'rename_board' | 'add_column' | 'remove_column' | 'rename_column' | 'add_card' | 'remove_card' | 'edit_card' | 'move_card' | 'set_target_date' | 'switch_view' | 'unknown';
+  type: 'create_board' | 'delete_board' | 'rename_board' | 'add_column' | 'remove_column' | 'rename_column' | 'add_card' | 'remove_card' | 'edit_card' | 'move_card' | 'set_target_date' | 'switch_view' | 'extract_card_json' | 'extract_column_json' | 'clear_column' | 'count_cards' | 'rename_card' | 'set_recurrence' | 'remove_recurrence' | 'add_label' | 'remove_label' | 'add_checklist' | 'set_description' | 'archive_card' | 'restore_card' | 'duplicate_card' | 'unknown';
   params: Record<string, unknown>;
   originalText: string;
 }
@@ -67,6 +87,7 @@ export interface AIMessage {
   content: string;
   timestamp: string;
   command?: AICommand;
+  commands?: AICommand[];
 }
 
 // Timeline types
@@ -89,16 +110,25 @@ export type {
   ColumnRow,
   CardRow,
   CardActivity,
+  BoardMemberRow,
+  SubscriptionRow,
+  FeedbackRow,
   InsertProfile,
   InsertBoard,
   InsertColumn,
   InsertCard,
   InsertCardActivity,
+  InsertBoardMember,
+  InsertSubscription,
+  InsertFeedback,
   UpdateProfile,
   UpdateBoard,
   UpdateColumn,
   UpdateCard,
   UpdateCardActivity,
+  UpdateBoardMember,
+  UpdateSubscription,
+  UpdateFeedback,
   Json,
 } from './database';
 

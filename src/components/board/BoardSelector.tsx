@@ -5,7 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, Edit2, Trash2, Check } from 'lucide-react';
@@ -78,38 +77,31 @@ export function BoardSelector() {
             <DropdownMenuItem
               key={board.id}
               onClick={() => setActiveBoard(board.id)}
-              className="flex items-center justify-between py-2 px-3 hover:bg-white/5 cursor-pointer focus:bg-white/5"
+              className="flex items-center justify-between py-2 px-2 hover:bg-white/5 cursor-pointer focus:bg-white/5 group"
             >
-              <span className="truncate flex-1">{board.name}</span>
-              <div className="flex items-center gap-1">
-                {activeBoardId === board.id && (
-                  <Check className="w-4 h-4 text-[#78fcd6]" />
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {activeBoardId === board.id ? (
+                  <Check className="w-4 h-4 text-[#78fcd6] shrink-0" />
+                ) : (
+                  <span className="w-4 h-4 shrink-0" />
                 )}
+                <span className="truncate">{board.name}</span>
+              </div>
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => openRenameDialog(board, e)}
+                  className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-[#78fcd6] transition-colors"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => openDeleteDialog(board, e)}
+                  className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-red-400 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             </DropdownMenuItem>
-          ))}
-          
-          <DropdownMenuSeparator className="bg-white/10" />
-          
-          {boards.map((board) => (
-            <div
-              key={`actions-${board.id}`}
-              className="flex items-center px-2 py-1 hover:bg-white/5"
-            >
-              <span className="flex-1 truncate text-sm text-[#A8B2B2] px-1">{board.name}</span>
-              <button
-                onClick={(e) => openRenameDialog(board, e)}
-                className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-[#78fcd6] transition-colors"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={(e) => openDeleteDialog(board, e)}
-                className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-red-400 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>

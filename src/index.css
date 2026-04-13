@@ -67,7 +67,43 @@
   }
 }
 
+/* Animated border angle property */
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-spin {
+  to { --border-angle: 360deg; }
+}
+
 @layer utilities {
+  .awesome-border {
+    position: relative;
+    border-radius: 10px;
+    padding: 1.5px;
+    background: conic-gradient(
+      from var(--border-angle),
+      transparent  0%,
+      transparent  40%,
+      #7bf8ff      52%,
+      #78fcd6      58%,
+      #00ffb6      62%,
+      #78fcd6      66%,
+      #7bf8ff      72%,
+      transparent  84%,
+      transparent 100%
+    );
+    animation: border-spin 3s linear infinite;
+    filter: drop-shadow(0 0 6px rgba(120, 252, 214, 0.4));
+  }
+
+  .awesome-border-inner {
+    border-radius: 9px;
+    background: hsl(210 11% 7%);
+  }
+
   /* Gradient utilities */
   .gradient-cyan {
     background: linear-gradient(135deg, #78fcd6, #00ffb6);
@@ -187,6 +223,17 @@
                 0 0 30px rgba(120, 252, 214, 0.2),
                 inset 0 0 10px rgba(120, 252, 214, 0.1);
   }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Date input native calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(0.1) saturate(0.5) hue-rotate(130deg);
+  cursor: pointer;
 }
 
 /* Board column drag and drop styles */

@@ -1,12 +1,18 @@
-import { useState } from 'react';
-import { DndContext, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { DndContext, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners, type CollisionDetection } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useUndoStore } from '@/store/useUndoStore';
 import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, ChevronDown } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles } from 'lucide-react';
+import { ShareBoardDialog } from './ShareBoardDialog';
+import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
+import { downloadBoardJSON } from '@/lib/board-io';
+import { BackgroundPicker } from './BackgroundPicker';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -22,19 +28,139 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface KanbanBoardProps {
   board: Board;
+  onAIClick?: () => void;
 }
 
-export function KanbanBoard({ board }: KanbanBoardProps) {
-  const { addColumn, moveCard, reorderColumns, reorderCards } = useBoardStore();
+export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
+  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [, setActiveDragData] = useState<{ cardId: string; sourceColumnId: string } | null>(null);
+  const [activeDragData, setActiveDragData] = useState<{ cardId: string; sourceColumnId: string } | null>(null);
+  const [activeDragType, setActiveDragType] = useState<'card' | 'column' | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const dragOriginRef = useRef<{ columnId: string; index: number } | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<CardLabel[]>([]);
   const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
+  const [hiddenColumnIds, setHiddenColumnIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(`zcb-hidden-cols-${board.id}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+
+  // Reset hidden columns when switching boards
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`zcb-hidden-cols-${board.id}`);
+      setHiddenColumnIds(stored ? JSON.parse(stored) : []);
+    } catch {
+      setHiddenColumnIds([]);
+    }
+  }, [board.id]);
+
+  // Persist hidden columns (skip if empty on first render to avoid overwriting)
+  useEffect(() => {
+    localStorage.setItem(`zcb-hidden-cols-${board.id}`, JSON.stringify(hiddenColumnIds));
+  }, [hiddenColumnIds, board.id]);
+
+  const hideColumn = (columnId: string) => {
+    setHiddenColumnIds(prev => [...prev, columnId]);
+  };
+
+  const showColumn = (columnId: string) => {
+    setHiddenColumnIds(prev => prev.filter(id => id !== columnId));
+  };
+
+  const activeCard = (() => {
+    if (!activeDragData) return null;
+    for (const col of board.columns) {
+      const c = col.cards.find(card => card.id === activeDragData.cardId);
+      if (c) return c;
+    }
+    return null;
+  })();
+
+  // Vertical wheel → horizontal board scroll everywhere on the board.
+  // Only exception: if mouse is inside a column card list that has room to scroll vertically.
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingBoard = useRef(false);
+  const dragStart = useRef({ x: 0, scrollLeft: 0 });
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    // Non-null alias for use inside closures (guarded by early return above)
+    const container: HTMLDivElement = el;
+
+    function onWheel(e: WheelEvent) {
+      // Check if over a column card list that can still scroll vertically
+      const target = e.target as HTMLElement;
+      const colScroll = target.closest('[data-column-cards]') as HTMLElement | null;
+      if (colScroll && e.deltaY !== 0) {
+        const atTop = colScroll.scrollTop <= 0;
+        const atBottom = colScroll.scrollTop + colScroll.clientHeight >= colScroll.scrollHeight - 1;
+        if (!(e.deltaY < 0 && atTop) && !(e.deltaY > 0 && atBottom)) {
+          return; // column can scroll in this direction, let it
+        }
+      }
+      // Convert vertical wheel → horizontal scroll
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    }
+
+    // Click-and-drag to scroll horizontally
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as HTMLElement;
+      // Only drag on the canvas background or column headers, not on cards/inputs/buttons
+      if (target.closest('button, input, textarea, [data-kanban-card], a, [role="dialog"]')) return;
+      isDraggingBoard.current = true;
+      dragStart.current = { x: e.clientX, scrollLeft: container.scrollLeft };
+      container.style.cursor = 'grabbing';
+      container.setPointerCapture(e.pointerId);
+    }
+    function onPointerMove(e: PointerEvent) {
+      if (!isDraggingBoard.current) return;
+      const dx = e.clientX - dragStart.current.x;
+      container.scrollLeft = dragStart.current.scrollLeft - dx;
+    }
+    function onPointerUp(e: PointerEvent) {
+      if (!isDraggingBoard.current) return;
+      isDraggingBoard.current = false;
+      container.style.cursor = '';
+      container.releasePointerCapture(e.pointerId);
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    container.addEventListener('pointerdown', onPointerDown);
+    container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerup', onPointerUp);
+    container.addEventListener('pointercancel', onPointerUp);
+
+    return () => {
+      container.removeEventListener('wheel', onWheel);
+      container.removeEventListener('pointerdown', onPointerDown);
+      container.removeEventListener('pointermove', onPointerMove);
+      container.removeEventListener('pointerup', onPointerUp);
+      container.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, []);
 
   const ALL_LABELS: CardLabel[] = ['red', 'yellow', 'green', 'blue', 'purple', 'gray'];
   const LABEL_COLORS: Record<CardLabel, string> = {
@@ -61,16 +187,39 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     })
   );
 
+  // When dragging a column, only consider other columns as drop targets to prevent
+  // oscillation from closestCorners bouncing between cards and columns.
+  const collisionDetection: CollisionDetection = useCallback(
+    (args) => {
+      if (activeDragType === 'column') {
+        return closestCorners({
+          ...args,
+          droppableContainers: args.droppableContainers.filter(
+            (container) => container.data.current?.type === 'column'
+          ),
+        });
+      }
+      return closestCorners(args);
+    },
+    [activeDragType]
+  );
+
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const activeData = active.data.current;
-    
+
     if (activeData?.type === 'card') {
+      const colId = activeData.columnId as string;
+      const col = board.columns.find((c) => c.id === colId);
+      const idx = col?.cards.findIndex((c) => c.id === active.id) ?? -1;
+      dragOriginRef.current = { columnId: colId, index: idx >= 0 ? idx : 0 };
       setActiveDragData({
         cardId: active.id as string,
-        sourceColumnId: activeData.columnId as string,
+        sourceColumnId: colId,
       });
     }
+
+    setActiveDragType((activeData?.type as 'card' | 'column') ?? null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -92,6 +241,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
 
     if (overData?.type === 'card') {
       const targetColumnId = overData.columnId as string;
+      setDragOverColumnId(targetColumnId);
       if (sourceColumnId !== targetColumnId) {
         // Cross-column move: place card before the target card
         const targetColumn = board.columns.find((c) => c.id === targetColumnId);
@@ -100,6 +250,7 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
       }
     } else if (overData?.type === 'column') {
       const targetColumnId = overId as string;
+      setDragOverColumnId(targetColumnId);
       if (sourceColumnId !== targetColumnId) {
         // Card dragged onto an empty column — append to end
         moveCard(board.id, sourceColumnId, targetColumnId, activeId as string);
@@ -109,10 +260,46 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    const origin = dragOriginRef.current;
+    dragOriginRef.current = null;
 
     setActiveDragData(null);
+    setActiveDragType(null);
+    setDragOverColumnId(null);
 
     if (!over) return;
+
+    // Record undo for cross-column card moves using the origin captured at drag start
+    if (origin && active.data.current?.type === 'card') {
+      const cardId = active.id as string;
+      // Find which column the card ended up in
+      let finalColumnId: string | null = null;
+      let finalIndex = 0;
+      for (const col of board.columns) {
+        const idx = col.cards.findIndex((c) => c.id === cardId);
+        if (idx >= 0) {
+          finalColumnId = col.id;
+          finalIndex = idx;
+          break;
+        }
+      }
+      if (finalColumnId && finalColumnId !== origin.columnId) {
+        const origColId = origin.columnId;
+        const origIdx = origin.index;
+        const destColId = finalColumnId;
+        const destIdx = finalIndex;
+        const bId = board.id;
+        useUndoStore.getState().pushAction({
+          description: 'Move card',
+          undo: () => {
+            useBoardStore.getState().moveCard(bId, destColId, origColId, cardId, origIdx);
+          },
+          redo: () => {
+            useBoardStore.getState().moveCard(bId, origColId, destColId, cardId, destIdx);
+          },
+        });
+      }
+    }
 
     const activeId = active.id;
     const overId = over.id;
@@ -122,16 +309,27 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     const activeData = active.data.current;
     const overData = over.data.current;
 
-    if (activeData?.type === 'column' && overData?.type === 'column') {
-      // Reorder columns
-      const oldIndex = board.columns.findIndex((c) => c.id === activeId);
-      const newIndex = board.columns.findIndex((c) => c.id === overId);
-      const newColumnIds = arrayMove(
-        board.columns.map((c) => c.id),
-        oldIndex,
-        newIndex
-      );
-      reorderColumns(board.id, newColumnIds);
+    if (activeData?.type === 'column') {
+      // Determine target column — over element may be a column or a card inside one
+      const targetColumnId =
+        overData?.type === 'column'
+          ? (overId as string)
+          : overData?.type === 'card'
+            ? (overData.columnId as string)
+            : null;
+
+      if (targetColumnId && targetColumnId !== activeId) {
+        const oldIndex = board.columns.findIndex((c) => c.id === activeId);
+        const newIndex = board.columns.findIndex((c) => c.id === targetColumnId);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newColumnIds = arrayMove(
+            board.columns.map((c) => c.id),
+            oldIndex,
+            newIndex
+          );
+          reorderColumns(board.id, newColumnIds);
+        }
+      }
       return;
     }
 
@@ -156,6 +354,13 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
     }
   };
 
+  const handleDragCancel = () => {
+    dragOriginRef.current = null;
+    setActiveDragData(null);
+    setActiveDragType(null);
+    setDragOverColumnId(null);
+  };
+
   const handleAddColumn = () => {
     if (newColumnTitle.trim()) {
       addColumn(board.id, newColumnTitle.trim());
@@ -170,7 +375,10 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay()) + 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const filteredColumns = board.columns.map((column) => ({
+  const visibleColumns = board.columns.filter(col => !hiddenColumnIds.includes(col.id));
+  const hiddenColumns = board.columns.filter(col => hiddenColumnIds.includes(col.id));
+
+  const filteredColumns = visibleColumns.map((column) => ({
     ...column,
     cards: column.cards.filter((card) => {
       if (!card.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -202,17 +410,25 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
   }));
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
       {/* Board Header */}
-      <div className="flex flex-col gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b border-white/5">
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-lg font-semibold truncate">{board.name}</h1>
-          {board.description && (
-            <p className="text-xs sm:text-sm text-[#A8B2B2] truncate">{board.description}</p>
-          )}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
+        <div>
+          <h1 className="text-lg font-semibold">{board.name}</h1>
         </div>
+        
+        <div className="flex items-center gap-1.5">
+          {/* Ask AI */}
+          {onAIClick && (
+            <button
+              onClick={onAIClick}
+              className="mr-2 flex items-center gap-1.5 h-9 px-4 font-medium text-sm text-[#78fcd6] hover:text-[#00ffb6] transition-colors bg-white/5 border border-white/10 rounded-lg hover:bg-white/10"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Ask AI</span>
+            </button>
+          )}
 
-        <div className="flex items-center gap-1.5 sm:gap-3 overflow-x-auto scrollbar-thin">
           {/* Search */}
           <div className="relative min-w-0 shrink">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
@@ -225,120 +441,212 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
             />
           </div>
 
-          {/* Label Filter */}
+          {/* Filters */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
-                variant="outline"
-                className={`h-9 px-3 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${selectedLabels.length > 0 ? 'border-[#78fcd6]/50 text-[#78fcd6]' : ''}`}
+                variant="ghost"
+                size="icon"
+                className={`relative h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${
+                  selectedLabels.length > 0 || dueDateFilter ? 'text-[#78fcd6]' : ''
+                }`}
               >
-                <Tag className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Labels</span>
-                {selectedLabels.length > 0 && (
-                  <span className="ml-1 text-xs bg-[#78fcd6]/20 px-1.5 rounded-full">{selectedLabels.length}</span>
+                <SlidersHorizontal className="w-4 h-4" />
+                {(selectedLabels.length > 0 || dueDateFilter) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#78fcd6] rounded-full" />
                 )}
-                <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48 bg-[#111515] border-white/10 p-3" align="end">
-              <div className="space-y-2">
-                {ALL_LABELS.map((label) => (
-                  <label key={label} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded p-1">
-                    <Checkbox
-                      checked={selectedLabels.includes(label)}
-                      onCheckedChange={(checked) => {
-                        setSelectedLabels(checked
-                          ? [...selectedLabels, label]
-                          : selectedLabels.filter((l) => l !== label)
-                        );
-                      }}
-                      className="border-white/20 data-[state=checked]:bg-[#78fcd6] data-[state=checked]:border-[#78fcd6]"
-                    />
-                    <div className={`w-4 h-4 rounded ${LABEL_COLORS[label]}`} />
-                    <span className="text-sm text-[#F2F7F7] capitalize">{label}</span>
-                  </label>
-                ))}
-                {selectedLabels.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedLabels([])}
-                    className="w-full h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7]"
-                  >
-                    Clear
-                  </Button>
+            <PopoverContent className="w-56 bg-[#111515] border-white/10 p-3" align="end">
+              <div className="space-y-3">
+                {/* Labels */}
+                <div>
+                  <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                    <Tag className="w-3 h-3" /> Labels
+                  </p>
+                  <div className="space-y-1.5">
+                    {ALL_LABELS.map((label) => (
+                      <label key={label} className="flex items-center gap-2 cursor-pointer hover:bg-white/5 rounded p-1">
+                        <Checkbox
+                          checked={selectedLabels.includes(label)}
+                          onCheckedChange={(checked) => {
+                            setSelectedLabels(checked
+                              ? [...selectedLabels, label]
+                              : selectedLabels.filter((l) => l !== label)
+                            );
+                          }}
+                          className="border-white/20 data-[state=checked]:bg-[#78fcd6] data-[state=checked]:border-[#78fcd6]"
+                        />
+                        <div className={`w-4 h-4 rounded ${LABEL_COLORS[label]}`} />
+                        <span className="text-sm text-[#F2F7F7] capitalize">{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-white/10" />
+
+                {/* Due Date */}
+                <div>
+                  <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3" /> Due Date
+                  </p>
+                  <div className="space-y-1">
+                    {DUE_DATE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
+                        className={`w-full text-left text-sm px-2 py-1.5 rounded transition-colors ${
+                          dueDateFilter === opt.value
+                            ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
+                            : 'text-[#F2F7F7] hover:bg-white/5'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Clear All */}
+                {(selectedLabels.length > 0 || dueDateFilter) && (
+                  <>
+                    <div className="border-t border-white/10" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setSelectedLabels([]); setDueDateFilter(null); }}
+                      className="w-full h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7]"
+                    >
+                      Clear All
+                    </Button>
+                  </>
                 )}
               </div>
             </PopoverContent>
           </Popover>
 
-          {/* Due Date Filter */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={`h-9 px-3 border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${dueDateFilter ? 'border-[#78fcd6]/50 text-[#78fcd6]' : ''}`}
-              >
-                <Calendar className="w-4 h-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Due Date</span>
-                <ChevronDown className="w-3 h-3 ml-1" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 bg-[#111515] border-white/10 p-3" align="end">
-              <div className="space-y-1">
-                {DUE_DATE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
-                    className={`w-full text-left text-sm px-2 py-1.5 rounded transition-colors ${
-                      dueDateFilter === opt.value
-                        ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                        : 'text-[#F2F7F7] hover:bg-white/5'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-                {dueDateFilter && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDueDateFilter(null)}
-                    className="w-full h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7] mt-1"
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <ArchiveView boardId={board.id} />
-
-          {/* Add Column Button */}
+          {/* Share Board */}
           <Button
-            onClick={() => setIsAddColumnDialogOpen(true)}
-            className="h-9 px-4 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
+            type="button"
+            variant="ghost"
+            onClick={() => setIsShareDialogOpen(true)}
+            className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
           >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline ml-1.5">Column</span>
+            <Share2 className="w-4 h-4 mr-1.5" />
+            Share
           </Button>
+
+          {/* More Options */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-[#111515] border-white/10">
+              <DropdownMenuItem
+                onClick={() => setIsAddColumnDialogOpen(true)}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Plus className="w-4 h-4" />
+                Add Column
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const template = boardToTemplate(board);
+                  saveUserBoardTemplate(template);
+                  toast.success('Board saved as template — use it when creating a new board');
+                }}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <BookmarkPlus className="w-4 h-4" />
+                Save as Template
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  downloadBoardJSON(board);
+                  toast.success('Board exported');
+                }}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Download className="w-4 h-4" />
+                Export to JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setIsBackgroundPickerOpen(true)}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Palette className="w-4 h-4" />
+                Change Background
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setIsArchiveOpen(true)}
+                className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+              >
+                <Archive className="w-4 h-4" />
+                Archive
+              </DropdownMenuItem>
+              {hiddenColumns.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuLabel className="text-[#A8B2B2] text-xs">
+                    Hidden Columns
+                  </DropdownMenuLabel>
+                  {hiddenColumns.map((col) => (
+                    <DropdownMenuItem
+                      key={col.id}
+                      onClick={() => showColumn(col.id)}
+                      className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
+                    >
+                      <Eye className="w-4 h-4" />
+                      {col.title}
+                    </DropdownMenuItem>
+                  ))}
+                  {hiddenColumns.length > 1 && (
+                    <DropdownMenuItem
+                      onClick={() => setHiddenColumnIds([])}
+                      className="text-[#78fcd6] focus:bg-white/5 focus:text-[#78fcd6]"
+                    >
+                      Show All Columns
+                    </DropdownMenuItem>
+                  )}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <ArchiveView boardId={board.id} open={isArchiveOpen} onOpenChange={setIsArchiveOpen} />
+          <BackgroundPicker
+            open={isBackgroundPickerOpen}
+            onOpenChange={setIsBackgroundPickerOpen}
+            currentBackground={board.background}
+            onSelect={(bg) => {
+              setBoardBackground(board.id, bg);
+              setIsBackgroundPickerOpen(false);
+            }}
+          />
         </div>
       </div>
 
       {/* Board Columns */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
-        <div className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin sm:snap-none snap-x snap-mandatory">
-          <div className="h-full flex items-start gap-2 sm:gap-4 p-2 sm:p-4 after:content-[''] after:min-w-[1px] after:flex-shrink-0">
+        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab">
+          <div className="h-full flex items-start gap-4 p-4 min-w-max">
             <SortableContext
-              items={board.columns.map((c) => c.id)}
+              items={visibleColumns.map((c) => c.id)}
               strategy={horizontalListSortingStrategy}
             >
               {filteredColumns.map((column) => (
@@ -346,12 +654,34 @@ export function KanbanBoard({ board }: KanbanBoardProps) {
                   key={column.id}
                   boardId={board.id}
                   column={column}
+                  onHide={() => hideColumn(column.id)}
+                  isDragOver={dragOverColumnId === column.id}
                 />
               ))}
             </SortableContext>
+            <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+              {activeCard ? (
+                <div className="w-72 sm:w-80 bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2">
+                  <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{activeCard.title}</p>
+                  {activeCard.description && (
+                    <p className="text-xs text-[#A8B2B2] mt-1 line-clamp-1">{activeCard.description}</p>
+                  )}
+                </div>
+              ) : null}
+            </DragOverlay>
           </div>
         </div>
       </DndContext>
+
+      {/* Share Board Dialog */}
+      <ShareBoardDialog
+        boardId={board.id}
+        boardName={board.name}
+        isPublic={board.isPublic ?? false}
+        embedEnabled={board.embedEnabled ?? false}
+        isOpen={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+      />
 
       {/* Add Column Dialog */}
       <Dialog open={isAddColumnDialogOpen} onOpenChange={setIsAddColumnDialogOpen}>

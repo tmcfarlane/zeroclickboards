@@ -1,6 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, LogOut, ChevronDown } from 'lucide-react';
+import { User, LogIn, LogOut, ChevronDown, Sparkles, Settings, Shield } from 'lucide-react';
 import { useAuthContext } from './AuthProvider';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useAdmin } from '@/hooks/useAdmin';
+import { ManageSubscription } from '@/components/billing/ManageSubscription';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +17,10 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ onSignInClick }: UserProfileProps) {
+  const navigate = useNavigate();
   const { isSignedIn, isLoaded, user, signOut } = useAuthContext();
+  const { hasSubscription } = useSubscription();
+  const { isAdmin } = useAdmin();
 
   if (!isLoaded) {
     return (
@@ -45,21 +52,19 @@ export function UserProfile({ onSignInClick }: UserProfileProps) {
           size="sm"
           className="h-9 px-2 text-[#A8B2B2] hover:text-white hover:bg-white/5"
         >
-          <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mr-2 overflow-hidden">
+          <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
             {user?.user_metadata?.avatar_url ? (
               <img
                 src={String(user.user_metadata.avatar_url)}
                 alt="User avatar"
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover"
               />
             ) : (
               <User className="w-4 h-4" />
             )}
           </span>
-          <span className="hidden md:inline text-sm max-w-[140px] truncate">
-            {user?.email ?? 'Account'}
-          </span>
-          <ChevronDown className="w-4 h-4 ml-2" />
+          <ChevronDown className="w-4 h-4 ml-1" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -70,7 +75,33 @@ export function UserProfile({ onSignInClick }: UserProfileProps) {
           <div className="text-xs text-[#A8B2B2]">Signed in as</div>
           <div className="text-sm font-medium truncate">{user?.email}</div>
         </div>
+        {hasSubscription && (
+          <>
+            <div className="h-px bg-white/10 my-1" />
+            <div className="px-3 py-1.5 flex items-center gap-2">
+              <Sparkles className="w-3 h-3 text-[#78fcd6]" />
+              <span className="text-xs text-[#78fcd6] font-medium">AI Pro</span>
+            </div>
+            <ManageSubscription />
+          </>
+        )}
         <div className="h-px bg-white/10 my-1" />
+        <DropdownMenuItem
+          onClick={() => navigate('/account')}
+          className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Account
+        </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem
+            onClick={() => navigate('/admin')}
+            className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Admin
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={async () => {
             await signOut();
