@@ -1,7 +1,8 @@
+import type { CSSProperties } from 'react';
 import { useMemo, useState } from 'react';
-import type { Board, Card } from '@/types';
+import type { Board, Card, CardLabel } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, Repeat } from 'lucide-react';
 import {
   format,
   startOfWeek,
@@ -12,6 +13,48 @@ import {
   isSameDay,
 } from 'date-fns';
 import { parseLocalDate } from '@/lib/utils';
+import { getOccurrencesInRange } from '@/lib/recurrence';
+
+const LABEL_HEX: Record<CardLabel, string> = {
+  red: '#ef4444',
+  yellow: '#eab308',
+  green: '#22c55e',
+  blue: '#3b82f6',
+  purple: '#a855f7',
+  gray: '#6b7280',
+};
+
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function labelCardStyle(labels: CardLabel[] | undefined): CSSProperties | undefined {
+  if (!labels || labels.length === 0) return undefined;
+  if (labels.length === 1) {
+    const c = LABEL_HEX[labels[0]];
+    return {
+      backgroundImage: `linear-gradient(to right, ${hexToRgba(c, 0.4)}, ${hexToRgba(c, 0.2)})`,
+      borderColor: hexToRgba(c, 0.5),
+    };
+  }
+  const stops = labels
+    .map((label, i) => {
+      const pct = (i / (labels.length - 1)) * 100;
+      return `${hexToRgba(LABEL_HEX[label], 0.4)} ${pct.toFixed(2)}%`;
+    })
+    .join(', ');
+  return {
+    backgroundImage: `linear-gradient(90deg, ${stops})`,
+    borderColor: hexToRgba(LABEL_HEX[labels[0]], 0.5),
+  };
+}
+
+const DEFAULT_CARD_STYLE =
+  'bg-gradient-to-r from-[#78fcd6]/30 to-[#00ffb6]/20 border-[#78fcd6]/30';
 
 interface TimelineViewProps {
   board: Board;
@@ -21,6 +64,8 @@ interface TimelineCard {
   card: Card;
   columnName: string;
   columnId: string;
+  occurrenceDate: string;
+  isRecurringInstance: boolean;
 }
 
 export function TimelineView({ board }: TimelineViewProps) {
@@ -30,25 +75,34 @@ export function TimelineView({ board }: TimelineViewProps) {
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Get all cards with target dates
+  // Get all cards with target dates, expanding recurring cards into per-occurrence entries.
   const timelineCards = useMemo(() => {
     const cards: TimelineCard[] = [];
     board.columns.forEach((column) => {
       column.cards.forEach((card) => {
         if (card.isArchived) return;
-        if (card.targetDate) {
+        if (!card.targetDate) return;
+        const occurrences = getOccurrencesInRange(
+          card.targetDate,
+          card.recurrence,
+          weekStart,
+          weekEnd
+        );
+        occurrences.forEach((occurrenceDate) => {
           cards.push({
             card,
             columnName: column.title,
             columnId: column.id,
+            occurrenceDate,
+            isRecurringInstance: !!card.recurrence && occurrenceDate !== card.targetDate,
           });
-        }
+        });
       });
     });
-    return cards.sort((a, b) => 
-      new Date(a.card.targetDate!).getTime() - new Date(b.card.targetDate!).getTime()
+    return cards.sort(
+      (a, b) => parseLocalDate(a.occurrenceDate).getTime() - parseLocalDate(b.occurrenceDate).getTime()
     );
-  }, [board]);
+  }, [board, weekStart, weekEnd]);
 
   // Group cards by column (swimlanes)
   const swimlanes = useMemo(() => {
@@ -161,7 +215,7 @@ export function TimelineView({ board }: TimelineViewProps) {
               swimlanes.map(([columnName, cards]) => {
                 const cardsByDay = new Map<number, TimelineCard[]>();
                 cards.forEach((item) => {
-                  const position = getCardPosition(item.card.targetDate!);
+                  const position = getCardPosition(item.occurrenceDate);
                   if (position === null) return;
                   const bucket = cardsByDay.get(position) ?? [];
                   bucket.push(item);
@@ -192,19 +246,32 @@ export function TimelineView({ board }: TimelineViewProps) {
                             }`}
                             style={{ minHeight: `${maxStack * 3.5 + 0.5}rem` }}
                           >
-                            {dayCards.map((item) => (
-                              <div
-                                key={item.card.id}
-                                className="bg-gradient-to-r from-[#78fcd6]/30 to-[#00ffb6]/20 border border-[#78fcd6]/30 rounded-lg p-1 sm:p-2 overflow-hidden hover:from-[#78fcd6]/40 hover:to-[#00ffb6]/30 transition-colors cursor-pointer"
-                              >
-                                <p className="text-xs font-medium text-[#F2F7F7] line-clamp-2">
-                                  {item.card.title}
-                                </p>
-                                <p className="text-[10px] text-[#A8B2B2] mt-1">
-                                  {format(parseLocalDate(item.card.targetDate!), 'MMM d')}
-                                </p>
-                              </div>
-                            ))}
+                            {dayCards.map((item) => {
+                              const labels = item.card.labels;
+                              const inlineStyle = labelCardStyle(labels);
+                              const iconColor = inlineStyle
+                                ? (item.isRecurringInstance ? 'text-white/60' : 'text-white/85')
+                                : (item.isRecurringInstance ? 'text-[#78fcd6]/70' : 'text-[#78fcd6]');
+                              return (
+                                <div
+                                  key={`${item.card.id}-${item.occurrenceDate}`}
+                                  className={`${inlineStyle ? '' : DEFAULT_CARD_STYLE} border rounded-lg p-1 sm:p-2 overflow-hidden transition-[filter] hover:brightness-125 cursor-pointer`}
+                                  style={inlineStyle}
+                                >
+                                  <div className="flex items-start gap-1">
+                                    <p className="text-xs font-medium text-[#F2F7F7] line-clamp-2 flex-1">
+                                      {item.card.title}
+                                    </p>
+                                    {item.card.recurrence && (
+                                      <Repeat className={`w-3 h-3 shrink-0 mt-0.5 ${iconColor}`} />
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-[#A8B2B2] mt-1">
+                                    {format(parseLocalDate(item.occurrenceDate), 'MMM d')}
+                                  </p>
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })}
