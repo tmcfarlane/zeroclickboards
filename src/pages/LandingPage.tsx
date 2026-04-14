@@ -253,11 +253,12 @@ function FeatureCopy({
 
 export function LandingPage() {
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
+  const [activeBentoIndex, setActiveBentoIndex] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-[#0B0F0F] text-[#F2F7F7]">
       {/* Hero */}
-      <section className="relative overflow-hidden px-6 pt-24 pb-16 md:pt-32 lg:pt-40">
+      <section className="relative overflow-hidden px-6 pt-8 pb-16 md:pt-12">
         {/* Background decorative orbs */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-40 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#78fcd6]/10 blur-[120px] animate-float" />
@@ -446,34 +447,81 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {bentoFeatures.map(({ icon: Icon, title, description, image }) => (
-              <div
-                key={title}
-                className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md transition-all duration-300 hover:border-[#78fcd6]/40 hover:shadow-lg hover:shadow-[#78fcd6]/10"
-              >
-                <div className="relative flex h-52 items-center justify-center overflow-hidden bg-[#0E1414] p-4">
-                  <img
-                    src={image}
-                    alt=""
-                    loading="lazy"
-                    className="max-h-full max-w-full rounded-lg object-contain shadow-lg shadow-black/40 ring-1 ring-white/10 transition-transform duration-500 group-hover:scale-[1.03]"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0B0F0F]/60 via-transparent to-transparent" />
-                </div>
-                <div className="flex flex-1 flex-col p-6">
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#78fcd6]/10 text-[#78fcd6] ring-1 ring-[#78fcd6]/20">
-                    <Icon className="h-5 w-5" />
+          <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {bentoFeatures.map(({ icon: Icon, title, description, image }, idx) => {
+              const isActive = activeBentoIndex === idx;
+              return (
+                <button
+                  key={title}
+                  type="button"
+                  aria-pressed={isActive}
+                  aria-label={`${title} — ${isActive ? 'collapse' : 'enlarge'} preview`}
+                  onMouseEnter={() => setActiveBentoIndex(idx)}
+                  onFocus={() => setActiveBentoIndex(idx)}
+                  onClick={() =>
+                    setActiveBentoIndex((prev) => (prev === idx ? null : idx))
+                  }
+                  onMouseLeave={() =>
+                    setActiveBentoIndex((prev) => (prev === idx ? null : prev))
+                  }
+                  onBlur={() =>
+                    setActiveBentoIndex((prev) => (prev === idx ? null : prev))
+                  }
+                  className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border bg-white/5 text-left backdrop-blur-md transition-colors duration-500 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#78fcd6]/60 ${
+                    isActive
+                      ? 'border-[#78fcd6]/50 shadow-xl shadow-[#78fcd6]/20'
+                      : 'border-white/10 hover:border-[#78fcd6]/40 hover:shadow-lg hover:shadow-[#78fcd6]/10'
+                  }`}
+                >
+                  <div
+                    className={`relative flex items-center justify-center overflow-hidden bg-[#0E1414] p-4 transition-[height,padding] duration-500 ease-out ${
+                      isActive ? 'h-[22rem] p-6' : 'h-52 p-4'
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt=""
+                      loading="lazy"
+                      className={`max-h-full max-w-full rounded-lg object-contain shadow-lg shadow-black/40 ring-1 ring-white/10 transition-transform duration-500 ease-out ${
+                        isActive ? 'scale-100' : 'scale-100 group-hover:scale-[1.03]'
+                      }`}
+                    />
+                    <div
+                      className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+                        isActive
+                          ? 'bg-gradient-to-t from-[#0B0F0F]/20 via-transparent to-transparent'
+                          : 'bg-gradient-to-t from-[#0B0F0F]/60 via-transparent to-transparent'
+                      }`}
+                    />
+                    <div
+                      aria-hidden="true"
+                      className={`pointer-events-none absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-xs text-[#78fcd6] backdrop-blur-sm transition-opacity duration-300 ${
+                        isActive ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                    >
+                      +
+                    </div>
                   </div>
-                  <h3 className="mb-2 text-lg font-semibold text-[#F2F7F7]">
-                    {title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-[#A8B2B2]">
-                    {description}
-                  </p>
-                </div>
-              </div>
-            ))}
+                  <div className="flex flex-1 flex-col p-6">
+                    <div
+                      className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ring-1 transition-colors duration-500 ${
+                        isActive
+                          ? 'bg-[#78fcd6]/20 text-[#78fcd6] ring-[#78fcd6]/40'
+                          : 'bg-[#78fcd6]/10 text-[#78fcd6] ring-[#78fcd6]/20'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold text-[#F2F7F7]">
+                      {title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-[#A8B2B2]">
+                      {description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
