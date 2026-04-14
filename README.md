@@ -8,7 +8,6 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
   <a href="https://github.com/tmcfarlane/zeroclickboards/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/tmcfarlane/zeroclickboards"></a>
   <a href="https://github.com/tmcfarlane/zeroclickboards/issues"><img alt="Issues" src="https://img.shields.io/github/issues/tmcfarlane/zeroclickboards"></a>
-  <a href="https://boards.zeroclickdev.ai/"><img alt="Free" src="https://img.shields.io/badge/Price-Free-brightgreen"></a>
 </p>
 
 <p align="center">
