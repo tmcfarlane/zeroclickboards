@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://boards.zeroclickdev.ai/">
-    <img alt="ZeroBoards" src="public/logo/logo_wordmark.svg" width="440">
+    <img alt="ZeroBoard" src="public/logo/logo_wordmark.svg" width="440">
   </a>
 </p>
 
@@ -23,13 +23,13 @@
 
 <p align="center">
   <a href="https://boards.zeroclickdev.ai/">
-    <img src="docs/screenshots/ZeroBoardAI.gif" alt="ZeroBoards demo — AI-powered Kanban boards" width="720">
+    <img src="docs/screenshots/ZeroBoardAI.gif" alt="ZeroBoard demo — AI-powered Kanban boards" width="720">
   </a>
 </p>
 
-## ZeroBoards is an open-source, AI-powered Kanban board
+## ZeroBoard is an open-source, AI-powered Kanban board
 
-**Describe your task. Let AI organize it.** ZeroBoards gives you a drag-and-drop Kanban board with an AI assistant that creates cards, moves tasks, and manages your workflow with plain-English commands.
+**Describe your task. Let AI organize it.** ZeroBoard gives you a drag-and-drop Kanban board with an AI assistant that creates cards, moves tasks, and manages your workflow with plain-English commands.
 
 - **AI assistant** — natural-language board control (5 free queries/day, Pro unlimited at $3/month)
 - **Drag-and-drop** — smooth @dnd-kit interactions for cards and columns
