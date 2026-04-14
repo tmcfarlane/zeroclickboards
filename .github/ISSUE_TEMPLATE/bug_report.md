@@ -34,7 +34,7 @@ If applicable, add screenshots or a short screen recording to help explain the p
 - Device: [e.g. MacBook Pro, iPhone 15]
 - OS: [e.g. macOS 14.3, iOS 17]
 - Browser: [e.g. Chrome 120, Safari 17]
-- Self-hosted or `boards.zeroclickdev.ai`?
+- Self-hosted or `board.zeroclickdev.ai`?
 
 ## Console / network errors
 

@@ -4,7 +4,7 @@ We welcome contributions from the community! ZeroBoard is open source and we bel
 
 ## How Feature Requests Work
 
-1. **Submit a feature request** via [the feedback page](https://boards.zeroclickdev.ai/feedback) or by creating a GitHub issue
+1. **Submit a feature request** via [the feedback page](https://board.zeroclickdev.ai/feedback) or by creating a GitHub issue
 2. A GitHub issue is created automatically (if submitted via the feedback page)
 3. An AI Agent picks it up and begins working on it
 4. Project owners and contributors review the AI's PR

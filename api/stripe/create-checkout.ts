@@ -16,7 +16,7 @@ export default async function handler(req: Request) {
   const stripe = new Stripe(stripeKey)
 
   try {
-    const origin = getHeader(req, 'origin') || 'https://boards.zeroclickdev.ai'
+    const origin = getHeader(req, 'origin') || 'https://board.zeroclickdev.ai'
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',

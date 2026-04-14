@@ -28,7 +28,7 @@ Please include:
 
 The following are in scope:
 
-- The main application at [boards.zeroclickdev.ai](https://boards.zeroclickdev.ai)
+- The main application at [board.zeroclickdev.ai](https://board.zeroclickdev.ai)
 - Code in this repository (frontend + `/api` serverless functions)
 - Supabase schema, RLS policies, and database access patterns
 
