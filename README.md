@@ -38,9 +38,9 @@
 
 ---
 
-> **We're past the era of reading docs.** Just paste this into your agent:
->
-> > Read this and tell me why it's not just another Kanban clone: https://raw.githubusercontent.com/tmcfarlane/zeroclickboards/refs/heads/main/README.md
+**We're past the era of reading docs.** Just paste this into your agent:
+
+> Read this and tell me why it's not just another Kanban clone: https://raw.githubusercontent.com/tmcfarlane/zeroclickboards/refs/heads/main/README.md
 
 ## Contents
 
