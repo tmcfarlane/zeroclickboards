@@ -1,5 +1,73 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Card, RecurrenceConfig } from '@/types';
+import { parseLocalDate } from '@/lib/utils';
+
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function getOccurrencesInRange(
+  baseDateStr: string,
+  config: RecurrenceConfig | undefined,
+  rangeStart: Date,
+  rangeEnd: Date
+): string[] {
+  const base = parseLocalDate(baseDateStr);
+  const start = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+  const end = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate());
+
+  if (!config) {
+    return base >= start && base <= end ? [toDateString(base)] : [];
+  }
+
+  const interval = Math.max(1, config.interval || 1);
+  const results: string[] = [];
+  const safetyLimit = 500;
+
+  if (config.frequency === 'weekly' && config.daysOfWeek && config.daysOfWeek.length > 0) {
+    const cursor = new Date(base);
+    let iterations = 0;
+    while (cursor <= end && iterations < safetyLimit) {
+      for (let i = 0; i < 7; i++) {
+        const candidate = new Date(cursor);
+        candidate.setDate(cursor.getDate() + i);
+        if (candidate < base || candidate > end) continue;
+        if (!config.daysOfWeek.includes(candidate.getDay())) continue;
+        if (candidate >= start) results.push(toDateString(candidate));
+      }
+      cursor.setDate(cursor.getDate() + 7 * interval);
+      iterations++;
+    }
+    return results;
+  }
+
+  const cursor = new Date(base);
+  let iterations = 0;
+  while (cursor <= end && iterations < safetyLimit) {
+    if (cursor >= start) results.push(toDateString(cursor));
+    switch (config.frequency) {
+      case 'daily':
+        cursor.setDate(cursor.getDate() + interval);
+        break;
+      case 'weekly':
+        cursor.setDate(cursor.getDate() + 7 * interval);
+        break;
+      case 'monthly': {
+        const targetDay = config.dayOfMonth || base.getDate();
+        cursor.setDate(1);
+        cursor.setMonth(cursor.getMonth() + interval);
+        const lastDay = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+        cursor.setDate(Math.min(targetDay, lastDay));
+        break;
+      }
+    }
+    iterations++;
+  }
+  return results;
+}
 
 export function calculateNextTargetDate(
   currentTargetDate: string | undefined,

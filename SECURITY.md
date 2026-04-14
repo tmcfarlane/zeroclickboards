@@ -8,10 +8,7 @@ If you discover a security vulnerability in ZeroClickBoards, please report it pr
 
 ### How to Report
 
-Send a report to the maintainer via one of these channels:
-
-- Email the maintainer directly (find contact via the GitHub profile)
-- Open a [GitHub Security Advisory](https://github.com/tmcfarlane/zeroclickboards/security/advisories/new) (preferred)
+Send a report to the maintainer via email (find contact via the GitHub profile).
 
 Please include:
 

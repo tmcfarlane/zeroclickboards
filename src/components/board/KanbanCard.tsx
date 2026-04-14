@@ -6,6 +6,7 @@ import type { Card } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Calendar, CheckSquare, Image as ImageIcon, FileText, Repeat } from 'lucide-react';
 import { formatRecurrence } from '@/lib/recurrence';
+import { parseLocalDate } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { CardEditor, type CardEditorSaveData } from './CardEditor';
 import { CardActionsMenu } from './CardActionsMenu';
@@ -102,13 +103,13 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return null;
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   const getDateStatus = (dateString?: string): 'overdue' | 'today' | 'soon' | 'later' => {
     if (!dateString) return 'later';
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     const now = new Date();
     const todayStr = now.toDateString();
     if (date.toDateString() === todayStr) return 'today';

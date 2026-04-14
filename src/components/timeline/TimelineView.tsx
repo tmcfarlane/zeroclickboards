@@ -1,7 +1,8 @@
+import type { CSSProperties } from 'react';
 import { useMemo, useState } from 'react';
-import type { Board, Card } from '@/types';
+import type { Board, Card, CardLabel } from '@/types';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, Repeat } from 'lucide-react';
 import {
   format,
   startOfWeek,
@@ -10,9 +11,50 @@ import {
   subWeeks,
   eachDayOfInterval,
   isSameDay,
-  isWithinInterval,
-  parseISO,
 } from 'date-fns';
+import { parseLocalDate } from '@/lib/utils';
+import { getOccurrencesInRange } from '@/lib/recurrence';
+
+const LABEL_HEX: Record<CardLabel, string> = {
+  red: '#ef4444',
+  yellow: '#eab308',
+  green: '#22c55e',
+  blue: '#3b82f6',
+  purple: '#a855f7',
+  gray: '#6b7280',
+};
+
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function labelCardStyle(labels: CardLabel[] | undefined): CSSProperties | undefined {
+  if (!labels || labels.length === 0) return undefined;
+  if (labels.length === 1) {
+    const c = LABEL_HEX[labels[0]];
+    return {
+      backgroundImage: `linear-gradient(to right, ${hexToRgba(c, 0.4)}, ${hexToRgba(c, 0.2)})`,
+      borderColor: hexToRgba(c, 0.5),
+    };
+  }
+  const stops = labels
+    .map((label, i) => {
+      const pct = (i / (labels.length - 1)) * 100;
+      return `${hexToRgba(LABEL_HEX[label], 0.4)} ${pct.toFixed(2)}%`;
+    })
+    .join(', ');
+  return {
+    backgroundImage: `linear-gradient(90deg, ${stops})`,
+    borderColor: hexToRgba(LABEL_HEX[labels[0]], 0.5),
+  };
+}
+
+const DEFAULT_CARD_STYLE =
+  'bg-gradient-to-r from-[#78fcd6]/30 to-[#00ffb6]/20 border-[#78fcd6]/30';
 
 interface TimelineViewProps {
   board: Board;
@@ -22,6 +64,8 @@ interface TimelineCard {
   card: Card;
   columnName: string;
   columnId: string;
+  occurrenceDate: string;
+  isRecurringInstance: boolean;
 }
 
 export function TimelineView({ board }: TimelineViewProps) {
@@ -31,25 +75,34 @@ export function TimelineView({ board }: TimelineViewProps) {
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Get all cards with target dates
+  // Get all cards with target dates, expanding recurring cards into per-occurrence entries.
   const timelineCards = useMemo(() => {
     const cards: TimelineCard[] = [];
     board.columns.forEach((column) => {
       column.cards.forEach((card) => {
         if (card.isArchived) return;
-        if (card.targetDate) {
+        if (!card.targetDate) return;
+        const occurrences = getOccurrencesInRange(
+          card.targetDate,
+          card.recurrence,
+          weekStart,
+          weekEnd
+        );
+        occurrences.forEach((occurrenceDate) => {
           cards.push({
             card,
             columnName: column.title,
             columnId: column.id,
+            occurrenceDate,
+            isRecurringInstance: !!card.recurrence && occurrenceDate !== card.targetDate,
           });
-        }
+        });
       });
     });
-    return cards.sort((a, b) => 
-      new Date(a.card.targetDate!).getTime() - new Date(b.card.targetDate!).getTime()
+    return cards.sort(
+      (a, b) => parseLocalDate(a.occurrenceDate).getTime() - parseLocalDate(b.occurrenceDate).getTime()
     );
-  }, [board]);
+  }, [board, weekStart, weekEnd]);
 
   // Group cards by column (swimlanes)
   const swimlanes = useMemo(() => {
@@ -72,7 +125,7 @@ export function TimelineView({ board }: TimelineViewProps) {
   const isToday = (date: Date) => isSameDay(date, new Date());
 
   const getCardPosition = (targetDate: string) => {
-    const date = parseISO(targetDate);
+    const date = parseLocalDate(targetDate);
     const dayIndex = days.findIndex((d) => isSameDay(d, date));
     if (dayIndex === -1) return null;
     return dayIndex;
@@ -127,12 +180,17 @@ export function TimelineView({ board }: TimelineViewProps) {
             {days.map((day) => (
               <div
                 key={day.toISOString()}
-                className={`text-center p-1.5 sm:p-3 rounded-lg ${
+                className={`relative text-center p-1.5 sm:p-3 rounded-lg ${
                   isToday(day)
-                    ? 'bg-[#78fcd6]/20 border border-[#78fcd6]/30'
+                    ? 'bg-[#78fcd6]/20 border border-[#78fcd6]/40 shadow-[0_0_0_1px_rgba(120,252,214,0.25),0_0_24px_-8px_rgba(120,252,214,0.6)]'
                     : 'bg-white/5 border border-white/5'
                 }`}
               >
+                {isToday(day) && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#78fcd6] text-[#0B0F0F] text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full">
+                    Today
+                  </span>
+                )}
                 <div className={`text-xs font-medium ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#A8B2B2]'}`}>
                   {format(day, 'EEE')}
                 </div>
@@ -154,73 +212,76 @@ export function TimelineView({ board }: TimelineViewProps) {
                 </p>
               </div>
             ) : (
-              swimlanes.map(([columnName, cards]) => (
-                <div key={columnName} className="space-y-2">
-                  {/* Swimlane Header */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#78fcd6]/30" />
-                    <span className="text-sm font-medium text-[#A8B2B2]">{columnName}</span>
-                    <span className="text-xs text-[#A8B2B2]/60">({cards.length})</span>
-                  </div>
+              swimlanes.map(([columnName, cards]) => {
+                const cardsByDay = new Map<number, TimelineCard[]>();
+                cards.forEach((item) => {
+                  const position = getCardPosition(item.occurrenceDate);
+                  if (position === null) return;
+                  const bucket = cardsByDay.get(position) ?? [];
+                  bucket.push(item);
+                  cardsByDay.set(position, bucket);
+                });
+                const maxStack = Math.max(1, ...Array.from(cardsByDay.values(), (b) => b.length));
 
-                  {/* Swimlane Grid */}
-                  <div className="grid grid-cols-7 gap-2 relative">
-                    {/* Background cells */}
-                    {days.map((day) => (
-                      <div
-                        key={`bg-${day.toISOString()}`}
-                        className={`h-14 sm:h-20 rounded-lg border ${
-                          isToday(day)
-                            ? 'bg-[#78fcd6]/5 border-[#78fcd6]/20'
-                            : 'bg-white/[0.02] border-white/5'
-                        }`}
-                      />
-                    ))}
+                return (
+                  <div key={columnName} className="space-y-2">
+                    {/* Swimlane Header */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#78fcd6]/30" />
+                      <span className="text-sm font-medium text-[#A8B2B2]">{columnName}</span>
+                      <span className="text-xs text-[#A8B2B2]/60">({cards.length})</span>
+                    </div>
 
-                    {/* Cards */}
-                    {cards.map((item) => {
-                      const position = getCardPosition(item.card.targetDate!);
-                      if (position === null) return null;
-
-                      return (
-                        <div
-                          key={item.card.id}
-                          className="absolute top-1 h-[calc(100%-8px)] mx-1"
-                          style={{
-                            left: `${(position / 7) * 100}%`,
-                            width: `calc(${100 / 7}% - 8px)`,
-                          }}
-                        >
-                          <div className="h-full bg-gradient-to-r from-[#78fcd6]/30 to-[#00ffb6]/20 border border-[#78fcd6]/30 rounded-lg p-1 sm:p-2 overflow-hidden hover:from-[#78fcd6]/40 hover:to-[#00ffb6]/30 transition-colors cursor-pointer">
-                            <p className="text-xs font-medium text-[#F2F7F7] line-clamp-2">
-                              {item.card.title}
-                            </p>
-                            <p className="text-[10px] text-[#A8B2B2] mt-1">
-                              {format(parseISO(item.card.targetDate!), 'MMM d')}
-                            </p>
+                    {/* Swimlane Grid */}
+                    <div className="grid grid-cols-7 gap-2">
+                      {days.map((day, dayIdx) => {
+                        const dayCards = cardsByDay.get(dayIdx) ?? [];
+                        return (
+                          <div
+                            key={`cell-${day.toISOString()}`}
+                            className={`rounded-lg border p-1 flex flex-col gap-1 ${
+                              isToday(day)
+                                ? 'bg-[#78fcd6]/[0.07] border-[#78fcd6]/30'
+                                : 'bg-white/[0.02] border-white/5'
+                            }`}
+                            style={{ minHeight: `${maxStack * 3.5 + 0.5}rem` }}
+                          >
+                            {dayCards.map((item) => {
+                              const labels = item.card.labels;
+                              const inlineStyle = labelCardStyle(labels);
+                              const iconColor = inlineStyle
+                                ? (item.isRecurringInstance ? 'text-white/60' : 'text-white/85')
+                                : (item.isRecurringInstance ? 'text-[#78fcd6]/70' : 'text-[#78fcd6]');
+                              return (
+                                <div
+                                  key={`${item.card.id}-${item.occurrenceDate}`}
+                                  className={`${inlineStyle ? '' : DEFAULT_CARD_STYLE} border rounded-lg p-1 sm:p-2 overflow-hidden transition-[filter] hover:brightness-125 cursor-pointer`}
+                                  style={inlineStyle}
+                                >
+                                  <div className="flex items-start gap-1">
+                                    <p className="text-xs font-medium text-[#F2F7F7] line-clamp-2 flex-1">
+                                      {item.card.title}
+                                    </p>
+                                    {item.card.recurrence && (
+                                      <Repeat className={`w-3 h-3 shrink-0 mt-0.5 ${iconColor}`} />
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-[#A8B2B2] mt-1">
+                                    {format(parseLocalDate(item.occurrenceDate), 'MMM d')}
+                                  </p>
+                                </div>
+                              );
+                            })}
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          {/* Today Marker */}
-          {isWithinInterval(new Date(), { start: weekStart, end: weekEnd }) && (
-            <div
-              className="absolute top-0 bottom-0 w-0.5 bg-[#78fcd6] pointer-events-none"
-              style={{
-                left: `${((days.findIndex((d) => isToday(d)) + 0.5) / 7) * 100}%`,
-              }}
-            >
-              <div className="absolute -top-1 -translate-x-1/2 bg-[#78fcd6] text-[#0B0F0F] text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                Today
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

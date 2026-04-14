@@ -26,7 +26,7 @@ We genuinely encourage you to submit feature requests. You might be surprised ho
 - **Tech Stack**: React 19, TypeScript, Vite 7, Tailwind CSS, shadcn/ui, Supabase, Zustand
 - **Database**: Supabase PostgreSQL with Row Level Security
 - **Deployment**: Vercel (serverless functions in `/api`)
-- **Styling**: Dark cyberpunk theme with cyan accent (`#78fcd6`)
+- **Styling**: Dark theme with cyan accent (`#78fcd6`)
 
 ## Pull Requests
 
