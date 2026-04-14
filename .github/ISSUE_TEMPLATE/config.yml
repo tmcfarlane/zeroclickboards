@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature request via feedback page
+    url: https://boards.zeroclickdev.ai/feedback
+    about: Submit feature requests through the in-app feedback form — they're auto-triaged and picked up by an AI agent.
+  - name: Security vulnerability
+    url: https://github.com/tmcfarlane/zeroclickboards/security/advisories/new
+    about: Please report security issues privately, not through public issues. See SECURITY.md.
+  - name: Question or discussion
+    url: https://github.com/tmcfarlane/zeroclickboards/discussions
+    about: For general questions, ideas, or discussion, use GitHub Discussions.
