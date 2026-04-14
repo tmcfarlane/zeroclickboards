@@ -36,7 +36,6 @@ Created by <a href="https://zeroclickdev.ai/">ZeroClickDev</a>
 ## Contents
 
 - [Features](#features)
-- [Screenshots](#screenshots)
 - [Quickstart](#quickstart)
 - [Setup](#setup)
 - [Architecture](#architecture)
@@ -49,47 +48,35 @@ Created by <a href="https://zeroclickdev.ai/">ZeroClickDev</a>
 
 ## Features
 
-- **AI assistant** — tell it what to do in plain English: create cards, move tasks, organize your board
-- **Drag-and-drop** — reorder cards between columns and rearrange columns with smooth @dnd-kit interactions
-- **Real-time sync** — changes appear instantly across all open tabs via Supabase Realtime
-- **Timeline / Gantt view** — visualize card target dates on a timeline for project planning
-- **Card labels & covers** — 6 label colors, cover images, checklists, and rich text content
-- **Archive & restore** — archive cards to declutter, restore or duplicate them anytime
-- **Dark cyberpunk theme** — charcoal UI with cyan accents, built for late-night productivity
-- **Google OAuth + email auth** — sign in with Google or email/password via Supabase Auth
-- **Free tier + Pro** — 5 free AI queries/day; unlimited with Pro ($3/month via Stripe)
-- **Deploy anywhere** — one-click Vercel deploy, serverless API keeps credentials safe
-
-## Screenshots
-
-<details open>
-<summary><strong>Click to expand</strong></summary>
-
 ### Kanban Board
 
-Drag-and-drop cards between columns, reorder columns, and manage your workflow.
+Drag-and-drop cards between columns and rearrange columns with smooth @dnd-kit interactions. Changes sync instantly across all open tabs via Supabase Realtime.
 
 ![Kanban board with drag-and-drop columns and cards](docs/screenshots/board.png)
 
 ### AI Assistant
 
-Tell the AI what you need in plain English and watch it update your board.
+Tell it what to do in plain English — create cards, move tasks, organize your board. 5 free AI queries/day; unlimited with Pro ($3/month via Stripe).
 
 ![AI assistant creating and organizing cards from natural language](docs/screenshots/ai-assistant.png)
 
 ### Timeline View
 
-Visualize your cards on a Gantt-style timeline by target date.
+Visualize card target dates on a Gantt-style timeline for project planning.
 
 ![Timeline / Gantt view for project planning](docs/screenshots/timeline.png)
 
 ### Card Editor
 
-Rich card editing with labels, cover images, checklists, and target dates.
+Rich card editing with 6 label colors, cover images, checklists, and target dates. Archive cards to declutter, then restore or duplicate them anytime.
 
 ![Card editor with labels, covers, and checklists](docs/screenshots/card-editor.png)
 
-</details>
+### Also included
+
+- **Dark cyberpunk theme** — charcoal UI with cyan accents, built for late-night productivity
+- **Google OAuth + email auth** — sign in with Google or email/password via Supabase Auth
+- **Deploy anywhere** — one-click Vercel deploy, serverless API keeps credentials safe
 
 ## Quickstart
 
