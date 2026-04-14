@@ -98,6 +98,7 @@ npm run build         # production build
 Create a [Supabase](https://supabase.com) project, then run [`supabase/schema.sql`](supabase/schema.sql) in the SQL Editor.
 
 In Supabase → Authentication:
+
 - Enable **Email / Password**
 - Enable **Google** provider
 - Add redirect URLs: `http://localhost:5173` and your production URL
@@ -108,17 +109,17 @@ In Supabase → Authentication:
 cp .env.example .env.local
 ```
 
-| Variable | Scope | Description |
-| --- | --- | --- |
-| `VITE_SUPABASE_URL` | Client | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Client | Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server | Service role key for API routes |
-| `AI_GATEWAY_API_KEY` | Server | AI provider API key |
-| `AI_GATEWAY_MODEL` | Server | Model name (e.g. `gpt-4o`) |
-| `STRIPE_SECRET_KEY` | Server | Stripe secret key (payments) |
-| `STRIPE_PRICE_ID` | Server | Stripe price ID for Pro plan |
-| `STRIPE_WEBHOOK_SECRET` | Server | Stripe webhook signing secret |
-| `VITE_GITHUB_REPO_URL` | Client | Optional — shows GitHub link in header |
+| Variable                    | Scope  | Description                            |
+| --------------------------- | ------ | -------------------------------------- |
+| `VITE_SUPABASE_URL`         | Client | Supabase project URL                   |
+| `VITE_SUPABASE_ANON_KEY`    | Client | Supabase anon/public key               |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server | Service role key for API routes        |
+| `AI_GATEWAY_API_KEY`        | Server | AI provider API key                    |
+| `AI_GATEWAY_MODEL`          | Server | Model name (e.g. `gpt-4o`)             |
+| `STRIPE_SECRET_KEY`         | Server | Stripe secret key (payments)           |
+| `STRIPE_PRICE_ID`           | Server | Stripe price ID for Pro plan           |
+| `STRIPE_WEBHOOK_SECRET`     | Server | Stripe webhook signing secret          |
+| `VITE_GITHUB_REPO_URL`      | Client | Optional — shows GitHub link in header |
 
 > **Never prefix sensitive keys with `VITE_`** — any `VITE_*` variable is exposed to the browser.
 
@@ -154,16 +155,16 @@ sequenceDiagram
 <details>
 <summary><strong>Project layout</strong></summary>
 
-| Path | Purpose |
-| --- | --- |
-| [`src/components/board/`](src/components/board) | Kanban board, columns, cards, card editor |
-| [`src/store/useBoardStore.ts`](src/store/useBoardStore.ts) | Zustand store for board state |
-| [`src/lib/database/`](src/lib/database) | Supabase query builders |
-| [`src/lib/supabase.ts`](src/lib/supabase.ts) | Supabase client |
-| [`api/ai/command.ts`](api/ai/command.ts) | AI assistant endpoint |
-| [`api/ai/usage.ts`](api/ai/usage.ts) | Daily usage limits |
-| [`api/stripe/`](api/stripe) | Stripe checkout + webhooks |
-| [`supabase/schema.sql`](supabase/schema.sql) | PostgreSQL schema + RLS policies |
+| Path                                                       | Purpose                                   |
+| ---------------------------------------------------------- | ----------------------------------------- |
+| [`src/components/board/`](src/components/board)            | Kanban board, columns, cards, card editor |
+| [`src/store/useBoardStore.ts`](src/store/useBoardStore.ts) | Zustand store for board state             |
+| [`src/lib/database/`](src/lib/database)                    | Supabase query builders                   |
+| [`src/lib/supabase.ts`](src/lib/supabase.ts)               | Supabase client                           |
+| [`api/ai/command.ts`](api/ai/command.ts)                   | AI assistant endpoint                     |
+| [`api/ai/usage.ts`](api/ai/usage.ts)                       | Daily usage limits                        |
+| [`api/stripe/`](api/stripe)                                | Stripe checkout + webhooks                |
+| [`supabase/schema.sql`](supabase/schema.sql)               | PostgreSQL schema + RLS policies          |
 
 </details>
 
