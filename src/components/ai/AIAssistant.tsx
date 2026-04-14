@@ -181,8 +181,25 @@ function pickRandomTasks(count: number): string[] {
   return shuffled.slice(0, Math.min(count, shuffled.length));
 }
 
-function parseCommandLocal(input: string): AICommand[] {
+function parseCommandLocal(input: string, columnTitles?: string[]): AICommand[] {
   const lower = input.toLowerCase().trim();
+
+  // --- Fill the board: "Fill the board with X", "Populate every column with Y" ---
+  // Local fallback only — AI version generates themed titles; this distributes random tasks.
+  if (
+    columnTitles &&
+    columnTitles.length > 0 &&
+    lower.match(/(?:fill|populate|seed|load)\s+(?:up\s+)?(?:the\s+)?(?:entire\s+|whole\s+)?(?:board|all\s+columns|every\s+column|each\s+column)/)
+  ) {
+    const perColumn = 4;
+    const total = columnTitles.length * perColumn;
+    const titles = pickRandomTasks(total);
+    return titles.map((title, idx) => ({
+      type: "add_card" as const,
+      params: { title, columnTitle: columnTitles[idx % columnTitles.length] },
+      originalText: input,
+    }));
+  }
 
   // --- Batch creation: "Add 10 random tasks to TODO" or "Add 5 cards to Done" ---
   const batchCountMatch = lower.match(
@@ -877,6 +894,41 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
             .split("T")[0];
         }
 
+        const allCards = command.params.allCards === true;
+        const onlyWithoutDate = command.params.onlyWithoutDate === true;
+        const columnTitle = getString("columnTitle");
+
+        if (allCards) {
+          const targetColumns = columnTitle
+            ? (activeBoard?.columns ?? []).filter((c) =>
+                c.title.toLowerCase().includes(columnTitle.toLowerCase()),
+              )
+            : (activeBoard?.columns ?? []);
+          if (columnTitle && targetColumns.length === 0)
+            return `Column "${columnTitle}" not found.`;
+
+          let count = 0;
+          targetColumns.forEach((column) => {
+            column.cards
+              .filter((c) => !c.isArchived)
+              .filter((c) => (onlyWithoutDate ? !c.targetDate : true))
+              .forEach((card) => {
+                editCard(activeBoardId, column.id, card.id, { targetDate });
+                count++;
+              });
+          });
+          if (count === 0) {
+            return onlyWithoutDate
+              ? "All cards already have due dates."
+              : "No cards to update.";
+          }
+          const scope = columnTitle
+            ? ` in "${targetColumns[0].title}"`
+            : "";
+          const filter = onlyWithoutDate ? " without dates" : "";
+          return `Set due date to ${targetDate} on ${count} card${count !== 1 ? "s" : ""}${filter}${scope}`;
+        }
+
         let updated = false;
         const cardTitle =
           getString("cardTitle") || lastCardTitle.current || undefined;
@@ -1186,7 +1238,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       }
 
       default:
-        return "I'm not sure how to help with that. Try commands like:\n• Add 5 random tasks to TODO\n• Add a red label to 'My Task'\n• Label all cards green\n• Add a checklist to 'My Task'\n• Set description of 'My Task' to '...'\n• Archive 'Old Task'\n• Duplicate 'My Task'\n• Clear the TODO column\n• How many cards in Done?\n• Show the timeline";
+        return "I'm not sure how to help with that. Try commands like:\n• Fill the board with engineering roles\n• Populate every column with marketing ideas\n• Add 5 random tasks to TODO\n• Add a red label to 'My Task'\n• Label all cards green\n• Add a checklist to 'My Task'\n• Set description of 'My Task' to '...'\n• Archive 'Old Task'\n• Duplicate 'My Task'\n• Clear the TODO column\n• How many cards in Done?\n• Show the timeline";
     }
   };
 
@@ -1267,7 +1319,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
     }
 
     const commands =
-      aiResponse.commands ?? parseCommandLocal(userMessage.content);
+      aiResponse.commands ??
+      parseCommandLocal(
+        userMessage.content,
+        activeBoard?.columns.map((c) => c.title),
+      );
 
     const results: string[] = [];
     for (let i = 0; i < commands.length; i++) {
