@@ -28,4 +28,4 @@ Links, screenshots, prior art from other tools, or anything else that would help
 
 ---
 
-> 💡 **Tip:** Feature requests submitted via the [feedback page](https://boards.zeroclickdev.ai/feedback) are auto-triaged by an AI agent that opens a draft PR for human review. This GitHub form is also fine — pick whichever you prefer.
+> 💡 **Tip:** Feature requests submitted via the [feedback page](https://board.zeroclickdev.ai/feedback) are auto-triaged by an AI agent that opens a draft PR for human review. This GitHub form is also fine — pick whichever you prefer.

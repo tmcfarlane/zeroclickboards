@@ -28,7 +28,7 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const origin = getHeader(req, 'origin') || 'https://boards.zeroclickdev.ai'
+    const origin = getHeader(req, 'origin') || 'https://board.zeroclickdev.ai'
 
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,

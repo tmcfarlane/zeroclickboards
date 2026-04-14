@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://boards.zeroclickdev.ai/">
+  <a href="https://board.zeroclickdev.ai/">
     <img alt="ZeroBoard" src="public/logo/logo_wordmark.svg" width="440">
   </a>
 </p>
@@ -11,17 +11,17 @@
 </p>
 
 <p align="center">
-  <a href="https://boards.zeroclickdev.ai/">Try It Live</a> - <a href="#features">Features</a> - <a href="#setup">Setup</a> - <a href="#deploy-to-vercel">Deploy</a> - <a href="#faq">FAQ</a> - <a href="#contributing">Contributing</a> - <a href="https://zeroclickdev.ai/">ZeroClickDev</a>
+  <a href="https://board.zeroclickdev.ai/">Try It Live</a> - <a href="#features">Features</a> - <a href="#setup">Setup</a> - <a href="#deploy-to-vercel">Deploy</a> - <a href="#faq">FAQ</a> - <a href="#contributing">Contributing</a> - <a href="https://zeroclickdev.ai/">ZeroClickDev</a>
 </p>
 
 <p align="center">
-  <a href="https://boards.zeroclickdev.ai/">
+  <a href="https://board.zeroclickdev.ai/">
     <img alt="Try it Live" src="https://img.shields.io/badge/TRY_IT_LIVE_--_FREE-00c896?style=for-the-badge&logo=vercel&logoColor=white">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://boards.zeroclickdev.ai/">
+  <a href="https://board.zeroclickdev.ai/">
     <img src="docs/screenshots/ZeroBoardAI.gif" alt="ZeroBoard demo — AI-powered Kanban boards" width="720">
   </a>
 </p>
@@ -38,9 +38,9 @@
 
 ---
 
-> **We're past the era of reading docs.** Just paste this into your agent:
->
-> > Read this and tell me why it's not just another Kanban clone: https://raw.githubusercontent.com/tmcfarlane/zeroclickboards/refs/heads/main/README.md
+**We're past the era of reading docs.** Just paste this into your agent:
+
+> Read this and tell me why it's not just another Kanban clone: https://raw.githubusercontent.com/tmcfarlane/zeroclickboards/refs/heads/main/README.md
 
 ## Contents
 
@@ -256,7 +256,7 @@ In your own Supabase project. Row Level Security policies ensure users only see 
 
 #### How do feature requests work?
 
-Submit one via the [feedback page](https://boards.zeroclickdev.ai/feedback) or open a GitHub issue. Feedback submissions are auto-converted to GitHub issues, where an AI agent picks them up and opens a draft PR for human review. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Submit one via the [feedback page](https://board.zeroclickdev.ai/feedback) or open a GitHub issue. Feedback submissions are auto-converted to GitHub issues, where an AI agent picks them up and opens a draft PR for human review. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contributing
 
