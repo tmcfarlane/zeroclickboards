@@ -221,7 +221,7 @@ Security issues: please report privately via [`SECURITY.md`](SECURITY.md) (if pr
 
 ## Built With
 
-Built 100% with AI assistance using [Claude Code](https://claude.ai/claude-code) and [Oh My ClaudeCode](https://github.com/nicobailon/oh-my-claudecode).
+Built with AI assistance using [Claude Code](https://claude.ai/claude-code) and [Oh My ClaudeCode](https://github.com/nicobailon/oh-my-claudecode).
 
 ## Star History
 
