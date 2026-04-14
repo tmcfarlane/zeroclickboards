@@ -41,12 +41,12 @@ interface BackgroundPickerProps {
 export function BackgroundPicker({ open, onOpenChange, currentBackground, onSelect }: BackgroundPickerProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-sm max-h-[85vh] flex flex-col">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-xs max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Board Background</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-2 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-4 py-1 overflow-y-auto flex-1 min-h-0 scrollbar-hide">
           {/* Gradients */}
           <div>
             <h3 className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider mb-3">Gradients</h3>
@@ -56,7 +56,7 @@ export function BackgroundPicker({ open, onOpenChange, currentBackground, onSele
                   key={bg.name}
                   type="button"
                   onClick={() => onSelect(bg.value)}
-                  className="relative aspect-[4/3] rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-white/30 transition-all hover:scale-105"
+                  className="relative aspect-[16/9] rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-white/30 transition-all hover:scale-105"
                   style={{ background: bg.value }}
                   title={bg.name}
                 >
@@ -79,7 +79,7 @@ export function BackgroundPicker({ open, onOpenChange, currentBackground, onSele
                   key={bg.name}
                   type="button"
                   onClick={() => onSelect(bg.value)}
-                  className="relative aspect-[4/3] rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-white/30 transition-all hover:scale-105"
+                  className="relative aspect-[16/9] rounded-lg overflow-hidden ring-1 ring-white/10 hover:ring-white/30 transition-all hover:scale-105"
                   style={{ background: bg.value }}
                   title={bg.name}
                 >

@@ -153,6 +153,15 @@
     mix-blend-mode: overlay;
   }
   
+  /* Hide scrollbar while keeping scroll */
+  .scrollbar-hide {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Custom scrollbar */
   .scrollbar-thin {
     scrollbar-width: thin;
