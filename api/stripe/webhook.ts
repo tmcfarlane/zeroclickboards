@@ -1,27 +1,28 @@
 import Stripe from 'stripe'
-import { createServiceClient, getHeader, jsonResponse } from '../_lib/auth.js'
+import { createServiceClient, getHeader, sendJson, readRawBody, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'POST') return jsonResponse(405, { error: 'Method not allowed' })
+export default async function handler(req: unknown, res: NodeRes) {
+  const method = (req as { method?: string }).method
+  if (method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' })
 
   const stripeKey = process.env.STRIPE_SECRET_KEY
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-  if (!stripeKey || !webhookSecret) return jsonResponse(500, { error: 'Stripe not configured' })
+  if (!stripeKey || !webhookSecret) return sendJson(res, 500, { error: 'Stripe not configured' })
 
-  const stripe = new Stripe(stripeKey)
-  const body = await req.text()
+  const stripe = new Stripe(stripeKey, { timeout: 8_000, maxNetworkRetries: 1 })
+  const body = await readRawBody(req)
   const signature = getHeader(req, 'stripe-signature')
 
-  if (!signature) return jsonResponse(400, { error: 'Missing stripe-signature' })
+  if (!signature) return sendJson(res, 400, { error: 'Missing stripe-signature' })
 
   let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Signature verification failed'
-    return jsonResponse(400, { error: message })
+    return sendJson(res, 400, { error: message })
   }
 
   const service = createServiceClient()
@@ -106,5 +107,5 @@ export default async function handler(req: Request) {
     }
   }
 
-  return jsonResponse(200, { received: true })
+  return sendJson(res, 200, { received: true })
 }

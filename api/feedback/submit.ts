@@ -1,18 +1,19 @@
-import { getUserFromRequest, createAuthenticatedClient, jsonResponse } from '../_lib/auth.js'
+import { getUserFromRequest, createAuthenticatedClient, sendJson, readJsonBody, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'POST') return jsonResponse(405, { error: 'Method not allowed' })
+export default async function handler(req: unknown, res: NodeRes) {
+  const method = (req as { method?: string }).method
+  if (method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' })
 
   const user = await getUserFromRequest(req)
-  if (!user) return jsonResponse(401, { error: 'Sign in required to submit feedback' })
+  if (!user) return sendJson(res, 401, { error: 'Sign in required to submit feedback' })
 
   let payload: unknown
   try {
-    payload = await req.json()
+    payload = await readJsonBody(req)
   } catch {
-    return jsonResponse(400, { error: 'Invalid JSON body' })
+    return sendJson(res, 400, { error: 'Invalid JSON body' })
   }
 
   const body = payload && typeof payload === 'object' ? payload as Record<string, unknown> : null
@@ -21,7 +22,7 @@ export default async function handler(req: Request) {
   const category = typeof body?.category === 'string' ? body.category : 'feature'
 
   if (!title || !description) {
-    return jsonResponse(400, { error: 'Title and description are required' })
+    return sendJson(res, 400, { error: 'Title and description are required' })
   }
 
   const client = createAuthenticatedClient(user.token)
@@ -37,7 +38,7 @@ export default async function handler(req: Request) {
     })
 
   if (dbError) {
-    return jsonResponse(500, { error: 'Failed to save feedback' })
+    return sendJson(res, 500, { error: 'Failed to save feedback' })
   }
 
   // Create GitHub issue
@@ -71,5 +72,5 @@ export default async function handler(req: Request) {
     }
   }
 
-  return jsonResponse(200, { success: true })
+  return sendJson(res, 200, { success: true })
 }

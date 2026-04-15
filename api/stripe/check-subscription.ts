@@ -1,16 +1,17 @@
-import { getUserFromRequest, hasActiveSubscription, createAuthenticatedClient, jsonResponse, logStep } from '../_lib/auth.js'
+import { getUserFromRequest, hasActiveSubscription, createAuthenticatedClient, sendJson, logStep, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
-export default async function handler(req: Request) {
+export default async function handler(req: unknown, res: NodeRes) {
   const route = 'stripe/check-subscription'
   const t0 = Date.now()
-  logStep(route, 'handler:entered', t0, { method: req.method })
-  if (req.method !== 'GET') return jsonResponse(405, { error: 'Method not allowed' })
+  const method = (req as { method?: string }).method
+  logStep(route, 'handler:entered', t0, { method })
+  if (method !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' })
 
   const user = await getUserFromRequest(req)
   logStep(route, 'after-auth', t0, { authed: !!user })
-  if (!user) return jsonResponse(401, { error: 'Unauthorized' })
+  if (!user) return sendJson(res, 401, { error: 'Unauthorized' })
 
   const priceId = process.env.STRIPE_PRICE_ID
 
@@ -32,7 +33,7 @@ export default async function handler(req: Request) {
     .maybeSingle()
   logStep(route, 'subscription-query', tQuery, { totalMs: Date.now() - t0 })
 
-  return jsonResponse(200, {
+  return sendJson(res, 200, {
     hasActiveSubscription: active,
     subscription: subscription ?? null,
   })

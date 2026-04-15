@@ -1,23 +1,24 @@
 import Stripe from 'stripe'
-import { getUserFromRequest, getHeader, jsonResponse, logStep } from '../_lib/auth.js'
+import { getUserFromRequest, getHeader, sendJson, logStep, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
-export default async function handler(req: Request) {
+export default async function handler(req: unknown, res: NodeRes) {
   const route = 'stripe/create-checkout'
   const t0 = Date.now()
-  logStep(route, 'handler:entered', t0, { method: req.method })
-  if (req.method !== 'POST') return jsonResponse(405, { error: 'Method not allowed' })
+  const method = (req as { method?: string }).method
+  logStep(route, 'handler:entered', t0, { method })
+  if (method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' })
 
   const user = await getUserFromRequest(req)
   logStep(route, 'after-auth', t0, { authed: !!user })
-  if (!user) return jsonResponse(401, { error: 'Unauthorized' })
+  if (!user) return sendJson(res, 401, { error: 'Unauthorized' })
 
   const stripeKey = process.env.STRIPE_SECRET_KEY
   const priceId = process.env.STRIPE_PRICE_ID
   if (!stripeKey || !priceId) {
     logStep(route, 'missing-stripe-env', t0, { hasKey: !!stripeKey, hasPriceId: !!priceId })
-    return jsonResponse(500, { error: 'Stripe not configured' })
+    return sendJson(res, 500, { error: 'Stripe not configured' })
   }
 
   const stripe = new Stripe(stripeKey, { timeout: 8_000, maxNetworkRetries: 1 })
@@ -36,10 +37,10 @@ export default async function handler(req: Request) {
     })
     logStep(route, 'stripe:session-created', tStripe, { totalMs: Date.now() - t0 })
 
-    return jsonResponse(200, { url: session.url })
+    return sendJson(res, 200, { url: session.url })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     logStep(route, 'stripe:error', t0, { error: message })
-    return jsonResponse(500, { error: message })
+    return sendJson(res, 500, { error: message })
   }
 }

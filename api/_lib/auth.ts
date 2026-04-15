@@ -77,7 +77,7 @@ export function getHeader(req: unknown, name: string): string | null {
   return null
 }
 
-export async function getUserFromRequest(req: Request): Promise<{ userId: string; email: string; token: string } | null> {
+export async function getUserFromRequest(req: unknown): Promise<{ userId: string; email: string; token: string } | null> {
   const authHeader = getHeader(req, 'authorization')
   if (!authHeader?.startsWith('Bearer ')) return null
   const token = authHeader.slice(7)
@@ -178,14 +178,42 @@ export const FREE_DAILY_AI_LIMIT = 5
 export const AI_WARNING_THRESHOLD = 3
 export const FREE_DAILY_AI_ABUSE_LIMIT = 15
 
-function jsonResponse(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-    },
-  })
+export interface NodeRes {
+  statusCode: number
+  setHeader(name: string, value: string): unknown
+  end(body?: string | Buffer): unknown
 }
 
-export { jsonResponse, logStep }
+export function sendJson(res: NodeRes, status: number, body: unknown): void {
+  res.statusCode = status
+  res.setHeader('content-type', 'application/json; charset=utf-8')
+  res.setHeader('cache-control', 'no-store')
+  res.end(JSON.stringify(body))
+}
+
+export async function readRawBody(req: unknown): Promise<string> {
+  const r = req as AsyncIterable<Buffer | string> & { body?: unknown }
+  // If Vercel already parsed the body (object), re-stringify.
+  if (r.body !== undefined && typeof r.body === 'object' && r.body !== null && !(r.body instanceof Buffer)) {
+    return JSON.stringify(r.body)
+  }
+  if (typeof r.body === 'string') return r.body
+  if (r.body instanceof Buffer) return r.body.toString('utf8')
+  const chunks: Buffer[] = []
+  for await (const chunk of r) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+}
+
+export async function readJsonBody(req: unknown): Promise<unknown> {
+  const r = req as { body?: unknown }
+  if (r.body !== undefined && typeof r.body !== 'string' && !(r.body instanceof Buffer)) {
+    return r.body
+  }
+  const raw = await readRawBody(req)
+  if (!raw) return undefined
+  return JSON.parse(raw)
+}
+
+export { logStep }
