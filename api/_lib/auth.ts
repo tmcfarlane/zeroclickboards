@@ -1,10 +1,22 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
+// eslint-disable-next-line no-console
+console.log(JSON.stringify({ step: 'auth-module:loaded', ts: Date.now() }))
+
 // Support both vercel dev (SUPABASE_URL from project settings)
 // and vite dev (VITE_SUPABASE_URL from .env)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+// eslint-disable-next-line no-console
+console.log(JSON.stringify({
+  step: 'auth-module:env',
+  hasUrl: !!SUPABASE_URL,
+  hasAnonKey: !!SUPABASE_ANON_KEY,
+  hasServiceKey: !!SUPABASE_SERVICE_ROLE_KEY,
+  urlHost: SUPABASE_URL ? (() => { try { return new URL(SUPABASE_URL).host } catch { return 'invalid-url' } })() : null,
+}))
 
 const FETCH_TIMEOUT_MS = 8_000
 const AUTH_FETCH_TIMEOUT_MS = 3_000

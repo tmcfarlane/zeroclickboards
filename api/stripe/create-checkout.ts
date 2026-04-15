@@ -6,6 +6,7 @@ export const config = { runtime: 'nodejs', maxDuration: 15 }
 export default async function handler(req: Request) {
   const route = 'stripe/create-checkout'
   const t0 = Date.now()
+  logStep(route, 'handler:entered', t0, { method: req.method })
   if (req.method !== 'POST') return jsonResponse(405, { error: 'Method not allowed' })
 
   const user = await getUserFromRequest(req)
