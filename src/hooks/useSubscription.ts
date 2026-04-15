@@ -12,6 +12,7 @@ interface SubscriptionData {
     cancel_at_period_end: boolean
     created_at: string
   } | null
+  trialEligible?: boolean
 }
 
 export function useSubscription() {
@@ -36,6 +37,7 @@ export function useSubscription() {
   return {
     hasSubscription: data?.hasActiveSubscription ?? false,
     subscription: data?.subscription ?? null,
+    trialEligible: data?.trialEligible ?? false,
     isLoading,
     refetch,
   }

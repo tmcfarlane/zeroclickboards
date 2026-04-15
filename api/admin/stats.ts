@@ -1,15 +1,16 @@
-import { getUserFromRequest, isAdmin, createServiceClient, jsonResponse } from '../_lib/auth.js'
+import { getUserFromRequest, isAdmin, createServiceClient, sendJson, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'GET') return jsonResponse(405, { error: 'Method not allowed' })
+export default async function handler(req: unknown, res: NodeRes) {
+  const method = (req as { method?: string }).method
+  if (method !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' })
 
   const user = await getUserFromRequest(req)
-  if (!user) return jsonResponse(401, { error: 'Unauthorized' })
+  if (!user) return sendJson(res, 401, { error: 'Unauthorized' })
 
   if (!isAdmin(user.email)) {
-    return jsonResponse(403, { error: 'Forbidden' })
+    return sendJson(res, 403, { error: 'Forbidden' })
   }
 
   const service = createServiceClient()
@@ -55,7 +56,7 @@ export default async function handler(req: Request) {
     user_name: profileMap.get(s.user_id)?.full_name ?? null,
   }))
 
-  return jsonResponse(200, {
+  return sendJson(res, 200, {
     isAdmin: true,
     stats: {
       totalUsers: usersResult.count ?? 0,

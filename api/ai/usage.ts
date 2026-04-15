@@ -1,25 +1,32 @@
-import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, isAdmin, jsonResponse, FREE_DAILY_AI_LIMIT } from '../_lib/auth.js'
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, isAdmin, sendJson, logStep, FREE_DAILY_AI_LIMIT, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'GET') {
-    return jsonResponse(405, { error: 'Method not allowed' })
+export default async function handler(req: unknown, res: NodeRes) {
+  const route = 'ai/usage'
+  const t0 = Date.now()
+  const method = (req as { method?: string }).method
+  logStep(route, 'handler:entered', t0, { method })
+  if (method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' })
   }
 
   const authUser = await getUserFromRequest(req)
+  logStep(route, 'after-auth', t0, { authed: !!authUser })
   if (!authUser) {
-    return jsonResponse(401, { error: 'Unauthorized' })
+    return sendJson(res, 401, { error: 'Unauthorized' })
   }
 
   // Admins have no caps — treat as paid
   const admin = isAdmin(authUser.email)
 
   try {
+    const tParallel = Date.now()
     const [subscribed, dailyUsage] = await Promise.all([
       hasActiveSubscription(authUser.token, authUser.userId, process.env.STRIPE_PRICE_ID),
       getDailyAIUsage(authUser.token, authUser.userId),
     ])
+    logStep(route, 'parallel-queries', tParallel, { totalMs: Date.now() - t0 })
 
     const uncapped = subscribed || admin
 
@@ -36,12 +43,12 @@ export default async function handler(req: Request) {
     const resetsAtDate = new Date(tomorrowPacific + 'T00:00:00Z')
     resetsAtDate.setUTCHours(resetsAtDate.getUTCHours() - offsetHours)
 
-    return jsonResponse(200, {
+    return sendJson(res, 200, {
       used: dailyUsage.charged,
       limit: uncapped ? null : FREE_DAILY_AI_LIMIT,
       resetsAt: resetsAtDate.toISOString(),
     })
   } catch {
-    return jsonResponse(500, { error: 'Failed to fetch AI usage' })
+    return sendJson(res, 500, { error: 'Failed to fetch AI usage' })
   }
 }

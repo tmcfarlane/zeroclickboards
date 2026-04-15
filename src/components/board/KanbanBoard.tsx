@@ -43,7 +43,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
-  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground } = useBoardStore();
+  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,34 +56,15 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
-  const [hiddenColumnIds, setHiddenColumnIds] = useState<string[]>(() => {
-    try {
-      const stored = localStorage.getItem(`zcb-hidden-cols-${board.id}`);
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  });
-
-  // Reset hidden columns when switching boards
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(`zcb-hidden-cols-${board.id}`);
-      setHiddenColumnIds(stored ? JSON.parse(stored) : []);
-    } catch {
-      setHiddenColumnIds([]);
-    }
-  }, [board.id]);
-
-  // Persist hidden columns (skip if empty on first render to avoid overwriting)
-  useEffect(() => {
-    localStorage.setItem(`zcb-hidden-cols-${board.id}`, JSON.stringify(hiddenColumnIds));
-  }, [hiddenColumnIds, board.id]);
+  const hiddenColumnIds = board.hiddenColumnIds ?? [];
 
   const hideColumn = (columnId: string) => {
-    setHiddenColumnIds(prev => [...prev, columnId]);
+    if (hiddenColumnIds.includes(columnId)) return;
+    setBoardHiddenColumns(board.id, [...hiddenColumnIds, columnId]);
   };
 
   const showColumn = (columnId: string) => {
-    setHiddenColumnIds(prev => prev.filter(id => id !== columnId));
+    setBoardHiddenColumns(board.id, hiddenColumnIds.filter(id => id !== columnId));
   };
 
   const activeCard = (() => {
@@ -610,7 +591,7 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
                   ))}
                   {hiddenColumns.length > 1 && (
                     <DropdownMenuItem
-                      onClick={() => setHiddenColumnIds([])}
+                      onClick={() => setBoardHiddenColumns(board.id, [])}
                       className="text-[#78fcd6] focus:bg-white/5 focus:text-[#78fcd6]"
                     >
                       Show All Columns

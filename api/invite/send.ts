@@ -1,7 +1,10 @@
 import {
   getUserFromRequest,
   createServiceClient,
-  jsonResponse,
+  sendJson,
+  readJsonBody,
+  getHeader,
+  type NodeRes,
 } from "../_lib/auth.js";
 import { Resend } from "resend";
 
@@ -17,18 +20,19 @@ function escapeHtml(s: string): string {
 
 const VALID_ROLES = ["viewer", "commenter", "editor"] as const;
 
-export default async function handler(req: Request) {
-  if (req.method !== "POST")
-    return jsonResponse(405, { error: "Method not allowed" });
+export default async function handler(req: unknown, res: NodeRes) {
+  const method = (req as { method?: string }).method;
+  if (method !== "POST")
+    return sendJson(res, 405, { error: "Method not allowed" });
 
   const user = await getUserFromRequest(req);
-  if (!user) return jsonResponse(401, { error: "Sign in required" });
+  if (!user) return sendJson(res, 401, { error: "Sign in required" });
 
   let payload: unknown;
   try {
-    payload = await req.json();
+    payload = await readJsonBody(req);
   } catch {
-    return jsonResponse(400, { error: "Invalid JSON body" });
+    return sendJson(res, 400, { error: "Invalid JSON body" });
   }
 
   const body =
@@ -41,18 +45,18 @@ export default async function handler(req: Request) {
   const role = typeof body?.role === "string" ? body.role : "viewer";
 
   if (!email || !boardId) {
-    return jsonResponse(400, { error: "Email and boardId are required" });
+    return sendJson(res, 400, { error: "Email and boardId are required" });
   }
 
   if (!VALID_ROLES.includes(role as (typeof VALID_ROLES)[number])) {
-    return jsonResponse(400, {
+    return sendJson(res, 400, {
       error: "Invalid role. Must be viewer, commenter, or editor.",
     });
   }
 
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) {
-    return jsonResponse(500, {
+    return sendJson(res, 500, {
       error: "Email service not configured — set RESEND_API_KEY",
     });
   }
@@ -76,7 +80,7 @@ export default async function handler(req: Request) {
       .single();
 
     if (!board || board.user_id !== user.userId) {
-      return jsonResponse(403, {
+      return sendJson(res, 403, {
         error: "You do not have permission to share this board",
       });
     }
@@ -133,7 +137,7 @@ export default async function handler(req: Request) {
     }
   }
 
-  const boardUrl = `${req.headers.get("origin") || "https://zeroclickboards.com"}/board/${boardId}`;
+  const boardUrl = `${getHeader(req, "origin") || "https://zeroclickboards.com"}/board/${boardId}`;
   const safeName = escapeHtml(inviterName);
   const safeBoardName = escapeHtml(boardName);
   const safeRole = escapeHtml(role);
@@ -164,16 +168,16 @@ export default async function handler(req: Request) {
 
     if (sendError) {
       console.error("[invite/send] Resend error:", JSON.stringify(sendError));
-      return jsonResponse(500, {
+      return sendJson(res, 500, {
         error: sendError.message || "Failed to send invitation email",
       });
     }
 
-    return jsonResponse(200, { success: true, emailId: data?.id });
+    return sendJson(res, 200, { success: true, emailId: data?.id });
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Unexpected error sending email";
     console.error("[invite/send] Unexpected error:", err);
-    return jsonResponse(500, { error: message });
+    return sendJson(res, 500, { error: message });
   }
 }

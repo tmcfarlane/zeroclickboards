@@ -12,7 +12,7 @@ interface UpgradeToProBannerProps {
 export function UpgradeToProBanner({ onLearnMore }: UpgradeToProBannerProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const { hasSubscription } = useSubscription();
+  const { hasSubscription, trialEligible } = useSubscription();
   const { isSignedIn } = useAuth();
   const { session } = useAuthContext();
 
@@ -50,9 +50,13 @@ export function UpgradeToProBanner({ onLearnMore }: UpgradeToProBannerProps) {
 
         {/* Copy — value prop */}
         <p className="text-sm text-[#A8B2B2]">
-          <span className="text-[#F2F7F7] font-medium">Unlock unlimited AI queries</span>
+          <span className="text-[#F2F7F7] font-medium">
+            {trialEligible ? 'Try Pro free for 7 days' : 'Unlock unlimited AI queries'}
+          </span>
           {' '}&mdash; automate your boards with natural language.
-          <span className="hidden sm:inline text-[#A8B2B2]/70"> Just $3/mo.</span>
+          <span className="hidden sm:inline text-[#A8B2B2]/70">
+            {trialEligible ? ' Then $3/mo. Cancel anytime.' : ' Just $3/mo.'}
+          </span>
         </p>
 
         {/* Direct-to-Stripe CTA */}
@@ -69,7 +73,7 @@ export function UpgradeToProBanner({ onLearnMore }: UpgradeToProBannerProps) {
               </>
             ) : (
               <>
-                <span>Upgrade to Pro</span>
+                <span>{trialEligible ? 'Start Free Trial' : 'Upgrade to Pro'}</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
               </>
             )}

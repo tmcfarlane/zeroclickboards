@@ -181,12 +181,12 @@ function EmbeddedBoard({
       aria-label={ariaLabel}
       className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0E1414] shadow-2xl shadow-black/60"
     >
-      <div className="relative h-[500px] w-full">
+      <div className="relative h-[550px] w-full">
         {status !== "failed" && (
           <iframe
             src={src}
             title={ariaLabel ?? "Embedded ZeroBoard"}
-            className={`absolute inset-0 h-full w-full border-0 bg-[#0b0f0f] transition-opacity duration-500 ${
+            className={`absolute inset-0 h-[100%] w-full border-0 bg-[#0b0f0f] transition-opacity duration-500 ${
               status === "loaded" ? "opacity-100" : "opacity-0"
             }`}
             loading="lazy"
@@ -688,8 +688,8 @@ export function LandingPage() {
             </div>
 
             {/* AI Pro plan — highlighted */}
-            <div className="relative bg-white/5 backdrop-blur-md border border-[#78fcd6]/40 rounded-2xl p-6 flex flex-col shadow-lg shadow-[#78fcd6]/10 ring-1 ring-[#78fcd6]/20">
-              <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl gradient-cyan" />
+            <div className="relative overflow-hidden bg-white/5 backdrop-blur-md border border-[#78fcd6]/40 rounded-2xl p-6 flex flex-col shadow-lg shadow-[#78fcd6]/10 ring-1 ring-[#78fcd6]/20">
+              <div className="absolute inset-x-0 top-0 h-1 gradient-cyan" />
               <div className="mb-2 inline-flex self-start items-center gap-1.5 rounded-full bg-[#78fcd6]/10 px-3 py-0.5 text-xs font-semibold text-[#78fcd6]">
                 <Sparkles className="w-3 h-3" />
                 Best Value
