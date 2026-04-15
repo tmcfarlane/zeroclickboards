@@ -19,6 +19,7 @@ interface BoardStore extends AppState {
   deleteBoard: (boardId: string) => void;
   renameBoard: (boardId: string, newName: string) => void;
   setBoardBackground: (boardId: string, background: string | undefined) => void;
+  setBoardHiddenColumns: (boardId: string, hiddenColumnIds: string[]) => void;
   setActiveBoard: (boardId: string) => void;
 
   addColumn: (boardId: string, title: string) => void;
@@ -69,8 +70,14 @@ type BoardData = {
   columns: Column[];
 };
 
-function boardToData(board: Board): BoardData & { background?: string } {
-  return { columns: board.columns, ...(board.background ? { background: board.background } : {}) };
+function boardToData(board: Board): BoardData & { background?: string; hiddenColumnIds?: string[] } {
+  return {
+    columns: board.columns,
+    ...(board.background ? { background: board.background } : {}),
+    ...(board.hiddenColumnIds && board.hiddenColumnIds.length > 0
+      ? { hiddenColumnIds: board.hiddenColumnIds }
+      : {}),
+  };
 }
 
 function dataToColumns(data: Json | null | undefined): Column[] {
@@ -84,6 +91,13 @@ function dataToBackground(data: Json | null | undefined): string | undefined {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined;
   const bg = (data as Record<string, unknown>).background;
   return typeof bg === 'string' ? bg : undefined;
+}
+
+function dataToHiddenColumnIds(data: Json | null | undefined): string[] {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
+  const ids = (data as Record<string, unknown>).hiddenColumnIds;
+  if (!Array.isArray(ids)) return [];
+  return ids.filter((v): v is string => typeof v === 'string');
 }
 
 const pendingBoardSync = new Map<string, ReturnType<typeof setTimeout>>();
@@ -123,6 +137,7 @@ function ensureBoardsSubscription(userId: string) {
             description,
             columns: dataToColumns(r.data as Json | null | undefined),
             background: dataToBackground(r.data as Json | null | undefined),
+            hiddenColumnIds: dataToHiddenColumnIds(r.data as Json | null | undefined),
             createdAt: r.created_at,
             updatedAt: r.updated_at,
             userId: r.user_id,
@@ -151,6 +166,7 @@ function ensureBoardsSubscription(userId: string) {
                 ...b,
                 ...next,
                 background: next.background ?? b.background,
+                hiddenColumnIds: next.hiddenColumnIds ?? b.hiddenColumnIds,
               };
             }),
           });
@@ -278,6 +294,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       description: row.description ?? undefined,
       columns: dataToColumns(row.data),
       background: dataToBackground(row.data),
+      hiddenColumnIds: dataToHiddenColumnIds(row.data),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       userId: row.user_id,
@@ -372,6 +389,15 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   setBoardBackground: (boardId, background) => {
     set((state) => ({
       boards: state.boards.map((b) => (b.id === boardId ? { ...b, background, updatedAt: new Date().toISOString() } : b)),
+    }));
+    scheduleBoardSync(boardId);
+  },
+
+  setBoardHiddenColumns: (boardId, hiddenColumnIds) => {
+    set((state) => ({
+      boards: state.boards.map((b) =>
+        b.id === boardId ? { ...b, hiddenColumnIds, updatedAt: new Date().toISOString() } : b
+      ),
     }));
     scheduleBoardSync(boardId);
   },

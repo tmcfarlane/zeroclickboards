@@ -63,12 +63,18 @@ function ReadOnlyCard({ card }: { card: Card }) {
 }
 
 export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
+  const hiddenColumnIds = board.hiddenColumnIds ?? [];
+  const visibleColumns = board.columns.filter((col) => !hiddenColumnIds.includes(col.id));
+
   return (
-    <div className="h-full flex flex-col">
+    <div
+      className="h-full min-h-full flex flex-col"
+      style={board.background ? { background: board.background } : undefined}
+    >
       {/* Board columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <div className="h-full flex items-start gap-4 p-4 min-w-max">
-          {board.columns.map((column) => {
+          {visibleColumns.map((column) => {
             const activeCards = column.cards.filter(c => !c.isArchived);
             return (
               <div
