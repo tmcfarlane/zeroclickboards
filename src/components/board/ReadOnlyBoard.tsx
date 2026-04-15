@@ -75,12 +75,6 @@ export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
     const container = scrollRef.current;
     if (!container) return;
 
-    function onWheel(e: WheelEvent) {
-      if (e.deltaY === 0) return;
-      e.preventDefault();
-      container!.scrollLeft += e.deltaY;
-    }
-
     function onPointerDown(e: PointerEvent) {
       isDragging.current = true;
       dragStart.current = { x: e.clientX, scrollLeft: container!.scrollLeft };
@@ -98,14 +92,12 @@ export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
       container!.releasePointerCapture(e.pointerId);
     }
 
-    container.addEventListener('wheel', onWheel, { passive: false });
     container.addEventListener('pointerdown', onPointerDown);
     container.addEventListener('pointermove', onPointerMove);
     container.addEventListener('pointerup', onPointerUp);
     container.addEventListener('pointercancel', onPointerUp);
 
     return () => {
-      container.removeEventListener('wheel', onWheel);
       container.removeEventListener('pointerdown', onPointerDown);
       container.removeEventListener('pointermove', onPointerMove);
       container.removeEventListener('pointerup', onPointerUp);
