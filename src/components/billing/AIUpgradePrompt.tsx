@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Sparkles, Check, Loader2, Minus } from 'lucide-react';
 import { useAuthContext } from '@/components/auth/AuthProvider';
+import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'sonner';
 
 interface AIUpgradePromptProps {
@@ -31,6 +32,7 @@ const proFeatures = [
 
 export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) {
   const { session } = useAuthContext();
+  const { trialEligible } = useSubscription();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubscribe = async () => {
@@ -119,6 +121,11 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
                 <span className="text-2xl font-bold text-[#F2F7F7]">$3</span>
                 <span className="text-sm text-[#A8B2B2]">/month</span>
               </div>
+              {trialEligible && (
+                <p className="mt-1 text-[11px] font-medium text-[#78fcd6]">
+                  Start with a 7-day free trial
+                </p>
+              )}
             </div>
 
             <div className="space-y-2.5 flex-1">
@@ -141,7 +148,7 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
                 {isLoading ? (
                   <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Redirecting&hellip;</>
                 ) : (
-                  'Get Pro for $3/mo'
+                  trialEligible ? 'Start 7-Day Free Trial' : 'Get Pro for $3/mo'
                 )}
               </Button>
             </div>

@@ -185,7 +185,45 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: rgba(120, 252, 214, 0.5);
   }
-  
+
+  /* Scrollbar always reserves space, visible only on hover (no layout shift) */
+  .scrollbar-hover {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    scrollbar-gutter: stable;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
+
+  .scrollbar-hover:hover,
+  .scrollbar-hover:focus-within,
+  .scrollbar-hover:active {
+    scrollbar-color: rgba(120, 252, 214, 0.3) transparent;
+  }
+
+  .scrollbar-hover:hover::-webkit-scrollbar-thumb,
+  .scrollbar-hover:focus-within::-webkit-scrollbar-thumb,
+  .scrollbar-hover:active::-webkit-scrollbar-thumb {
+    background: rgba(120, 252, 214, 0.3);
+  }
+
+  .scrollbar-hover:hover::-webkit-scrollbar-thumb:hover {
+    background: rgba(120, 252, 214, 0.5);
+  }
+
   /* Animation utilities */
   .animate-float {
     animation: float 3s ease-in-out infinite;

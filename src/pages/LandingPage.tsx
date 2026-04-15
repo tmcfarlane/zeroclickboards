@@ -181,12 +181,12 @@ function EmbeddedBoard({
       aria-label={ariaLabel}
       className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0E1414] shadow-2xl shadow-black/60"
     >
-      <div className="relative h-[500px] w-full">
+      <div className="relative h-[550px] w-full">
         {status !== "failed" && (
           <iframe
             src={src}
             title={ariaLabel ?? "Embedded ZeroBoard"}
-            className={`absolute inset-0 h-full w-full border-0 bg-[#0b0f0f] transition-opacity duration-500 ${
+            className={`absolute inset-0 h-[100%] w-full border-0 bg-[#0b0f0f] transition-opacity duration-500 ${
               status === "loaded" ? "opacity-100" : "opacity-0"
             }`}
             loading="lazy"
@@ -439,7 +439,7 @@ export function LandingPage() {
             <div className="absolute -inset-px rounded-3xl bg-gradient-to-br from-[#78fcd6]/40 via-transparent to-[#00ffb6]/30 opacity-60 blur-sm" />
             <div className="relative rounded-3xl bg-gradient-to-b from-white/10 to-transparent p-1 backdrop-blur-xl">
               <EmbeddedBoard
-                src="https://board.zeroclickdev.ai/embed/9df8454b-d1f6-4c6f-83b3-d4a710d45fc9"
+                src="http://localhost:5173/embed/9df8454b-d1f6-4c6f-83b3-d4a710d45fc9"
                 fallbackSrc="/screenshots/kanban.png"
                 fallbackAlt="ZeroBoard kanban board interface with multiple columns, cards, labels, and cover images"
                 ariaLabel="ZeroBoard live product preview"

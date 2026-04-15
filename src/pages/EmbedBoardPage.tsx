@@ -128,7 +128,7 @@ export function EmbedBoardPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#0B0F0F] flex flex-col">
+    <div className="relative h-screen overflow-hidden bg-[#0B0F0F] flex flex-col">
       <div className="flex-1 min-h-0 flex flex-col">
         <ReadOnlyBoard board={board} />
       </div>

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { Board, Card, CardLabel } from '@/types';
 
 interface ReadOnlyBoardProps {
@@ -66,20 +67,69 @@ export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
   const hiddenColumnIds = board.hiddenColumnIds ?? [];
   const visibleColumns = board.columns.filter((col) => !hiddenColumnIds.includes(col.id));
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, scrollLeft: 0 });
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    function onWheel(e: WheelEvent) {
+      if (e.deltaY === 0) return;
+      e.preventDefault();
+      container!.scrollLeft += e.deltaY;
+    }
+
+    function onPointerDown(e: PointerEvent) {
+      isDragging.current = true;
+      dragStart.current = { x: e.clientX, scrollLeft: container!.scrollLeft };
+      container!.style.cursor = 'grabbing';
+      container!.setPointerCapture(e.pointerId);
+    }
+    function onPointerMove(e: PointerEvent) {
+      if (!isDragging.current) return;
+      container!.scrollLeft = dragStart.current.scrollLeft - (e.clientX - dragStart.current.x);
+    }
+    function onPointerUp(e: PointerEvent) {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      container!.style.cursor = '';
+      container!.releasePointerCapture(e.pointerId);
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false });
+    container.addEventListener('pointerdown', onPointerDown);
+    container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerup', onPointerUp);
+    container.addEventListener('pointercancel', onPointerUp);
+
+    return () => {
+      container.removeEventListener('wheel', onWheel);
+      container.removeEventListener('pointerdown', onPointerDown);
+      container.removeEventListener('pointermove', onPointerMove);
+      container.removeEventListener('pointerup', onPointerUp);
+      container.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, []);
+
   return (
     <div
       className="h-full min-h-full flex flex-col"
       style={board.background ? { background: board.background } : undefined}
     >
       {/* Board columns */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="h-full flex items-start gap-4 p-4 min-w-max">
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden scrollbar-hover cursor-grab select-none"
+      >
+        <div className="h-full flex items-stretch gap-4 p-4 min-w-max">
           {visibleColumns.map((column) => {
             const activeCards = column.cards.filter(c => !c.isArchived);
             return (
               <div
                 key={column.id}
-                className="w-72 sm:w-80 flex-shrink-0 bg-[#111515] rounded-xl border border-white/5 flex flex-col max-h-[calc(100vh-8rem)]"
+                className="w-72 sm:w-80 flex-shrink-0 bg-[#111515] rounded-xl border border-white/5 flex flex-col min-h-0"
               >
                 {/* Column Header */}
                 <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
@@ -88,7 +138,7 @@ export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
                 </div>
 
                 {/* Cards */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+                <div className="flex-1 overflow-hidden p-2 space-y-2">
                   {activeCards.map((card) => (
                     <ReadOnlyCard key={card.id} card={card} />
                   ))}

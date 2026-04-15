@@ -122,7 +122,7 @@ export async function hasActiveSubscription(token: string, userId: string, price
     .from('subscriptions')
     .select('id, status')
     .eq('user_id', userId)
-    .eq('status', 'active')
+    .in('status', ['active', 'trialing'])
   if (priceId) query = query.eq('stripe_price_id', priceId)
   const { data, error } = await query.limit(1).maybeSingle()
 

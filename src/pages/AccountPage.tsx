@@ -169,7 +169,11 @@ export function AccountPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[#A8B2B2] mb-1">
-                        {subscription.cancel_at_period_end ? 'Access until' : 'Next billing date'}
+                        {subscription.cancel_at_period_end
+                          ? 'Access until'
+                          : subscription.status === 'trialing'
+                            ? 'Trial ends'
+                            : 'Next billing date'}
                       </p>
                       <p className="text-sm font-medium">
                         {formatDate(subscription.current_period_end)}

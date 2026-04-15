@@ -27,14 +27,17 @@ export default async function handler(req: unknown, res: NodeRes) {
   if (priceId) query = query.eq('stripe_price_id', priceId)
 
   const tQuery = Date.now()
-  const { data: subscription } = await query
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  logStep(route, 'subscription-query', tQuery, { totalMs: Date.now() - t0 })
+  const [subResult, anyPriorResult] = await Promise.all([
+    query.order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    client.from('subscriptions').select('id').eq('user_id', user.userId).limit(1).maybeSingle(),
+  ])
+  const subscription = subResult.data
+  const trialEligible = !anyPriorResult.error && !anyPriorResult.data
+  logStep(route, 'subscription-query', tQuery, { totalMs: Date.now() - t0, trialEligible })
 
   return sendJson(res, 200, {
     hasActiveSubscription: active,
     subscription: subscription ?? null,
+    trialEligible,
   })
 }

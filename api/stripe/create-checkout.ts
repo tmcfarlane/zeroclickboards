@@ -1,7 +1,9 @@
 import Stripe from 'stripe'
-import { getUserFromRequest, getHeader, sendJson, logStep, type NodeRes } from '../_lib/auth.js'
+import { getUserFromRequest, getHeader, sendJson, logStep, createAuthenticatedClient, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
+
+const TRIAL_DAYS = 7
 
 export default async function handler(req: unknown, res: NodeRes) {
   const route = 'stripe/create-checkout'
@@ -21,6 +23,19 @@ export default async function handler(req: unknown, res: NodeRes) {
     return sendJson(res, 500, { error: 'Stripe not configured' })
   }
 
+  // "New user" = no prior subscription row for this user in our DB.
+  // Any existing row (active, canceled, past_due, etc.) disqualifies them from a fresh trial.
+  const tTrial = Date.now()
+  const supabase = createAuthenticatedClient(user.token)
+  const { data: priorSub, error: priorSubError } = await supabase
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', user.userId)
+    .limit(1)
+    .maybeSingle()
+  const isNewUser = !priorSubError && !priorSub
+  logStep(route, 'trial-eligibility', tTrial, { isNewUser, hadError: !!priorSubError })
+
   const stripe = new Stripe(stripeKey, { timeout: 8_000, maxNetworkRetries: 1 })
 
   try {
@@ -34,8 +49,15 @@ export default async function handler(req: unknown, res: NodeRes) {
       cancel_url: `${origin}/app?checkout=cancel`,
       metadata: { userId: user.userId },
       client_reference_id: user.userId,
+      subscription_data: isNewUser
+        ? {
+            trial_period_days: TRIAL_DAYS,
+            trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+            metadata: { userId: user.userId, trial: 'new_user_7d' },
+          }
+        : { metadata: { userId: user.userId } },
     })
-    logStep(route, 'stripe:session-created', tStripe, { totalMs: Date.now() - t0 })
+    logStep(route, 'stripe:session-created', tStripe, { totalMs: Date.now() - t0, trial: isNewUser })
 
     return sendJson(res, 200, { url: session.url })
   } catch (err) {
