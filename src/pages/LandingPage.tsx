@@ -4,7 +4,6 @@ import {
   Github,
   Heart,
   Check,
-  ArrowRight,
   Layout,
   Clock,
   Wand2,
@@ -17,9 +16,11 @@ import {
   Lock,
   Rocket,
   Pencil,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/auth/SignInModal";
+import { FallingCardsShower } from "@/components/FallingCardsShower";
 
 const GITHUB_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? "https://github.com";
 
@@ -730,8 +731,8 @@ export function LandingPage() {
       </section>
 
       {/* Open Source */}
-      <section className="px-6 py-16 md:py-20">
-        <div className="mx-auto max-w-3xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center">
+      <section className="px-6 py-12 md:py-16">
+        <div className="mx-auto max-w-2xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center">
           <Github className="mx-auto mb-4 w-8 h-8 text-[#78fcd6]" />
           <h2 className="mb-3 text-2xl font-bold text-[#F2F7F7]">
             Proudly Open Source
@@ -753,7 +754,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* Final CTA — hidden for now, keep around for future use */}
+      {/*
       <section className="px-6 py-12 md:py-20">
         <div className="relative mx-auto max-w-2xl overflow-hidden rounded-3xl border border-[#78fcd6]/30 bg-gradient-to-br from-[#78fcd6]/10 via-white/5 to-[#00ffb6]/10 p-8 backdrop-blur-md md:p-10">
           <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-[#78fcd6]/20 blur-[100px]" />
@@ -780,11 +782,48 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+      */}
+
+      {/* Pile tagline + clearance for falling cards */}
+      <div className="relative z-50 px-6 pt-10 pb-[36vh] text-center">
+        <p
+          className="mb-8 text-5xl leading-tight text-[#F2F7F7] sm:text-6xl md:text-7xl"
+          style={{ fontFamily: "'Caveat', cursive" }}
+        >
+          This is your work{" "}
+          <span
+            className="underline"
+            style={{
+              textDecorationColor: "#78fcd6",
+              textDecorationThickness: "4px",
+              textUnderlineOffset: "6px",
+              textDecorationSkipInk: "none",
+            }}
+          >
+            without a board
+          </span>
+          .
+        </p>
+
+        <button
+          type="button"
+          onClick={() => setIsSignInModalOpen(true)}
+          className="group relative inline-flex h-14 items-center overflow-hidden rounded-full bg-gradient-to-b from-[#8ffde0] via-[#78fcd6] to-[#00ffb6] px-8 text-lg font-bold text-[#0B0F0F] shadow-[0_10px_30px_-8px_rgba(120,252,214,0.55),inset_0_1px_0_rgba(255,255,255,0.55)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(120,252,214,0.75),inset_0_1px_0_rgba(255,255,255,0.7)]"
+        >
+          <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+          <span className="relative inline-flex items-center">
+            Fix this now
+            <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 ease-out group-hover:translate-x-1" />
+          </span>
+        </button>
+      </div>
 
       <SignInModal
         isOpen={isSignInModalOpen}
         onOpenChange={setIsSignInModalOpen}
       />
+
+      <FallingCardsShower />
     </div>
   );
 }
