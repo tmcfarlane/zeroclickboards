@@ -591,7 +591,7 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
                   ))}
                   {hiddenColumns.length > 1 && (
                     <DropdownMenuItem
-                      onClick={() => setHiddenColumnIds([])}
+                      onClick={() => setBoardHiddenColumns(board.id, [])}
                       className="text-[#78fcd6] focus:bg-white/5 focus:text-[#78fcd6]"
                     >
                       Show All Columns
