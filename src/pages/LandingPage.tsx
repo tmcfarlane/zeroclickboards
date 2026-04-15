@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from "react";
 import {
   Sparkles,
   Github,
@@ -17,11 +17,11 @@ import {
   Lock,
   Rocket,
   Pencil,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { SignInModal } from '@/components/auth/SignInModal';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SignInModal } from "@/components/auth/SignInModal";
 
-const GITHUB_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? 'https://github.com';
+const GITHUB_URL = import.meta.env.VITE_GITHUB_REPO_URL ?? "https://github.com";
 
 type WideBlock = {
   eyebrow: string;
@@ -43,45 +43,47 @@ type TallBlock = {
 };
 
 const timelineBlock: WideBlock = {
-  eyebrow: 'Timeline / Gantt',
-  title: 'See the whole quarter at a glance',
+  eyebrow: "Timeline / Gantt",
+  title: "See the whole quarter at a glance",
   description:
-    'Switch to a Gantt-style timeline to spot overlapping deadlines, scheduling gaps, and the path to launch — without leaving your board.',
+    "Switch to a Gantt-style timeline to spot overlapping deadlines, scheduling gaps, and the path to launch — without leaving your board.",
   bullets: [
-    'Scrollable timeline of every due date',
-    'Color-coded by column and status',
-    'One click back to kanban view',
+    "Scrollable timeline of every due date",
+    "Color-coded by column and status",
+    "One click back to kanban view",
   ],
-  image: '/screenshots/timeline.png',
-  imageAlt: 'ZeroBoard timeline and Gantt chart view of cards across dates',
+  image: "/screenshots/timeline.png",
+  imageAlt: "ZeroBoard timeline and Gantt chart view of cards across dates",
 };
 
 const tallBlocks: TallBlock[] = [
   {
-    eyebrow: 'AI Assistant',
-    title: 'Just tell it what you want',
+    eyebrow: "AI Assistant",
+    title: "Just tell it what you want",
     description:
       'Skip the clicks. Type "move all overdue cards to In Progress" or "add a checklist for launch tasks" — the AI assistant handles the rest.',
     bullets: [
-      'Natural-language card creation & moves',
-      'Bulk edits in seconds, not minutes',
-      'Lives right in your board sidebar',
+      "Natural-language card creation & moves",
+      "Bulk edits in seconds, not minutes",
+      "Lives right in your board sidebar",
     ],
-    image: '/screenshots/ai-assist.png',
-    imageAlt: 'ZeroBoard AI assistant chat sidebar managing cards with plain English',
+    image: "/screenshots/ai-assist.png",
+    imageAlt:
+      "ZeroBoard AI assistant chat sidebar managing cards with plain English",
   },
   {
-    eyebrow: 'Card Editor',
-    title: 'Every card, infinitely deep',
+    eyebrow: "Card Editor",
+    title: "Every card, infinitely deep",
     description:
-      'Checklists, attachments, rich descriptions, due dates, labels, and activity logs — all in a focused editor that stays out of your way.',
+      "Checklists, attachments, rich descriptions, due dates, labels, and activity logs — all in a focused editor that stays out of your way.",
     bullets: [
-      'Checklists, images, and rich text',
-      'Attach covers & target dates',
-      'Full activity feed on every change',
+      "Checklists, images, and rich text",
+      "Attach covers & target dates",
+      "Full activity feed on every change",
     ],
-    image: '/screenshots/card-editor.png',
-    imageAlt: 'ZeroBoard card editor with labels, cover images, checklists, and activity',
+    image: "/screenshots/card-editor.png",
+    imageAlt:
+      "ZeroBoard card editor with labels, cover images, checklists, and activity",
     reverse: true,
   },
 ];
@@ -89,64 +91,64 @@ const tallBlocks: TallBlock[] = [
 const bentoFeatures = [
   {
     icon: Share2,
-    title: 'Share & Collaborate',
+    title: "Share & Collaborate",
     description:
-      'Invite teammates via email with view or edit access. Changes sync in real time across every device.',
-    image: '/screenshots/sharing.png',
+      "Invite teammates via email with view or edit access. Changes sync in real time across every device.",
+    image: "/screenshots/sharing.png",
   },
   {
     icon: BookmarkPlus,
-    title: 'Save as Template',
+    title: "Save as Template",
     description:
-      'Turn any board or card into a reusable template and spin up new boards from it in a single click.',
-    image: '/screenshots/save-as-template.png',
+      "Turn any board or card into a reusable template and spin up new boards from it in a single click.",
+    image: "/screenshots/save-as-template.png",
   },
   {
     icon: Palette,
-    title: 'Custom Backgrounds',
+    title: "Custom Backgrounds",
     description:
-      'Personalize each board with a gradient or solid color — pick from curated presets or go custom.',
-    image: '/screenshots/choose-background-color.png',
+      "Personalize each board with a gradient or solid color — pick from curated presets or go custom.",
+    image: "/screenshots/choose-background-color.png",
   },
   {
     icon: Download,
-    title: 'Export to JSON',
+    title: "Export to JSON",
     description:
-      'Own your data. Export any board to JSON for backup, migration, or piping into your own tooling.',
-    image: '/screenshots/export-to-json.png',
+      "Own your data. Export any board to JSON for backup, migration, or piping into your own tooling.",
+    image: "/screenshots/export-to-json.png",
   },
   {
     icon: Lock,
-    title: 'Google OAuth + Email',
+    title: "Google OAuth + Email",
     description:
-      'Sign in with Google or email/password via Supabase Auth. Boards sync across devices instantly.',
-    image: '/screenshots/sign-in-auth.png',
+      "Sign in with Google or email/password via Supabase Auth. Boards sync across devices instantly.",
+    image: "/screenshots/sign-in-auth.png",
   },
   {
     icon: Rocket,
-    title: 'Deploy on Vercel',
+    title: "Deploy on Vercel",
     description:
-      'One-click deploy from GitHub. Serverless API routes keep your Supabase and AI keys safe on the server.',
-    image: '/screenshots/deploy-with-vercel.png',
+      "One-click deploy from GitHub. Serverless API routes keep your Supabase and AI keys safe on the server.",
+    image: "/screenshots/deploy-with-vercel.png",
   },
 ];
 
 const quickFeatures = [
-  { icon: Layout, label: 'Kanban Boards' },
-  { icon: Clock, label: 'Timeline / Gantt' },
-  { icon: Wand2, label: 'AI Assistant' },
-  { icon: GripVertical, label: 'Drag & Drop' },
-  { icon: RefreshCw, label: 'Real-time Sync' },
-  { icon: Pencil, label: 'Card Editor' },
+  { icon: Layout, label: "Kanban Boards" },
+  { icon: Clock, label: "Timeline / Gantt" },
+  { icon: Wand2, label: "AI Assistant" },
+  { icon: GripVertical, label: "Drag & Drop" },
+  { icon: RefreshCw, label: "Real-time Sync" },
+  { icon: Pencil, label: "Card Editor" },
 ];
 
 const freePlanFeatures = [
-  'Unlimited boards, columns & cards',
-  'Drag & drop reordering',
-  'Timeline / Gantt view',
-  'Card templates',
-  'Real-time sync',
-  'Open source & self-hostable',
+  "Unlimited boards, columns & cards",
+  "Drag & drop reordering",
+  "Timeline / Gantt view",
+  "Card templates",
+  "Real-time sync",
+  "Open source & self-hostable",
 ];
 
 function BrowserFrame({
@@ -154,33 +156,66 @@ function BrowserFrame({
   alt,
   ariaLabel,
   imgClassName,
+  zoom,
+  hideChrome,
 }: {
   src: string;
   alt: string;
   ariaLabel?: string;
   imgClassName?: string;
+  zoom?: number;
+  hideChrome?: boolean;
 }) {
+  const [origin, setOrigin] = useState("50% 50%");
+  const [isHovering, setIsHovering] = useState(false);
+  const zoomEnabled = typeof zoom === "number";
+
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!zoomEnabled) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setOrigin(`${x}% ${y}%`);
+  };
+
   return (
     <div
       aria-label={ariaLabel}
       className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0E1414] shadow-2xl shadow-black/60"
     >
       {/* Browser chrome */}
-      <div className="flex items-center gap-2 border-b border-white/5 bg-[#0B0F0F] px-4 py-2.5">
-        <span className="h-3 w-3 rounded-full bg-[#ff5f57]/80" />
-        <span className="h-3 w-3 rounded-full bg-[#febc2e]/80" />
-        <span className="h-3 w-3 rounded-full bg-[#28c840]/80" />
-        <div className="ml-3 hidden flex-1 items-center gap-2 rounded-md bg-white/5 px-3 py-1 text-xs text-[#A8B2B2] sm:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#78fcd6]" />
-          board.zeroclickdev.ai
+      {!hideChrome && (
+        <div className="flex items-center gap-2 border-b border-white/5 bg-[#0B0F0F] px-4 py-2.5">
+          <span className="h-3 w-3 rounded-full bg-[#ff5f57]/80" />
+          <span className="h-3 w-3 rounded-full bg-[#febc2e]/80" />
+          <span className="h-3 w-3 rounded-full bg-[#28c840]/80" />
+          <div className="ml-3 hidden flex-1 items-center gap-2 rounded-md bg-white/5 px-3 py-1 text-xs text-[#A8B2B2] sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#78fcd6]" />
+            board.zeroclickdev.ai
+          </div>
         </div>
+      )}
+      <div
+        className={zoomEnabled ? "relative overflow-hidden cursor-zoom-in" : ""}
+        onMouseMove={zoomEnabled ? handleMouseMove : undefined}
+        onMouseEnter={zoomEnabled ? () => setIsHovering(true) : undefined}
+        onMouseLeave={zoomEnabled ? () => setIsHovering(false) : undefined}
+      >
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          style={
+            zoomEnabled
+              ? {
+                  transformOrigin: origin,
+                  transform: isHovering ? `scale(${zoom})` : "scale(1)",
+                }
+              : undefined
+          }
+          className={`${imgClassName ?? "block h-auto w-full"}${zoomEnabled ? " motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-reduce:transform-none" : ""}`}
+        />
       </div>
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        className={imgClassName ?? 'block h-auto w-full'}
-      />
     </div>
   );
 }
@@ -189,12 +224,14 @@ function ScreenshotFrame({
   src,
   alt,
   className,
-  eager = false,
+  zoom,
+  hideChrome,
 }: {
   src: string;
   alt: string;
   className?: string;
-  eager?: boolean;
+  zoom?: number;
+  hideChrome?: boolean;
 }) {
   return (
     <div className="relative">
@@ -202,8 +239,14 @@ function ScreenshotFrame({
         <div className="absolute inset-0 rounded-full bg-[#78fcd6]/15 blur-[100px]" />
       </div>
       <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-[#78fcd6]/40 via-transparent to-[#00ffb6]/20 opacity-60 blur-sm" />
-      <BrowserFrame src={src} alt={alt} imgClassName={className} ariaLabel={alt} />
-      {eager ? null : null}
+      <BrowserFrame
+        src={src}
+        alt={alt}
+        imgClassName={className}
+        ariaLabel={alt}
+        zoom={zoom}
+        hideChrome={hideChrome}
+      />
     </div>
   );
 }
@@ -222,7 +265,7 @@ function FeatureCopy({
   centered?: boolean;
 }) {
   return (
-    <div className={centered ? 'mx-auto max-w-2xl text-center' : ''}>
+    <div className={centered ? "mx-auto max-w-2xl text-center" : ""}>
       <p
         className={`mb-3 inline-flex items-center gap-2 rounded-full border border-[#78fcd6]/30 bg-[#78fcd6]/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[#78fcd6]`}
       >
@@ -231,15 +274,14 @@ function FeatureCopy({
       <h3 className="mb-4 text-3xl font-bold leading-tight text-[#F2F7F7] sm:text-4xl">
         {title}
       </h3>
-      <p className="mb-6 text-lg leading-relaxed text-[#A8B2B2]">{description}</p>
+      <p className="mb-6 text-lg leading-relaxed text-[#A8B2B2]">
+        {description}
+      </p>
       <ul
-        className={`space-y-3 ${centered ? 'mx-auto inline-flex flex-col text-left' : ''}`}
+        className={`space-y-3 ${centered ? "mx-auto inline-flex flex-col text-left" : ""}`}
       >
         {bullets.map((bullet) => (
-          <li
-            key={bullet}
-            className="flex items-start gap-3 text-[#F2F7F7]/90"
-          >
+          <li key={bullet} className="flex items-start gap-3 text-[#F2F7F7]/90">
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#78fcd6]/15 text-[#78fcd6]">
               <Check className="h-3 w-3" strokeWidth={3} />
             </span>
@@ -274,15 +316,15 @@ export function LandingPage() {
 
           {/* Headline */}
           <h1 className="mb-6 max-w-3xl text-5xl font-black tracking-tight sm:text-6xl lg:text-7xl leading-[1.1]">
-            Organize your work with{' '}
+            Organize your work with{" "}
             <span className="gradient-cyan-text">ZeroBoard</span>
           </h1>
 
           {/* Description */}
           <p className="mb-10 max-w-2xl text-lg text-[#A8B2B2] leading-relaxed md:text-xl">
-            A powerful, open-source Kanban board with timeline views, AI assistance,
-            real-time sync, and deep customization — built for people who want more
-            control of their workflow tooling.
+            A powerful, open-source Kanban board with timeline views, AI
+            assistance, real-time sync, and deep customization — built for
+            people who want more control of their workflow tooling.
           </p>
 
           {/* CTAs */}
@@ -340,7 +382,7 @@ export function LandingPage() {
       </section>
 
       {/* Trello Tribute */}
-      <section className="px-6 pt-8 pb-20">
+      <section className="px-6 py-12 md:py-16">
         <div className="mx-auto max-w-2xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center">
           <div className="mb-3 flex justify-center">
             <Heart className="w-6 h-6 text-[#78fcd6]" />
@@ -349,28 +391,29 @@ export function LandingPage() {
             Born from Love for Trello
           </h2>
           <p className="text-[#A8B2B2] leading-relaxed">
-            We're huge fans of Trello. Some of us have used it for over 15 years to
-            track daily activities, work routines, food habits, sleep schedules, and
-            more. We simply wanted more customization and control of our tooling.
+            We're huge fans of Trello. Some of us have used it for over 15 years
+            to track daily activities, work routines, food habits, sleep
+            schedules, and more. We simply wanted more customization and control
+            of our tooling.
           </p>
         </div>
       </section>
 
       {/* Section heading */}
-      <section className="px-6 pb-12">
+      <section className="px-6 py-20 md:py-24">
         <div className="mx-auto max-w-5xl text-center">
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-[#78fcd6]">
             Built for makers
           </p>
           <h2 className="text-4xl font-bold text-[#F2F7F7] sm:text-5xl">
-            Everything you need,{' '}
+            Everything you need,{" "}
             <span className="gradient-cyan-text">nothing you don't</span>
           </h2>
         </div>
       </section>
 
       {/* Wide row: AI Assistant — animated demo */}
-      <section className="px-6 pb-24">
+      <section className="px-6 py-16 md:py-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-10">
             <FeatureCopy
@@ -397,7 +440,7 @@ export function LandingPage() {
       </section>
 
       {/* Wide row: Timeline */}
-      <section className="px-6 pb-24">
+      <section className="px-6 py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-10">
             <FeatureCopy
@@ -408,18 +451,23 @@ export function LandingPage() {
               centered
             />
           </div>
-          <ScreenshotFrame src={timelineBlock.image} alt={timelineBlock.imageAlt} />
+          <ScreenshotFrame
+            src={timelineBlock.image}
+            alt={timelineBlock.imageAlt}
+            zoom={1.6}
+          />
         </div>
       </section>
 
       {/* Two-column: Card Editor (tall dialog) — reversed */}
-      <section className="px-6 pb-24">
+      <section className="px-6 py-20 md:py-24">
         <div className="mx-auto max-w-6xl">
-          <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-16">
-            <div className="mx-auto w-full max-w-md md:order-1">
+          <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-20">
+            <div className="mx-auto w-full max-w-sm md:order-1 motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-out motion-safe:hover:scale-[1.20] motion-reduce:transform-none">
               <ScreenshotFrame
                 src={tallBlocks[1].image}
                 alt={tallBlocks[1].imageAlt}
+                hideChrome
               />
             </div>
             <div className="md:order-2">
@@ -435,7 +483,7 @@ export function LandingPage() {
       </section>
 
       {/* Bento grid — remaining features */}
-      <section className="px-6 pb-24">
+      <section className="px-6 py-16 md:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold text-[#F2F7F7] sm:text-4xl">
@@ -448,86 +496,96 @@ export function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {bentoFeatures.map(({ icon: Icon, title, description, image }, idx) => {
-              const isActive = activeBentoIndex === idx;
-              return (
-                <button
-                  key={title}
-                  type="button"
-                  aria-pressed={isActive}
-                  aria-label={`${title} — ${isActive ? 'collapse' : 'enlarge'} preview`}
-                  onMouseEnter={() => setActiveBentoIndex(idx)}
-                  onFocus={() => setActiveBentoIndex(idx)}
-                  onClick={() =>
-                    setActiveBentoIndex((prev) => (prev === idx ? null : idx))
-                  }
-                  onMouseLeave={() =>
-                    setActiveBentoIndex((prev) => (prev === idx ? null : prev))
-                  }
-                  onBlur={() =>
-                    setActiveBentoIndex((prev) => (prev === idx ? null : prev))
-                  }
-                  className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border bg-white/5 text-left backdrop-blur-md transition-colors duration-500 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#78fcd6]/60 ${
-                    isActive
-                      ? 'border-[#78fcd6]/50 shadow-xl shadow-[#78fcd6]/20'
-                      : 'border-white/10 hover:border-[#78fcd6]/40 hover:shadow-lg hover:shadow-[#78fcd6]/10'
-                  }`}
-                >
-                  <div
-                    className={`relative flex items-center justify-center overflow-hidden bg-[#0E1414] p-4 transition-[height,padding] duration-500 ease-out ${
-                      isActive ? 'h-[22rem] p-6' : 'h-52 p-4'
+            {bentoFeatures.map(
+              ({ icon: Icon, title, description, image }, idx) => {
+                const isActive = activeBentoIndex === idx;
+                return (
+                  <button
+                    key={title}
+                    type="button"
+                    aria-pressed={isActive}
+                    aria-label={`${title} — ${isActive ? "collapse" : "enlarge"} preview`}
+                    onMouseEnter={() => setActiveBentoIndex(idx)}
+                    onFocus={() => setActiveBentoIndex(idx)}
+                    onClick={() =>
+                      setActiveBentoIndex((prev) => (prev === idx ? null : idx))
+                    }
+                    onMouseLeave={() =>
+                      setActiveBentoIndex((prev) =>
+                        prev === idx ? null : prev,
+                      )
+                    }
+                    onBlur={() =>
+                      setActiveBentoIndex((prev) =>
+                        prev === idx ? null : prev,
+                      )
+                    }
+                    className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border bg-white/5 text-left backdrop-blur-md transition-colors duration-500 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#78fcd6]/60 ${
+                      isActive
+                        ? "border-[#78fcd6]/50 shadow-xl shadow-[#78fcd6]/20"
+                        : "border-white/10 hover:border-[#78fcd6]/40 hover:shadow-lg hover:shadow-[#78fcd6]/10"
                     }`}
                   >
-                    <img
-                      src={image}
-                      alt=""
-                      loading="lazy"
-                      className={`max-h-full max-w-full rounded-lg object-contain shadow-lg shadow-black/40 ring-1 ring-white/10 transition-transform duration-500 ease-out ${
-                        isActive ? 'scale-100' : 'scale-100 group-hover:scale-[1.03]'
-                      }`}
-                    />
                     <div
-                      className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
-                        isActive
-                          ? 'bg-gradient-to-t from-[#0B0F0F]/20 via-transparent to-transparent'
-                          : 'bg-gradient-to-t from-[#0B0F0F]/60 via-transparent to-transparent'
-                      }`}
-                    />
-                    <div
-                      aria-hidden="true"
-                      className={`pointer-events-none absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-xs text-[#78fcd6] backdrop-blur-sm transition-opacity duration-300 ${
-                        isActive ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
+                      className={`relative flex items-center justify-center overflow-hidden bg-[#0E1414] p-4 transition-[height,padding] duration-500 ease-out ${
+                        isActive ? "h-[22rem] p-6" : "h-52 p-4"
                       }`}
                     >
-                      +
+                      <img
+                        src={image}
+                        alt=""
+                        loading="lazy"
+                        className={`max-h-full max-w-full rounded-lg object-contain shadow-lg shadow-black/40 ring-1 ring-white/10 transition-transform duration-500 ease-out ${
+                          isActive
+                            ? "scale-100"
+                            : "scale-100 group-hover:scale-[1.03]"
+                        }`}
+                      />
+                      <div
+                        className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+                          isActive
+                            ? "bg-gradient-to-t from-[#0B0F0F]/20 via-transparent to-transparent"
+                            : "bg-gradient-to-t from-[#0B0F0F]/60 via-transparent to-transparent"
+                        }`}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className={`pointer-events-none absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-xs text-[#78fcd6] backdrop-blur-sm transition-opacity duration-300 ${
+                          isActive
+                            ? "opacity-0"
+                            : "opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        +
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <div
-                      className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ring-1 transition-colors duration-500 ${
-                        isActive
-                          ? 'bg-[#78fcd6]/20 text-[#78fcd6] ring-[#78fcd6]/40'
-                          : 'bg-[#78fcd6]/10 text-[#78fcd6] ring-[#78fcd6]/20'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    <div className="flex flex-1 flex-col p-6">
+                      <div
+                        className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ring-1 transition-colors duration-500 ${
+                          isActive
+                            ? "bg-[#78fcd6]/20 text-[#78fcd6] ring-[#78fcd6]/40"
+                            : "bg-[#78fcd6]/10 text-[#78fcd6] ring-[#78fcd6]/20"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" aria-hidden="true" />
+                      </div>
+                      <h3 className="mb-2 text-lg font-semibold text-[#F2F7F7]">
+                        {title}
+                      </h3>
+                      <p className="text-sm leading-relaxed text-[#A8B2B2]">
+                        {description}
+                      </p>
                     </div>
-                    <h3 className="mb-2 text-lg font-semibold text-[#F2F7F7]">
-                      {title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-[#A8B2B2]">
-                      {description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              },
+            )}
           </div>
         </div>
       </section>
 
       {/* Pricing */}
-      <section className="px-6 pb-20">
+      <section className="px-6 py-16 md:py-20">
         <div className="mx-auto max-w-3xl">
           <h2 className="mb-10 text-center text-3xl font-bold text-[#F2F7F7]">
             Simple pricing
@@ -538,11 +596,16 @@ export function LandingPage() {
               <h3 className="mb-1 text-xl font-bold text-[#F2F7F7]">Free</h3>
               <p className="mb-6 text-3xl font-black text-[#F2F7F7]">
                 $0
-                <span className="text-base font-normal text-[#A8B2B2]">/forever</span>
+                <span className="text-base font-normal text-[#A8B2B2]">
+                  /forever
+                </span>
               </p>
               <ul className="space-y-2.5 flex-1">
                 {freePlanFeatures.map((feat) => (
-                  <li key={feat} className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
+                  <li
+                    key={feat}
+                    className="flex items-start gap-2.5 text-sm text-[#A8B2B2]"
+                  >
                     <span className="mt-0.5 text-[#78fcd6]">✓</span>
                     {feat}
                   </li>
@@ -566,9 +629,13 @@ export function LandingPage() {
               <h3 className="mb-1 text-xl font-bold text-[#F2F7F7]">AI Pro</h3>
               <p className="mb-1 text-3xl font-black text-[#78fcd6]">
                 $3
-                <span className="text-base font-normal text-[#A8B2B2]">/month</span>
+                <span className="text-base font-normal text-[#A8B2B2]">
+                  /month
+                </span>
               </p>
-              <p className="mb-6 text-sm text-[#A8B2B2]">Less than a coffee. Everything in Free, plus:</p>
+              <p className="mb-6 text-sm text-[#A8B2B2]">
+                Less than a coffee. Everything in Free, plus:
+              </p>
               <ul className="space-y-2.5 flex-1">
                 <li className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
                   <span className="mt-0.5 text-[#78fcd6]">✓</span>
@@ -594,37 +661,17 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="px-6 pb-20">
-        <div className="relative mx-auto max-w-4xl overflow-hidden rounded-3xl border border-[#78fcd6]/30 bg-gradient-to-br from-[#78fcd6]/10 via-white/5 to-[#00ffb6]/10 p-10 text-center backdrop-blur-md md:p-14">
-          <div className="pointer-events-none absolute -top-20 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#78fcd6]/20 blur-[100px]" />
-          <h2 className="relative mb-4 text-3xl font-bold text-[#F2F7F7] sm:text-4xl">
-            Ready to ship your work?
-          </h2>
-          <p className="relative mx-auto mb-8 max-w-xl text-[#A8B2B2]">
-            Spin up your first board in under a minute. No credit card, no setup —
-            just a clean slate and the tools to organize anything.
-          </p>
-          <Button
-            onClick={() => setIsSignInModalOpen(true)}
-            className="relative h-12 px-8 bg-gradient-to-r from-[#78fcd6] to-[#00ffb6] text-[#0B0F0F] font-bold rounded-full text-base shadow-lg ring-2 ring-[#78fcd6]/30 hover:shadow-[#78fcd6]/50 hover:scale-105 transition-all duration-300"
-          >
-            Start Free
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </section>
-
       {/* Open Source */}
-      <section className="px-6 pb-24">
+      <section className="px-6 py-16 md:py-20">
         <div className="mx-auto max-w-3xl bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 text-center">
           <Github className="mx-auto mb-4 w-8 h-8 text-[#78fcd6]" />
           <h2 className="mb-3 text-2xl font-bold text-[#F2F7F7]">
             Proudly Open Source
           </h2>
           <p className="mb-6 text-[#A8B2B2] leading-relaxed">
-            ZeroBoard is fully open source. Read the code, fork it, self-host it, or
-            contribute back. The community is what makes this project great.
+            ZeroBoard is fully open source. Read the code, fork it, self-host
+            it, or contribute back. The community is what makes this project
+            great.
           </p>
           <a
             href={GITHUB_URL}
@@ -638,7 +685,38 @@ export function LandingPage() {
         </div>
       </section>
 
-      <SignInModal isOpen={isSignInModalOpen} onOpenChange={setIsSignInModalOpen} />
+      {/* Final CTA */}
+      <section className="px-6 py-12 md:py-20">
+        <div className="relative mx-auto max-w-2xl overflow-hidden rounded-3xl border border-[#78fcd6]/30 bg-gradient-to-br from-[#78fcd6]/10 via-white/5 to-[#00ffb6]/10 p-8 backdrop-blur-md md:p-10">
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-[#78fcd6]/20 blur-[100px]" />
+          <div className="relative flex flex-col items-center gap-5 text-center md:flex-row md:justify-center md:gap-6 md:text-left">
+            <div className="max-w-md">
+              <h2 className="mb-2 text-2xl font-bold text-[#F2F7F7] sm:text-3xl">
+                Ready to ship your work?
+              </h2>
+              <p className="text-[#A8B2B2]">
+                Spin up your first board in under a minute. No credit card, no
+                setup.
+              </p>
+            </div>
+            <Button
+              onClick={() => setIsSignInModalOpen(true)}
+              className="group relative h-12 shrink-0 overflow-hidden rounded-full bg-gradient-to-b from-[#8ffde0] via-[#78fcd6] to-[#00ffb6] px-8 text-base font-bold text-[#0B0F0F] shadow-[0_10px_30px_-8px_rgba(120,252,214,0.55),inset_0_1px_0_rgba(255,255,255,0.55)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(120,252,214,0.75),inset_0_1px_0_rgba(255,255,255,0.7)]"
+            >
+              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+              <span className="relative inline-flex items-center">
+                Start Free
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 ease-out group-hover:translate-x-1" />
+              </span>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <SignInModal
+        isOpen={isSignInModalOpen}
+        onOpenChange={setIsSignInModalOpen}
+      />
     </div>
   );
 }
