@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   Sparkles,
   Github,
@@ -150,6 +150,64 @@ const freePlanFeatures = [
   "Real-time sync",
   "Open source & self-hostable",
 ];
+
+function EmbeddedBoard({
+  src,
+  fallbackSrc,
+  fallbackAlt,
+  ariaLabel,
+  timeoutMs = 6000,
+}: {
+  src: string;
+  fallbackSrc: string;
+  fallbackAlt: string;
+  ariaLabel?: string;
+  timeoutMs?: number;
+}) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "failed">(
+    "loading",
+  );
+  const loadedRef = useRef(false);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (!loadedRef.current) setStatus("failed");
+    }, timeoutMs);
+    return () => window.clearTimeout(t);
+  }, [timeoutMs]);
+
+  return (
+    <div
+      aria-label={ariaLabel}
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0E1414] shadow-2xl shadow-black/60"
+    >
+      <div className="relative h-[500px] w-full">
+        {status !== "failed" && (
+          <iframe
+            src={src}
+            title={ariaLabel ?? "Embedded ZeroBoard"}
+            className={`absolute inset-0 h-full w-full border-0 bg-[#0b0f0f] transition-opacity duration-500 ${
+              status === "loaded" ? "opacity-100" : "opacity-0"
+            }`}
+            loading="lazy"
+            onLoad={() => {
+              loadedRef.current = true;
+              setStatus("loaded");
+            }}
+            onError={() => setStatus("failed")}
+          />
+        )}
+        {status !== "loaded" && (
+          <img
+            src={fallbackSrc}
+            alt={fallbackAlt}
+            className="absolute inset-0 h-full w-full object-cover object-top"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 function BrowserFrame({
   src,
@@ -368,13 +426,23 @@ export function LandingPage() {
             <div className="absolute inset-x-0 top-1/2 h-[400px] -translate-y-1/2 bg-[#78fcd6]/20 blur-[140px]" />
           </div>
 
+          <div className="mb-6 text-center md:mb-8">
+            <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-[#78fcd6]">
+              Try it live
+            </p>
+            <h2 className="text-2xl font-bold text-[#F2F7F7] sm:text-3xl">
+              A real ZeroBoard, embedded right here
+            </h2>
+          </div>
+
           <div className="relative">
             <div className="absolute -inset-px rounded-3xl bg-gradient-to-br from-[#78fcd6]/40 via-transparent to-[#00ffb6]/30 opacity-60 blur-sm" />
             <div className="relative rounded-3xl bg-gradient-to-b from-white/10 to-transparent p-1 backdrop-blur-xl">
-              <BrowserFrame
-                src="/screenshots/kanban.png"
-                alt="ZeroBoard kanban board interface with multiple columns, cards, labels, and cover images"
-                ariaLabel="ZeroBoard product preview"
+              <EmbeddedBoard
+                src="https://board.zeroclickdev.ai/embed/9df8454b-d1f6-4c6f-83b3-d4a710d45fc9"
+                fallbackSrc="/screenshots/kanban.png"
+                fallbackAlt="ZeroBoard kanban board interface with multiple columns, cards, labels, and cover images"
+                ariaLabel="ZeroBoard live product preview"
               />
             </div>
           </div>
