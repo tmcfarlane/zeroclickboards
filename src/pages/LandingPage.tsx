@@ -439,7 +439,7 @@ export function LandingPage() {
             <div className="absolute -inset-px rounded-3xl bg-gradient-to-br from-[#78fcd6]/40 via-transparent to-[#00ffb6]/30 opacity-60 blur-sm" />
             <div className="relative rounded-3xl bg-gradient-to-b from-white/10 to-transparent p-1 backdrop-blur-xl">
               <EmbeddedBoard
-                src="http://localhost:5173/embed/9df8454b-d1f6-4c6f-83b3-d4a710d45fc9"
+                src="https://board.zeroclickdev.ai/embed/9df8454b-d1f6-4c6f-83b3-d4a710d45fc9"
                 fallbackSrc="/screenshots/kanban.png"
                 fallbackAlt="ZeroBoard kanban board interface with multiple columns, cards, labels, and cover images"
                 ariaLabel="ZeroBoard live product preview"
