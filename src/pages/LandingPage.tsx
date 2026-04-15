@@ -688,8 +688,8 @@ export function LandingPage() {
             </div>
 
             {/* AI Pro plan — highlighted */}
-            <div className="relative bg-white/5 backdrop-blur-md border border-[#78fcd6]/40 rounded-2xl p-6 flex flex-col shadow-lg shadow-[#78fcd6]/10 ring-1 ring-[#78fcd6]/20">
-              <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl gradient-cyan" />
+            <div className="relative overflow-hidden bg-white/5 backdrop-blur-md border border-[#78fcd6]/40 rounded-2xl p-6 flex flex-col shadow-lg shadow-[#78fcd6]/10 ring-1 ring-[#78fcd6]/20">
+              <div className="absolute inset-x-0 top-0 h-1 gradient-cyan" />
               <div className="mb-2 inline-flex self-start items-center gap-1.5 rounded-full bg-[#78fcd6]/10 px-3 py-0.5 text-xs font-semibold text-[#78fcd6]">
                 <Sparkles className="w-3 h-3" />
                 Best Value
