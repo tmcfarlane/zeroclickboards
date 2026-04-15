@@ -226,15 +226,25 @@ function BrowserFrame({
   hideChrome?: boolean;
 }) {
   const [origin, setOrigin] = useState("50% 50%");
-  const [isHovering, setIsHovering] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
   const zoomEnabled = typeof zoom === "number";
 
-  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!zoomEnabled) return;
+  const updateOriginFromEvent = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setOrigin(`${x}% ${y}%`);
+  };
+
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!zoomEnabled || !isZoomed) return;
+    updateOriginFromEvent(e);
+  };
+
+  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (!zoomEnabled) return;
+    updateOriginFromEvent(e);
+    setIsZoomed((prev) => !prev);
   };
 
   return (
@@ -255,10 +265,14 @@ function BrowserFrame({
         </div>
       )}
       <div
-        className={zoomEnabled ? "relative overflow-hidden cursor-zoom-in" : ""}
+        className={
+          zoomEnabled
+            ? `relative overflow-hidden ${isZoomed ? "cursor-zoom-out" : "cursor-zoom-in"}`
+            : ""
+        }
+        onClick={zoomEnabled ? handleClick : undefined}
         onMouseMove={zoomEnabled ? handleMouseMove : undefined}
-        onMouseEnter={zoomEnabled ? () => setIsHovering(true) : undefined}
-        onMouseLeave={zoomEnabled ? () => setIsHovering(false) : undefined}
+        onMouseLeave={zoomEnabled ? () => setIsZoomed(false) : undefined}
       >
         <img
           src={src}
@@ -268,7 +282,7 @@ function BrowserFrame({
             zoomEnabled
               ? {
                   transformOrigin: origin,
-                  transform: isHovering ? `scale(${zoom})` : "scale(1)",
+                  transform: isZoomed ? `scale(${zoom})` : "scale(1)",
                 }
               : undefined
           }
@@ -661,7 +675,7 @@ export function LandingPage() {
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {/* Free plan */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col transition-all duration-300 hover:scale-[1.01] hover:border-white/20 hover:bg-white/[0.07]">
               <h3 className="mb-1 text-xl font-bold text-[#F2F7F7]">Free</h3>
               <p className="mb-6 text-3xl font-black text-[#F2F7F7]">
                 $0
@@ -689,9 +703,9 @@ export function LandingPage() {
             </div>
 
             {/* AI Pro plan — highlighted */}
-            <div className="relative overflow-hidden bg-white/5 backdrop-blur-md border border-[#78fcd6]/40 rounded-2xl p-6 flex flex-col shadow-lg shadow-[#78fcd6]/10 ring-1 ring-[#78fcd6]/20">
+            <div className="relative overflow-hidden bg-white/5 backdrop-blur-md border border-[#78fcd6]/40 rounded-2xl p-6 flex flex-col shadow-lg shadow-[#78fcd6]/10 ring-1 ring-[#78fcd6]/20 transition-all duration-300 hover:scale-[1.04] hover:border-[#78fcd6]/70 hover:shadow-xl hover:shadow-[#78fcd6]/30 hover:ring-[#78fcd6]/40">
               <div className="absolute inset-x-0 top-0 h-1 gradient-cyan" />
-              <div className="mb-2 inline-flex self-start items-center gap-1.5 rounded-full bg-[#78fcd6]/10 px-3 py-0.5 text-xs font-semibold text-[#78fcd6]">
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-[#78fcd6]/10 px-3 py-0.5 text-xs font-semibold text-[#78fcd6] border border-[#78fcd6]/30">
                 <Sparkles className="w-3 h-3" />
                 Best Value
               </div>
@@ -705,20 +719,26 @@ export function LandingPage() {
               <p className="mb-6 text-sm text-[#A8B2B2]">
                 Less than a coffee. Everything in Free, plus:
               </p>
-              <ul className="space-y-2.5 flex-1">
+              <ul className="space-y-2.5">
                 <li className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
                   <span className="mt-0.5 text-[#78fcd6]">✓</span>
-                  AI Assistant — manage your board with plain English
+                  Your personal AI that turns plain English into instant board updates
                 </li>
                 <li className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
                   <span className="mt-0.5 text-[#78fcd6]">✓</span>
-                  Create, move, and edit cards in seconds
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-[#A8B2B2]">
-                  <span className="mt-0.5 text-[#78fcd6]">✓</span>
-                  Priority support &amp; early access to new features
+                  Skip the line with priority support and first access to every new feature
                 </li>
               </ul>
+              <div className="mt-4 flex-1 rounded-xl border border-[#78fcd6]/20 bg-[#78fcd6]/[0.04] p-3.5">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#78fcd6]/90">
+                  Just say things like:
+                </p>
+                <div className="space-y-1.5 text-sm italic text-[#A8B2B2]">
+                  <p>“Move all Q3 tasks to Done”</p>
+                  <p>“Add a design review card due Friday”</p>
+                  <p>“Label every marketing card high priority”</p>
+                </div>
+              </div>
               <Button
                 onClick={() => setIsSignInModalOpen(true)}
                 className="mt-8 w-full h-11 bg-gradient-to-r from-[#78fcd6] to-[#00ffb6] text-[#0B0F0F] font-bold rounded-xl hover:shadow-lg hover:shadow-[#78fcd6]/30 hover:scale-[1.02] transition-all duration-300"
