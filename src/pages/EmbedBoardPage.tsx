@@ -15,14 +15,20 @@ interface EmbedBoard extends Board {
 
 function rowToBoard(row: Record<string, unknown>): EmbedBoard {
   const data = row.data as Record<string, unknown> | null;
-  const columns: Column[] = data && Array.isArray((data as Record<string, unknown>).columns)
-    ? (data as Record<string, unknown>).columns as Column[]
+  const columns: Column[] = data && Array.isArray(data.columns)
+    ? (data.columns as Column[])
+    : [];
+  const background = data && typeof data.background === 'string' ? data.background : undefined;
+  const hiddenColumnIds = data && Array.isArray(data.hiddenColumnIds)
+    ? (data.hiddenColumnIds as unknown[]).filter((v): v is string => typeof v === 'string')
     : [];
   return {
     id: row.id as string,
     name: row.name as string,
     description: (row.description as string) ?? undefined,
     columns,
+    background,
+    hiddenColumnIds,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     userId: row.user_id as string,
@@ -122,8 +128,10 @@ export function EmbedBoardPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#0B0F0F]">
-      <ReadOnlyBoard board={board} />
+    <div className="relative h-screen overflow-hidden bg-[#0B0F0F] flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
+        <ReadOnlyBoard board={board} />
+      </div>
 
       {/* Watermark */}
       <a

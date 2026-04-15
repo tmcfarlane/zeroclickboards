@@ -18,14 +18,20 @@ interface SharedBoard extends Board {
 
 function rowToBoard(row: Record<string, unknown>): SharedBoard {
   const data = row.data as Record<string, unknown> | null;
-  const columns: Column[] = data && Array.isArray((data as Record<string, unknown>).columns)
-    ? (data as Record<string, unknown>).columns as Column[]
+  const columns: Column[] = data && Array.isArray(data.columns)
+    ? (data.columns as Column[])
+    : [];
+  const background = data && typeof data.background === 'string' ? data.background : undefined;
+  const hiddenColumnIds = data && Array.isArray(data.hiddenColumnIds)
+    ? (data.hiddenColumnIds as unknown[]).filter((v): v is string => typeof v === 'string')
     : [];
   return {
     id: row.id as string,
     name: row.name as string,
     description: (row.description as string) ?? undefined,
     columns,
+    background,
+    hiddenColumnIds,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
     userId: row.user_id as string,

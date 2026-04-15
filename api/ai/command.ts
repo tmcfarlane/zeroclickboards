@@ -1,7 +1,7 @@
 import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
-import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, isAdmin, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD, FREE_DAILY_AI_ABUSE_LIMIT } from '../_lib/auth.js';
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, logAIUsage, isAdmin, sendJson, readJsonBody, FREE_DAILY_AI_LIMIT, AI_WARNING_THRESHOLD, FREE_DAILY_AI_ABUSE_LIMIT, type NodeRes } from '../_lib/auth.js';
 
 export const config = {
   runtime: 'nodejs',
@@ -71,16 +71,6 @@ function extractJsonObject(text: string): unknown {
   } catch {
     return null;
   }
-}
-
-function jsonResponse(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-    },
-  });
 }
 
 const SYSTEM_PROMPT = `You are a command parser for a Trello-like kanban app. Return an object of shape { "commands": [ ... ] } containing one or more command objects. Each command has { "type", "params", "originalText" }.
@@ -154,16 +144,17 @@ Respond with raw JSON only — no prose, no markdown fences. Schema:
 
 Always copy the user's raw input into each command's "originalText" field. Only use "unknown" for requests that are clearly unrelated to board management.`;
 
-export default async function handler(req: Request) {
+export default async function handler(req: unknown, res: NodeRes) {
   const t0 = performance.now();
-  if (req.method !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' });
+  const method = (req as { method?: string }).method;
+  if (method !== 'POST') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
   }
 
   const authUser = await getUserFromRequest(req);
   const tAuth = performance.now();
   if (!authUser) {
-    return jsonResponse(401, { error: 'Unauthorized' });
+    return sendJson(res, 401, { error: 'Unauthorized' });
   }
 
   const admin = isAdmin(authUser.email);
@@ -187,7 +178,7 @@ export default async function handler(req: Request) {
     const resetsAtDate = new Date(tomorrowPacific + 'T00:00:00Z');
     resetsAtDate.setUTCHours(resetsAtDate.getUTCHours() - offsetHours);
 
-    return jsonResponse(429, {
+    return sendJson(res, 429, {
       error: 'AI_DAILY_LIMIT_REACHED',
       usage: { used: dailyUsage.charged, limit: FREE_DAILY_AI_LIMIT, resetsAt: resetsAtDate.toISOString() },
     });
@@ -197,14 +188,14 @@ export default async function handler(req: Request) {
   const modelId = (process.env.AI_GATEWAY_MODEL || 'gpt-5.2').trim();
 
   if (!apiKey) {
-    return jsonResponse(500, { error: 'Missing AI_GATEWAY_API_KEY' });
+    return sendJson(res, 500, { error: 'Missing AI_GATEWAY_API_KEY' });
   }
 
   let payload: unknown;
   try {
-    payload = await req.json();
+    payload = await readJsonBody(req);
   } catch {
-    return jsonResponse(400, { error: 'Invalid JSON body' });
+    return sendJson(res, 400, { error: 'Invalid JSON body' });
   }
 
   const body = (payload && typeof payload === 'object') ? (payload as Record<string, unknown>) : null;
@@ -215,7 +206,7 @@ export default async function handler(req: Request) {
     : '';
 
   if (!rawText.trim()) {
-    return jsonResponse(400, { error: 'Missing text' });
+    return sendJson(res, 400, { error: 'Missing text' });
   }
 
   const text = truncate(rawText, MAX_TEXT_LEN);
@@ -262,12 +253,12 @@ export default async function handler(req: Request) {
     const parsed = extractJsonObject(result.text);
     if (!parsed) {
       console.error('[ai/command] could not extract JSON from model output:', result.text.slice(0, 500));
-      return jsonResponse(502, { error: 'AI returned invalid JSON' });
+      return sendJson(res, 502, { error: 'AI returned invalid JSON' });
     }
     const validated = ResponseSchema.safeParse(parsed);
     if (!validated.success) {
       console.error('[ai/command] schema validation failed:', validated.error.issues);
-      return jsonResponse(502, { error: 'AI response failed schema validation' });
+      return sendJson(res, 502, { error: 'AI response failed schema validation' });
     }
     commands = validated.data.commands.map((c) => ({
       type: c.type,
@@ -278,7 +269,7 @@ export default async function handler(req: Request) {
     const tFail = performance.now();
     const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
     console.error('[ai/command] generateText failed:', isTimeout ? 'timeout after 30s' : err);
-    return jsonResponse(isTimeout ? 504 : 502, {
+    return sendJson(res, isTimeout ? 504 : 502, {
       error: isTimeout ? 'AI gateway timed out' : 'AI gateway error',
       timing: { authMs: Math.round(tAuth - t0), gatewayMs: Math.round(tFail - tPreFetch), totalMs: Math.round(tFail - t0) },
     });
@@ -314,7 +305,7 @@ export default async function handler(req: Request) {
   // Preserve the existing response contract: single command responses use
   // { command }, batches use { commands }. Client handles both shapes.
   if (commands.length === 1) {
-    return jsonResponse(200, { command: commands[0], usage, timing });
+    return sendJson(res, 200, { command: commands[0], usage, timing });
   }
-  return jsonResponse(200, { commands, usage, timing });
+  return sendJson(res, 200, { commands, usage, timing });
 }

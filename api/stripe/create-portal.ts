@@ -1,18 +1,19 @@
 import Stripe from 'stripe'
-import { getUserFromRequest, getHeader, createAuthenticatedClient, jsonResponse } from '../_lib/auth.js'
+import { getUserFromRequest, getHeader, createAuthenticatedClient, sendJson, type NodeRes } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'POST') return jsonResponse(405, { error: 'Method not allowed' })
+export default async function handler(req: unknown, res: NodeRes) {
+  const method = (req as { method?: string }).method
+  if (method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' })
 
   const user = await getUserFromRequest(req)
-  if (!user) return jsonResponse(401, { error: 'Unauthorized' })
+  if (!user) return sendJson(res, 401, { error: 'Unauthorized' })
 
   const stripeKey = process.env.STRIPE_SECRET_KEY
-  if (!stripeKey) return jsonResponse(500, { error: 'Stripe not configured' })
+  if (!stripeKey) return sendJson(res, 500, { error: 'Stripe not configured' })
 
-  const stripe = new Stripe(stripeKey)
+  const stripe = new Stripe(stripeKey, { timeout: 8_000, maxNetworkRetries: 1 })
 
   const client = createAuthenticatedClient(user.token)
 
@@ -24,7 +25,7 @@ export default async function handler(req: Request) {
     .single()
 
   if (!profile?.stripe_customer_id) {
-    return jsonResponse(400, { error: 'No subscription found' })
+    return sendJson(res, 400, { error: 'No subscription found' })
   }
 
   try {
@@ -35,9 +36,9 @@ export default async function handler(req: Request) {
       return_url: `${origin}/app`,
     })
 
-    return jsonResponse(200, { url: session.url })
+    return sendJson(res, 200, { url: session.url })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return jsonResponse(500, { error: message })
+    return sendJson(res, 500, { error: message })
   }
 }

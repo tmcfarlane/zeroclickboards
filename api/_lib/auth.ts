@@ -1,16 +1,40 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
+// eslint-disable-next-line no-console
+console.log(JSON.stringify({ step: 'auth-module:loaded', ts: Date.now() }))
+
 // Support both vercel dev (SUPABASE_URL from project settings)
 // and vite dev (VITE_SUPABASE_URL from .env)
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-const FETCH_TIMEOUT_MS = 8_000
+// eslint-disable-next-line no-console
+console.log(JSON.stringify({
+  step: 'auth-module:env',
+  hasUrl: !!SUPABASE_URL,
+  hasAnonKey: !!SUPABASE_ANON_KEY,
+  hasServiceKey: !!SUPABASE_SERVICE_ROLE_KEY,
+  urlHost: SUPABASE_URL ? (() => { try { return new URL(SUPABASE_URL).host } catch { return 'invalid-url' } })() : null,
+}))
 
-function fetchWithTimeout(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-  const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS)
-  return fetch(input, { ...init, signal })
+const FETCH_TIMEOUT_MS = 8_000
+const AUTH_FETCH_TIMEOUT_MS = 3_000
+
+function makeFetchWithTimeout(timeoutMs: number) {
+  return function fetchWithTimeout(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    const signal = AbortSignal.timeout(timeoutMs)
+    return fetch(input, { ...init, signal })
+  }
+}
+
+const fetchWithTimeout = makeFetchWithTimeout(FETCH_TIMEOUT_MS)
+const authFetchWithTimeout = makeFetchWithTimeout(AUTH_FETCH_TIMEOUT_MS)
+
+function logStep(route: string, step: string, startedAt: number, extra?: Record<string, unknown>) {
+  const durationMs = Date.now() - startedAt
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify({ route, step, durationMs, ...extra }))
 }
 
 // Serverless functions are stateless — disable auto-refresh and session
@@ -53,18 +77,38 @@ export function getHeader(req: unknown, name: string): string | null {
   return null
 }
 
-export async function getUserFromRequest(req: Request): Promise<{ userId: string; email: string; token: string } | null> {
+export async function getUserFromRequest(req: unknown): Promise<{ userId: string; email: string; token: string } | null> {
   const authHeader = getHeader(req, 'authorization')
   if (!authHeader?.startsWith('Bearer ')) return null
   const token = authHeader.slice(7)
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify({ step: 'auth:missing-env', hasUrl: !!SUPABASE_URL, hasAnonKey: !!SUPABASE_ANON_KEY }))
+    return null
+  }
 
-  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
-  const { data, error } = await client.auth.getUser(token)
-  if (error || !data.user) return null
-
-  return { userId: data.user.id, email: data.user.email ?? '', token }
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: SERVERLESS_AUTH, global: { fetch: authFetchWithTimeout } })
+  const startedAt = Date.now()
+  try {
+    const { data, error } = await client.auth.getUser(token)
+    const durationMs = Date.now() - startedAt
+    if (error || !data.user) {
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: false, error: error?.message ?? 'no-user' }))
+      return null
+    }
+    if (durationMs > 500) {
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: true, slow: true }))
+    }
+    return { userId: data.user.id, email: data.user.email ?? '', token }
+  } catch (err) {
+    const durationMs = Date.now() - startedAt
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: false, error: err instanceof Error ? err.message : 'unknown' }))
+    return null
+  }
 }
 
 export function isAdmin(email: string): boolean {
@@ -78,7 +122,7 @@ export async function hasActiveSubscription(token: string, userId: string, price
     .from('subscriptions')
     .select('id, status')
     .eq('user_id', userId)
-    .eq('status', 'active')
+    .in('status', ['active', 'trialing'])
   if (priceId) query = query.eq('stripe_price_id', priceId)
   const { data, error } = await query.limit(1).maybeSingle()
 
@@ -134,14 +178,42 @@ export const FREE_DAILY_AI_LIMIT = 5
 export const AI_WARNING_THRESHOLD = 3
 export const FREE_DAILY_AI_ABUSE_LIMIT = 15
 
-function jsonResponse(status: number, body: unknown) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-    },
-  })
+export interface NodeRes {
+  statusCode: number
+  setHeader(name: string, value: string): unknown
+  end(body?: string | Buffer): unknown
 }
 
-export { jsonResponse }
+export function sendJson(res: NodeRes, status: number, body: unknown): void {
+  res.statusCode = status
+  res.setHeader('content-type', 'application/json; charset=utf-8')
+  res.setHeader('cache-control', 'no-store')
+  res.end(JSON.stringify(body))
+}
+
+export async function readRawBody(req: unknown): Promise<string> {
+  const r = req as AsyncIterable<Buffer | string> & { body?: unknown }
+  // If Vercel already parsed the body (object), re-stringify.
+  if (r.body !== undefined && typeof r.body === 'object' && r.body !== null && !(r.body instanceof Buffer)) {
+    return JSON.stringify(r.body)
+  }
+  if (typeof r.body === 'string') return r.body
+  if (r.body instanceof Buffer) return r.body.toString('utf8')
+  const chunks: Buffer[] = []
+  for await (const chunk of r) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+}
+
+export async function readJsonBody(req: unknown): Promise<unknown> {
+  const r = req as { body?: unknown }
+  if (r.body !== undefined && typeof r.body !== 'string' && !(r.body instanceof Buffer)) {
+    return r.body
+  }
+  const raw = await readRawBody(req)
+  if (!raw) return undefined
+  return JSON.parse(raw)
+}
+
+export { logStep }

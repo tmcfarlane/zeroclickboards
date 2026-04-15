@@ -182,12 +182,12 @@ function EmbeddedBoard({
       aria-label={ariaLabel}
       className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0E1414] shadow-2xl shadow-black/60"
     >
-      <div className="relative h-[500px] w-full">
+      <div className="relative h-[550px] w-full">
         {status !== "failed" && (
           <iframe
             src={src}
             title={ariaLabel ?? "Embedded ZeroBoard"}
-            className={`absolute inset-0 h-full w-full border-0 bg-[#0b0f0f] transition-opacity duration-500 ${
+            className={`absolute inset-0 h-[100%] w-full border-0 bg-[#0b0f0f] transition-opacity duration-500 ${
               status === "loaded" ? "opacity-100" : "opacity-0"
             }`}
             loading="lazy"

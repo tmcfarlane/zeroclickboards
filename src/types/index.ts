@@ -66,6 +66,7 @@ export interface Board {
   isPublic?: boolean;
   embedEnabled?: boolean;
   background?: string;
+  hiddenColumnIds?: string[];
 }
 
 export interface AppState {
