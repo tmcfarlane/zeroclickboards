@@ -1,13 +1,16 @@
-import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, isAdmin, jsonResponse, FREE_DAILY_AI_LIMIT } from '../_lib/auth.js'
+import { getUserFromRequest, hasActiveSubscription, getDailyAIUsage, isAdmin, jsonResponse, logStep, FREE_DAILY_AI_LIMIT } from '../_lib/auth.js'
 
 export const config = { runtime: 'nodejs', maxDuration: 15 }
 
 export default async function handler(req: Request) {
+  const route = 'ai/usage'
+  const t0 = Date.now()
   if (req.method !== 'GET') {
     return jsonResponse(405, { error: 'Method not allowed' })
   }
 
   const authUser = await getUserFromRequest(req)
+  logStep(route, 'after-auth', t0, { authed: !!authUser })
   if (!authUser) {
     return jsonResponse(401, { error: 'Unauthorized' })
   }
@@ -16,10 +19,12 @@ export default async function handler(req: Request) {
   const admin = isAdmin(authUser.email)
 
   try {
+    const tParallel = Date.now()
     const [subscribed, dailyUsage] = await Promise.all([
       hasActiveSubscription(authUser.token, authUser.userId, process.env.STRIPE_PRICE_ID),
       getDailyAIUsage(authUser.token, authUser.userId),
     ])
+    logStep(route, 'parallel-queries', tParallel, { totalMs: Date.now() - t0 })
 
     const uncapped = subscribed || admin
 

@@ -7,10 +7,22 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPA
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const FETCH_TIMEOUT_MS = 8_000
+const AUTH_FETCH_TIMEOUT_MS = 3_000
 
-function fetchWithTimeout(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-  const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS)
-  return fetch(input, { ...init, signal })
+function makeFetchWithTimeout(timeoutMs: number) {
+  return function fetchWithTimeout(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+    const signal = AbortSignal.timeout(timeoutMs)
+    return fetch(input, { ...init, signal })
+  }
+}
+
+const fetchWithTimeout = makeFetchWithTimeout(FETCH_TIMEOUT_MS)
+const authFetchWithTimeout = makeFetchWithTimeout(AUTH_FETCH_TIMEOUT_MS)
+
+function logStep(route: string, step: string, startedAt: number, extra?: Record<string, unknown>) {
+  const durationMs = Date.now() - startedAt
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify({ route, step, durationMs, ...extra }))
 }
 
 // Serverless functions are stateless — disable auto-refresh and session
@@ -58,13 +70,33 @@ export async function getUserFromRequest(req: Request): Promise<{ userId: string
   if (!authHeader?.startsWith('Bearer ')) return null
   const token = authHeader.slice(7)
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify({ step: 'auth:missing-env', hasUrl: !!SUPABASE_URL, hasAnonKey: !!SUPABASE_ANON_KEY }))
+    return null
+  }
 
-  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: SERVERLESS_AUTH, global: { fetch: fetchWithTimeout } })
-  const { data, error } = await client.auth.getUser(token)
-  if (error || !data.user) return null
-
-  return { userId: data.user.id, email: data.user.email ?? '', token }
+  const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: SERVERLESS_AUTH, global: { fetch: authFetchWithTimeout } })
+  const startedAt = Date.now()
+  try {
+    const { data, error } = await client.auth.getUser(token)
+    const durationMs = Date.now() - startedAt
+    if (error || !data.user) {
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: false, error: error?.message ?? 'no-user' }))
+      return null
+    }
+    if (durationMs > 500) {
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: true, slow: true }))
+    }
+    return { userId: data.user.id, email: data.user.email ?? '', token }
+  } catch (err) {
+    const durationMs = Date.now() - startedAt
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: false, error: err instanceof Error ? err.message : 'unknown' }))
+    return null
+  }
 }
 
 export function isAdmin(email: string): boolean {
@@ -144,4 +176,4 @@ function jsonResponse(status: number, body: unknown) {
   })
 }
 
-export { jsonResponse }
+export { jsonResponse, logStep }
