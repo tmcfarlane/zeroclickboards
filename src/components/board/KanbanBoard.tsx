@@ -6,6 +6,8 @@ import { useUndoStore } from '@/store/useUndoStore';
 import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
 import { ArchiveView } from './ArchiveView';
+import { ViewToggle } from './ViewToggle';
+import { BoardSelector } from './BoardSelector';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles } from 'lucide-react';
 import { ShareBoardDialog } from './ShareBoardDialog';
@@ -40,9 +42,10 @@ import {
 interface KanbanBoardProps {
   board: Board;
   onAIClick?: () => void;
+  onNewBoardClick: () => void;
 }
 
-export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
+export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardProps) {
   const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
@@ -394,10 +397,11 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
     <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
       {/* Board Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
-        <div>
-          <h1 className="text-lg font-semibold">{board.name}</h1>
+        <div className="flex items-center gap-3 min-w-0">
+          <BoardSelector onCreateBoardClick={onNewBoardClick} />
+          <ViewToggle />
         </div>
-        
+
         <div className="flex items-center gap-1.5">
           {/* Ask AI */}
           {onAIClick && (

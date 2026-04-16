@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuthContext } from '@/components/auth/AuthProvider'
+import { apiFetch } from '@/lib/apiFetch'
 
 interface AdminProfile {
   id: string
@@ -42,11 +43,7 @@ export function useAdmin() {
   const { data } = useQuery<{ isAdmin: boolean }>({
     queryKey: ['admin-check', session?.user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/admin/check', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      })
+      const res = await apiFetch('/api/admin/check', { session })
       if (!res.ok) return { isAdmin: false }
       return res.json()
     },
@@ -67,11 +64,7 @@ export function useAdminStats() {
   const { data, isLoading, error, refetch } = useQuery<AdminStatsData>({
     queryKey: ['admin-stats', session?.user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/admin/stats', {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      })
+      const res = await apiFetch('/api/admin/stats', { session })
       if (res.status === 403) {
         return { isAdmin: false, stats: { totalUsers: 0, totalSubscriptions: 0, activeSubscriptions: 0 }, recentUsers: [], recentSubscriptions: [] }
       }

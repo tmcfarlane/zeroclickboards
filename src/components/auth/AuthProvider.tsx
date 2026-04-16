@@ -33,14 +33,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data, error }) => {
+    supabase.auth.getSession().then(async ({ data, error }) => {
       if (!mounted) return;
-      if (error) {
+      if (error || !data.session) {
         setSession(null);
-      } else {
-        setSession(data.session);
+        setIsLoaded(true);
+        return;
       }
+      setSession(data.session);
       setIsLoaded(true);
+      // Validate the cached session with the server. If the JWT references a
+      // session_id that no longer exists (revoked, signed out elsewhere, etc.),
+      // getUser() errors and Supabase JS clears the stale storage for us —
+      // then sign out locally so the UI returns to the login state.
+      const { error: validateError } = await supabase.auth.getUser();
+      if (!mounted) return;
+      if (validateError) {
+        await supabase.auth.signOut({ scope: 'local' });
+      }
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {

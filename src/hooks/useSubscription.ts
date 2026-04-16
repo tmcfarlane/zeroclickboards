@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuthContext } from '@/components/auth/AuthProvider'
+import { apiFetch } from '@/lib/apiFetch'
 
 interface SubscriptionData {
   hasActiveSubscription: boolean
@@ -21,11 +22,7 @@ export function useSubscription() {
   const { data, isLoading, refetch } = useQuery<SubscriptionData>({
     queryKey: ['subscription', session?.user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/stripe/check-subscription', {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-      })
+      const res = await apiFetch('/api/stripe/check-subscription', { session })
       if (!res.ok) throw new Error('Failed to check subscription')
       return res.json()
     },

@@ -68,10 +68,12 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="flex items-center gap-2 text-[#F2F7F7] hover:bg-white/5 h-9 px-3"
+            className="flex items-center gap-2 text-[#F2F7F7] hover:bg-white/5 h-10 px-2 -ml-2 max-w-full min-w-0"
           >
-            <span className="font-medium">{activeBoard?.name || 'Select Board'}</span>
-            <ChevronDown className="w-4 h-4 text-[#A8B2B2]" />
+            <span className="text-lg font-semibold truncate">
+              {activeBoard?.name || 'Select Board'}
+            </span>
+            <ChevronDown className="w-5 h-5 text-[#A8B2B2] shrink-0" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

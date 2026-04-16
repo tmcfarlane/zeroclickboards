@@ -6,7 +6,6 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
-import { BoardSelector } from '@/components/board/BoardSelector';
 import { KanbanBoard } from '@/components/board/KanbanBoard';
 import { BoardSkeleton } from '@/components/board/BoardSkeleton';
 import { TimelineView } from '@/components/timeline/TimelineView';
@@ -14,7 +13,7 @@ import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { Button } from '@/components/ui/button';
-import { Plus, Layout, Clock, Github } from 'lucide-react';
+import { Plus, Layout, Github } from 'lucide-react';
 import { CreateBoardDialog } from '@/components/board/CreateBoardDialog';
 import { Footer } from './Footer';
 import { AIUpgradePrompt } from '@/components/billing/AIUpgradePrompt';
@@ -116,84 +115,52 @@ export function AppShell() {
     <div className="h-dvh bg-[#0B0F0F] text-[#F2F7F7] noise-overlay flex flex-col">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F0F]/90 backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <img src="/logo/logo_color.svg" alt="ZeroBoard" className="w-8 h-8" />
-            <span className="font-semibold text-lg">ZeroBoard</span>
+        <div className="flex items-center justify-between px-4 py-1.5">
+          <div className="flex items-center gap-2">
+            <img src="/logo/logo_color.svg" alt="ZeroBoard" className="w-6 h-6" />
+            <span className="font-semibold text-sm">ZeroBoard</span>
           </div>
 
-          {userBoards.length > 0 && (
-            <div className="flex-1 mx-2 min-w-0 flex items-center gap-2">
-              <BoardSelector onCreateBoardClick={() => setIsCreateDialogOpen(true)} />
-            </div>
-          )}
+          <div className="flex-1" />
 
-          <div className="flex items-center gap-2">
-            {activeBoard && (
-              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('board')}
-                  className={`h-8 px-3 rounded-md transition-all ${
-                    viewMode === 'board'
-                      ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                      : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Layout className="w-4 h-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Board</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { setViewMode('timeline'); setIsAIOpen(false); }}
-                  className={`h-8 px-3 rounded-md transition-all ${
-                    viewMode === 'timeline'
-                      ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                      : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Clock className="w-4 h-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Timeline</span>
-                </Button>
-              </div>
-            )}
+          <div className="flex items-center gap-3">
+            <UpgradeToProBanner />
 
-            {userBoards.length === 0 && (
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                variant="ghost"
-                className="h-9 px-4 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-lg"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline ml-1.5">New Board</span>
-              </Button>
-            )}
+            <div className="hidden sm:block h-5 w-px bg-white/10" aria-hidden="true" />
+
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              variant="ghost"
+              className="h-8 px-3 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-md text-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline ml-1">New Board</span>
+            </Button>
 
             {repoUrl && (
               <a
                 href={repoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hidden sm:flex items-center justify-center transition-colors"
+                className="h-8 w-8 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 hidden sm:flex items-center justify-center transition-colors"
                 aria-label="Open GitHub repository"
               >
-                <Github className="w-4 h-4 text-[#A8B2B2]" />
+                <Github className="w-3.5 h-3.5 text-[#A8B2B2]" />
               </a>
             )}
 
-            <div className="ml-2">
-              <UserProfile onSignInClick={() => setIsSignInModalOpen(true)} />
+            <div className="ml-1">
+              <UserProfile
+                onSignInClick={() => setIsSignInModalOpen(true)}
+                onPricingClick={() => setIsUpgradePromptOpen(true)}
+              />
             </div>
           </div>
         </div>
       </header>
 
-      {/* Upgrade to Pro Banner */}
-      <div className="pt-14">
-        <UpgradeToProBanner onLearnMore={() => setIsUpgradePromptOpen(true)} />
-      </div>
+      {/* Header spacer — matches fixed header height */}
+      <div className="pt-10" />
 
       {/* Main Content Area with AI Side Panel */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
@@ -204,12 +171,19 @@ export function AppShell() {
               <BoardSkeleton />
             ) : activeBoard ? (
               viewMode === 'board' ? (
-                <KanbanBoard board={activeBoard} onAIClick={handleAIClick} />
+                <KanbanBoard
+                  board={activeBoard}
+                  onAIClick={handleAIClick}
+                  onNewBoardClick={() => setIsCreateDialogOpen(true)}
+                />
               ) : (
-                <TimelineView board={activeBoard} />
+                <TimelineView
+                  board={activeBoard}
+                  onNewBoardClick={() => setIsCreateDialogOpen(true)}
+                />
               )
             ) : (
-              <div className="h-full flex items-center justify-center" style={{ minHeight: 'calc(100vh - 3.5rem)' }}>
+              <div className="h-full flex items-center justify-center" style={{ minHeight: 'calc(100vh - 2.5rem)' }}>
                 <div className="text-center">
                   <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
                     <Layout className="w-8 h-8 text-[#78fcd6]" />

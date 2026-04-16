@@ -61,7 +61,7 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-xl p-0 gap-0 overflow-hidden">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[96vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="text-xl font-bold text-center">Choose Your Plan</DialogTitle>
           <DialogDescription className="text-[#A8B2B2] text-center">
