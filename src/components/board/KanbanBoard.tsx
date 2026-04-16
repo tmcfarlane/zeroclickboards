@@ -427,57 +427,63 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   const activeColumn = filteredColumns[activeColumnIndex] ?? filteredColumns[0];
   const activeColumnCards = activeColumn?.cards.filter(c => !c.isArchived) ?? [];
 
+  // Refs for edge-drag so the effect doesn't re-register on every render
+  const dragStateRef = useRef({ activeDragData, activeColumnIndex, filteredColumns, boardId: board.id });
+  dragStateRef.current = { activeDragData, activeColumnIndex, filteredColumns, boardId: board.id };
+
   // Mobile: move card to adjacent column when dragged to screen edge
+  const isDragging = !!activeDragData;
   useEffect(() => {
-    if (!isCompact || !activeDragData) {
+    if (!isCompact || !isDragging) {
       lastPointerX.current = null;
-      if (edgeScrollTimer.current) {
-        clearTimeout(edgeScrollTimer.current);
-        edgeScrollTimer.current = null;
-      }
       return;
     }
 
     const EDGE_ZONE = 50;
     const EDGE_DELAY = 400;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     function onPointerMove(e: PointerEvent) {
       lastPointerX.current = e.clientX;
+
+      if (timer) clearTimeout(timer);
+      const x = e.clientX;
+      const w = window.innerWidth;
+      if (x < EDGE_ZONE || x > w - EDGE_ZONE) {
+        timer = setTimeout(checkEdge, EDGE_DELAY);
+      }
     }
 
     function checkEdge() {
+      const { activeDragData: drag, activeColumnIndex: colIdx, filteredColumns: cols, boardId } = dragStateRef.current;
       const x = lastPointerX.current;
-      if (x === null || !activeDragData) return;
+      if (x === null || !drag) return;
       const w = window.innerWidth;
 
-      if (x < EDGE_ZONE && activeColumnIndex > 0) {
-        const prevCol = filteredColumns[activeColumnIndex - 1];
+      if (x < EDGE_ZONE && colIdx > 0) {
+        const prevCol = cols[colIdx - 1];
         if (prevCol) {
-          moveCard(board.id, activeDragData.sourceColumnId, prevCol.id, activeDragData.cardId);
-          setActiveDragData({ ...activeDragData, sourceColumnId: prevCol.id });
-          setActiveColumnIndex(activeColumnIndex - 1);
+          moveCard(boardId, drag.sourceColumnId, prevCol.id, drag.cardId);
+          setActiveDragData({ ...drag, sourceColumnId: prevCol.id });
+          setActiveColumnIndex(colIdx - 1);
         }
-      } else if (x > w - EDGE_ZONE && activeColumnIndex < filteredColumns.length - 1) {
-        const nextCol = filteredColumns[activeColumnIndex + 1];
+      } else if (x > w - EDGE_ZONE && colIdx < cols.length - 1) {
+        const nextCol = cols[colIdx + 1];
         if (nextCol) {
-          moveCard(board.id, activeDragData.sourceColumnId, nextCol.id, activeDragData.cardId);
-          setActiveDragData({ ...activeDragData, sourceColumnId: nextCol.id });
-          setActiveColumnIndex(activeColumnIndex + 1);
+          moveCard(boardId, drag.sourceColumnId, nextCol.id, drag.cardId);
+          setActiveDragData({ ...drag, sourceColumnId: nextCol.id });
+          setActiveColumnIndex(colIdx + 1);
         }
       }
     }
 
-    window.addEventListener('pointermove', onPointerMove);
-    edgeScrollTimer.current = setTimeout(checkEdge, EDGE_DELAY);
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
 
     return () => {
       window.removeEventListener('pointermove', onPointerMove);
-      if (edgeScrollTimer.current) {
-        clearTimeout(edgeScrollTimer.current);
-        edgeScrollTimer.current = null;
-      }
+      if (timer) clearTimeout(timer);
     };
-  }, [isCompact, activeDragData, activeColumnIndex, filteredColumns, board.id, moveCard]);
+  }, [isCompact, isDragging, moveCard]);
 
   useEffect(() => {
     const el = mobileCardListRef.current;
