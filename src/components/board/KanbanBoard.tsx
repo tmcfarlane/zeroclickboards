@@ -5,6 +5,7 @@ import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
 import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
+import { KanbanCard } from './KanbanCard';
 import { ArchiveView } from './ArchiveView';
 import { ViewToggle } from './ViewToggle';
 import { BoardSelector } from './BoardSelector';
@@ -92,6 +93,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   // Vertical wheel → horizontal board scroll everywhere on the board.
   // Only exception: if mouse is inside a column card list that has room to scroll vertically.
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const mobileCardListRef = useRef<HTMLDivElement>(null);
   const isDraggingBoard = useRef(false);
   const dragStart = useRef({ x: 0, scrollLeft: 0 });
 
@@ -775,7 +777,25 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab">
+        {/* Mobile: single column card list */}
+        {isCompact && activeColumn && (
+          <div ref={mobileCardListRef} className="flex-1 overflow-y-auto sm:hidden">
+            <div className="p-3 space-y-2">
+              <SortableContext items={activeColumnCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                {activeColumnCards.map((card) => (
+                  <KanbanCard key={card.id} boardId={board.id} columnId={activeColumn.id} card={card} />
+                ))}
+              </SortableContext>
+              {activeColumnCards.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-[#A8B2B2]">
+                  <p className="text-sm">No cards in this column</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div ref={scrollContainerRef} className="hidden sm:flex flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab flex-col">
           <div className="h-full flex items-start gap-4 p-4 min-w-max">
             <SortableContext
               items={visibleColumns.map((c) => c.id)}
@@ -793,7 +813,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
             </SortableContext>
             <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
               {activeCard ? (
-                <div className="w-72 sm:w-80 bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2">
+                <div className="w-[calc(100vw-24px)] sm:w-80 bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2">
                   <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{activeCard.title}</p>
                   {activeCard.description && (
                     <p className="text-xs text-[#A8B2B2] mt-1 line-clamp-1">{activeCard.description}</p>
@@ -804,6 +824,12 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
           </div>
         </div>
       </DndContext>
+
+      {/* Mobile Bottom Bar */}
+      <MobileBottomBar onAIClick={onAIClick} onAddCard={() => setIsMobileAddCardOpen(true)} />
+
+      {/* Mobile Add Card Dialog */}
+      <CardEditor isOpen={isMobileAddCardOpen} onClose={() => setIsMobileAddCardOpen(false)} onSave={handleMobileAddCard} mode="create" />
 
       {/* Share Board Dialog */}
       <ShareBoardDialog
