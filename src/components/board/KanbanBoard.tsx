@@ -888,52 +888,53 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        {/* Mobile: single column card list */}
-        {isCompact && activeColumn && (
-          <div ref={mobileCardListRef} className="flex-1 overflow-y-auto sm:hidden">
-            <div className="p-3 space-y-2">
-              <SortableContext items={activeColumnCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                {activeColumnCards.map((card) => (
-                  <KanbanCard key={card.id} boardId={board.id} columnId={activeColumn.id} card={card} />
+        {isCompact ? (
+          activeColumn && (
+            <div ref={mobileCardListRef} className="flex-1 overflow-y-auto">
+              <div className="p-3 space-y-2">
+                <SortableContext items={activeColumnCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {activeColumnCards.map((card) => (
+                    <KanbanCard key={card.id} boardId={board.id} columnId={activeColumn.id} card={card} />
+                  ))}
+                </SortableContext>
+                {activeColumnCards.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-[#A8B2B2]">
+                    <p className="text-sm">No cards in this column</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        ) : (
+          <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab">
+            <div className="h-full flex items-start gap-4 p-4 min-w-max">
+              <SortableContext
+                items={visibleColumns.map((c) => c.id)}
+                strategy={horizontalListSortingStrategy}
+              >
+                {filteredColumns.map((column) => (
+                  <KanbanColumn
+                    key={column.id}
+                    boardId={board.id}
+                    column={column}
+                    onHide={() => hideColumn(column.id)}
+                    isDragOver={dragOverColumnId === column.id}
+                  />
                 ))}
               </SortableContext>
-              {activeColumnCards.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-[#A8B2B2]">
-                  <p className="text-sm">No cards in this column</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div ref={scrollContainerRef} className="hidden sm:flex flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab flex-col">
-          <div className="h-full flex items-start gap-4 p-4 min-w-max">
-            <SortableContext
-              items={visibleColumns.map((c) => c.id)}
-              strategy={horizontalListSortingStrategy}
-            >
-              {filteredColumns.map((column) => (
-                <KanbanColumn
-                  key={column.id}
-                  boardId={board.id}
-                  column={column}
-                  onHide={() => hideColumn(column.id)}
-                  isDragOver={dragOverColumnId === column.id}
-                />
-              ))}
-            </SortableContext>
-            <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
-              {activeCard ? (
-                <div className="w-[calc(100vw-24px)] sm:w-80 bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2">
-                  <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{activeCard.title}</p>
-                  {activeCard.description && (
-                    <p className="text-xs text-[#A8B2B2] mt-1 line-clamp-1">{activeCard.description}</p>
-                  )}
-                </div>
-              ) : null}
-            </DragOverlay>
           </div>
         </div>
+        )}
+        <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+          {activeCard ? (
+            <div className={`${isCompact ? 'w-[calc(100vw-24px)]' : 'w-80'} bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2`}>
+              <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{activeCard.title}</p>
+              {activeCard.description && (
+                <p className="text-xs text-[#A8B2B2] mt-1 line-clamp-1">{activeCard.description}</p>
+              )}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
       {/* Mobile Bottom Bar */}
