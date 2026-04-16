@@ -257,9 +257,12 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
   const hasAnyTimelineCards = timelineCards.length > 0;
 
   return (
-    <div className="h-full flex flex-col">
+    <div
+      className="h-full flex flex-col"
+      style={board.background ? { background: board.background } : undefined}
+    >
       {/* Timeline Header */}
-      <div className="px-4 py-3 border-b border-white/5 space-y-2">
+      <div className="px-4 pt-5 pb-3 border-b border-white/5 space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <BoardSelector onCreateBoardClick={onNewBoardClick} />
           <ViewToggle />
