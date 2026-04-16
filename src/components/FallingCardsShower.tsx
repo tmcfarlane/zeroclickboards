@@ -46,6 +46,7 @@ const LABEL_COLORS = [
 const DESKTOP_COUNT = 44;
 const MOBILE_COUNT = 24;
 const TRIGGER_DISTANCE_FROM_BOTTOM = 900;
+const RESET_DISTANCE_FROM_BOTTOM = 1600;
 const RELEASE_WINDOW_MS = 1800;
 const MOUSE_REPEL_RADIUS = 280;
 const MOUSE_REPEL_STRENGTH = 0.22;
@@ -93,9 +94,19 @@ export function FallingCardsShower() {
   const matterRef = useRef<typeof MatterType | null>(null);
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   const floorBodyRef = useRef<MatterType.Body | null>(null);
+  const timeoutsRef = useRef<number[]>([]);
+  const bodiesRef = useRef<(MatterType.Body | null)[]>([]);
+  const genRef = useRef(0);
+  const isMobileRef = useRef(false);
+  const isTinyRef = useRef(false);
 
   if (specsRef.current.length === 0 && typeof window !== "undefined") {
     const isMobile = window.matchMedia("(max-width: 639px)").matches;
+    const isTiny = window.matchMedia(
+      "(max-width: 399px) and (max-height: 699px)",
+    ).matches;
+    isMobileRef.current = isMobile;
+    isTinyRef.current = isTiny;
     specsRef.current = buildSpecs(
       isMobile ? MOBILE_COUNT : DESKTOP_COUNT,
       window.innerWidth,
@@ -112,8 +123,6 @@ export function FallingCardsShower() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const timeouts: number[] = [];
 
     const handleMouseMove = (e: MouseEvent) => {
       cursorRef.current = { x: e.clientX, y: e.clientY };
@@ -137,9 +146,42 @@ export function FallingCardsShower() {
       Matter.Body.setPosition(floor, { x: vw / 2, y: floorY + 40 });
     };
 
+    const teardownPhysics = () => {
+      genRef.current++;
+      timeoutsRef.current.forEach((id) => window.clearTimeout(id));
+      timeoutsRef.current = [];
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      const Matter = matterRef.current;
+      if (Matter && runnerRef.current) Matter.Runner.stop(runnerRef.current);
+      if (Matter && engineRef.current) {
+        Matter.World.clear(engineRef.current.world, false);
+        Matter.Engine.clear(engineRef.current);
+      }
+      engineRef.current = null;
+      runnerRef.current = null;
+      floorBodyRef.current = null;
+      bodiesRef.current = [];
+      const specs = specsRef.current;
+      cardElementsRef.current.forEach((el, i) => {
+        if (!el) return;
+        el.style.opacity = "0";
+        const spec = specs[i];
+        if (spec) {
+          el.style.transform = `translate3d(${spec.spawnX}px, ${spec.spawnY}px, 0) rotate(${spec.spawnAngle}rad)`;
+        }
+      });
+    };
+
     const startPhysics = async () => {
-      const Matter = (await import("matter-js")).default;
-      matterRef.current = Matter;
+      const myGen = genRef.current;
+      if (!matterRef.current) {
+        matterRef.current = (await import("matter-js")).default;
+      }
+      if (genRef.current !== myGen) return;
+      const Matter = matterRef.current;
 
       const specs = specsRef.current;
       const dims = dimsRef.current;
@@ -172,10 +214,12 @@ export function FallingCardsShower() {
       const bodies: (MatterType.Body | null)[] = new Array(specs.length).fill(
         null,
       );
+      bodiesRef.current = bodies;
 
       specs.forEach((spec, i) => {
         const { w, h } = dims[i] ?? { w: 120, h: 60 };
         const id = window.setTimeout(() => {
+          if (genRef.current !== myGen) return;
           const body = Matter.Bodies.rectangle(
             spec.spawnX,
             spec.spawnY,
@@ -197,19 +241,15 @@ export function FallingCardsShower() {
           const el = cardElementsRef.current[i];
           if (el) el.style.opacity = "1";
         }, spec.releaseDelay);
-        timeouts.push(id);
+        timeoutsRef.current.push(id);
       });
 
       const runner = Matter.Runner.create();
       runnerRef.current = runner;
       Matter.Runner.run(runner, engine);
 
-      window.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseleave", handleMouseLeave);
-      window.addEventListener("scroll", updateFloorPosition, { passive: true });
-      window.addEventListener("resize", updateFloorPosition);
-
       const tick = () => {
+        if (genRef.current !== myGen) return;
         const cursor = cursorRef.current;
         const r = MOUSE_REPEL_RADIUS;
         const rSq = r * r;
@@ -245,18 +285,37 @@ export function FallingCardsShower() {
     };
 
     const checkScroll = () => {
-      if (triggeredRef.current) return;
       const distToBottom =
         document.documentElement.scrollHeight -
         window.scrollY -
         window.innerHeight;
-      if (distToBottom < TRIGGER_DISTANCE_FROM_BOTTOM) {
+
+      if (
+        !triggeredRef.current &&
+        distToBottom < TRIGGER_DISTANCE_FROM_BOTTOM
+      ) {
         triggeredRef.current = true;
-        window.removeEventListener("scroll", checkScroll);
+        if (!isMobileRef.current) {
+          window.removeEventListener("scroll", checkScroll);
+        }
         void startPhysics();
+        return;
+      }
+
+      if (
+        isMobileRef.current &&
+        triggeredRef.current &&
+        distToBottom > RESET_DISTANCE_FROM_BOTTOM
+      ) {
+        triggeredRef.current = false;
+        teardownPhysics();
       }
     };
 
+    window.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener("scroll", updateFloorPosition, { passive: true });
+    window.addEventListener("resize", updateFloorPosition);
     window.addEventListener("scroll", checkScroll, { passive: true });
     checkScroll();
 
@@ -266,7 +325,7 @@ export function FallingCardsShower() {
       document.removeEventListener("mouseleave", handleMouseLeave);
       window.removeEventListener("scroll", updateFloorPosition);
       window.removeEventListener("resize", updateFloorPosition);
-      timeouts.forEach((id) => window.clearTimeout(id));
+      timeoutsRef.current.forEach((id) => window.clearTimeout(id));
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       const Matter = matterRef.current;
       if (Matter && runnerRef.current) Matter.Runner.stop(runnerRef.current);
@@ -278,6 +337,16 @@ export function FallingCardsShower() {
   }, []);
 
   const specs = specsRef.current;
+  const tiny = isTinyRef.current;
+  const cardClass = tiny
+    ? "absolute left-0 top-0 whitespace-nowrap rounded-lg border border-white/10 bg-[#14191a]/90 px-3 py-1.5 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.75)] backdrop-blur-sm will-change-transform"
+    : "absolute left-0 top-0 whitespace-nowrap rounded-xl border border-white/10 bg-[#14191a]/90 px-5 py-3 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.75)] backdrop-blur-sm will-change-transform";
+  const labelClass = tiny
+    ? "mb-1 h-[3px] w-8 rounded-full"
+    : "mb-2 h-[5px] w-12 rounded-full";
+  const textClass = tiny
+    ? "text-[16px] font-bold leading-none tracking-tight text-[#F2F7F7]"
+    : "text-[26px] font-bold leading-none tracking-tight text-[#F2F7F7]";
 
   return (
     <div
@@ -290,7 +359,7 @@ export function FallingCardsShower() {
           ref={(el) => {
             cardElementsRef.current[i] = el;
           }}
-          className="absolute left-0 top-0 whitespace-nowrap rounded-xl border border-white/10 bg-[#14191a]/90 px-5 py-3 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.75)] backdrop-blur-sm will-change-transform"
+          className={cardClass}
           style={{
             opacity: 0,
             transform: `translate3d(${spec.spawnX}px, ${spec.spawnY}px, 0) rotate(${spec.spawnAngle}rad)`,
@@ -298,12 +367,10 @@ export function FallingCardsShower() {
           }}
         >
           <div
-            className="mb-2 h-[5px] w-12 rounded-full"
+            className={labelClass}
             style={{ backgroundColor: spec.color }}
           />
-          <div className="text-[26px] font-bold leading-none tracking-tight text-[#F2F7F7]">
-            {spec.word}
-          </div>
+          <div className={textClass}>{spec.word}</div>
         </div>
       ))}
     </div>
