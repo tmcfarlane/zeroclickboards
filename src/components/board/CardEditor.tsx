@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import {
   Popover,
@@ -763,7 +764,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[95vw] sm:max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[95vw] sm:max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">{mode === 'create' ? 'Create Card' : 'Edit Card'}</DialogTitle>
         {/* Cover Image from first attachment */}
         {coverAttachment && (
           <div className="relative">

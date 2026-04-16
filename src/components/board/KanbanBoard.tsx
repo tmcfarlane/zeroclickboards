@@ -96,6 +96,8 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   const mobileCardListRef = useRef<HTMLDivElement>(null);
   const isDraggingBoard = useRef(false);
   const dragStart = useRef({ x: 0, scrollLeft: 0 });
+  const edgeScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPointerX = useRef<number | null>(null);
 
   useEffect(() => {
     const el = scrollContainerRef.current;
@@ -157,6 +159,58 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
       container.removeEventListener('pointercancel', onPointerUp);
     };
   }, []);
+
+  // Mobile: move card to adjacent column when dragged to screen edge
+  useEffect(() => {
+    if (!isCompact || !activeDragData) {
+      lastPointerX.current = null;
+      if (edgeScrollTimer.current) {
+        clearTimeout(edgeScrollTimer.current);
+        edgeScrollTimer.current = null;
+      }
+      return;
+    }
+
+    const EDGE_ZONE = 50;
+    const EDGE_DELAY = 400;
+
+    function onPointerMove(e: PointerEvent) {
+      lastPointerX.current = e.clientX;
+    }
+
+    function checkEdge() {
+      const x = lastPointerX.current;
+      if (x === null || !activeDragData) return;
+      const w = window.innerWidth;
+
+      if (x < EDGE_ZONE && activeColumnIndex > 0) {
+        const prevCol = filteredColumns[activeColumnIndex - 1];
+        if (prevCol) {
+          moveCard(board.id, activeDragData.sourceColumnId, prevCol.id, activeDragData.cardId);
+          setActiveDragData({ ...activeDragData, sourceColumnId: prevCol.id });
+          setActiveColumnIndex(activeColumnIndex - 1);
+        }
+      } else if (x > w - EDGE_ZONE && activeColumnIndex < filteredColumns.length - 1) {
+        const nextCol = filteredColumns[activeColumnIndex + 1];
+        if (nextCol) {
+          moveCard(board.id, activeDragData.sourceColumnId, nextCol.id, activeDragData.cardId);
+          setActiveDragData({ ...activeDragData, sourceColumnId: nextCol.id });
+          setActiveColumnIndex(activeColumnIndex + 1);
+        }
+      }
+    }
+
+    window.addEventListener('pointermove', onPointerMove);
+    edgeScrollTimer.current = setTimeout(checkEdge, EDGE_DELAY);
+
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      if (edgeScrollTimer.current) {
+        clearTimeout(edgeScrollTimer.current);
+        edgeScrollTimer.current = null;
+      }
+    };
+  }, [isCompact, activeDragData, activeColumnIndex, filteredColumns, board.id, moveCard]);
 
   const ALL_LABELS: CardLabel[] = ['red', 'yellow', 'green', 'blue', 'purple', 'gray'];
   const LABEL_COLORS: Record<CardLabel, string> = {
@@ -479,7 +533,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   return (
     <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
       {/* Mobile Header */}
-      <div className="relative flex sm:hidden items-center justify-between px-3 pt-3 pb-2 border-b border-white/5">
+      <div className="relative flex sm:hidden items-center justify-between pl-3 pr-4 pt-4 pb-2 border-b border-white/5">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <BoardSelector onCreateBoardClick={onNewBoardClick} />
         </div>
