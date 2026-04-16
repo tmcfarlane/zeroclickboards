@@ -5,9 +5,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, Edit2, Trash2, Check } from 'lucide-react';
+import { ChevronDown, Edit2, Trash2, Check, Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export function BoardSelector() {
+interface BoardSelectorProps {
+  onCreateBoardClick: () => void;
+}
+
+export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
   const { boards, activeBoardId, setActiveBoard, renameBoard, deleteBoard } = useBoardStore();
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -73,6 +78,14 @@ export function BoardSelector() {
           align="start"
           className="w-64 bg-[#111515] border-white/10 text-[#F2F7F7]"
         >
+          <DropdownMenuItem
+            onClick={onCreateBoardClick}
+            className="flex items-center gap-2 py-2 px-2 hover:bg-white/5 cursor-pointer focus:bg-white/5 text-[#78fcd6]"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="font-medium">New Board</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-white/10" />
           {boards.map((board) => (
             <DropdownMenuItem
               key={board.id}

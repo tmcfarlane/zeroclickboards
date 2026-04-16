@@ -21,6 +21,7 @@ interface BoardStore extends AppState {
   setBoardBackground: (boardId: string, background: string | undefined) => void;
   setBoardHiddenColumns: (boardId: string, hiddenColumnIds: string[]) => void;
   setActiveBoard: (boardId: string) => void;
+  syncBoard: (boardId: string) => void;
 
   addColumn: (boardId: string, title: string) => void;
   removeColumn: (boardId: string, columnId: string) => void;
@@ -322,7 +323,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       id: uuidv4(),
       name,
       description,
-      columns: columns || createDefaultColumns(),
+      columns: columns ?? createDefaultColumns(),
       createdAt: now,
       updatedAt: now,
       userId: userId ?? undefined,
@@ -405,6 +406,10 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   setActiveBoard: (boardId) => {
     set({ activeBoardId: boardId });
     useUndoStore.getState().clearHistory();
+  },
+
+  syncBoard: (boardId) => {
+    scheduleBoardSync(boardId);
   },
 
   addColumn: (boardId, title) => {

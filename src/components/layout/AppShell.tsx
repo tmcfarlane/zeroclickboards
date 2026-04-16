@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { toast, Toaster } from 'sonner';
+import { Toaster } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
@@ -14,13 +14,8 @@ import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { Button } from '@/components/ui/button';
-import { Plus, Layout, Clock, Github, Upload } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { TemplatePicker } from '@/components/board/TemplatePicker';
-import { templateToColumns, type BoardTemplate } from '@/lib/templates';
-import { readFileAsJSON, validateBoardJSON, importBoardFromJSON } from '@/lib/board-io';
+import { Plus, Layout, Clock, Github } from 'lucide-react';
+import { CreateBoardDialog } from '@/components/board/CreateBoardDialog';
 import { Footer } from './Footer';
 import { AIUpgradePrompt } from '@/components/billing/AIUpgradePrompt';
 import { UpgradeToProBanner } from '@/components/billing/UpgradeToProBanner';
@@ -41,13 +36,9 @@ export function AppShell() {
   } = useBoardStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
-  const [newBoardName, setNewBoardName] = useState('');
-  const [newBoardDescription, setNewBoardDescription] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<BoardTemplate | null>(null);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
-  const importFileRef = useRef<HTMLInputElement>(null);
   const { isSignedIn, isLoaded, userId } = useAuth();
 
 
@@ -106,41 +97,6 @@ export function AppShell() {
     }
   }, [userBoards, activeBoardId, createBoard, setActiveBoard, isSignedIn, isLoaded, remoteStatus]);
 
-  const handleCreateBoard = () => {
-    if (newBoardName.trim()) {
-      createBoard(
-        newBoardName.trim(),
-        newBoardDescription.trim() || undefined,
-        selectedTemplate ? templateToColumns(selectedTemplate) : undefined
-      );
-      setNewBoardName('');
-      setNewBoardDescription('');
-      setSelectedTemplate(null);
-      setIsCreateDialogOpen(false);
-    }
-  };
-
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const data = await readFileAsJSON(file);
-      const result = validateBoardJSON(data);
-      if (!result.valid) {
-        toast.error(result.error);
-        return;
-      }
-      const { name, description, columns } = importBoardFromJSON(result.payload);
-      createBoard(name, description, columns);
-      toast.success('Board imported successfully');
-      setIsCreateDialogOpen(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to import board');
-    } finally {
-      if (importFileRef.current) importFileRef.current.value = '';
-    }
-  };
-
   const handleAIClick = () => {
     setIsAIOpen((v) => !v);
   };
@@ -168,49 +124,52 @@ export function AppShell() {
 
           {userBoards.length > 0 && (
             <div className="flex-1 mx-2 min-w-0 flex items-center gap-2">
-              <BoardSelector />
-              {activeBoard && (
-                <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setViewMode('board')}
-                    className={`h-8 px-3 rounded-md transition-all ${
-                      viewMode === 'board'
-                        ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                        : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <Layout className="w-4 h-4 sm:mr-1.5" />
-                    <span className="hidden sm:inline">Board</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { setViewMode('timeline'); setIsAIOpen(false); }}
-                    className={`h-8 px-3 rounded-md transition-all ${
-                      viewMode === 'timeline'
-                        ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
-                        : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <Clock className="w-4 h-4 sm:mr-1.5" />
-                    <span className="hidden sm:inline">Timeline</span>
-                  </Button>
-                </div>
-              )}
+              <BoardSelector onCreateBoardClick={() => setIsCreateDialogOpen(true)} />
             </div>
           )}
 
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setIsCreateDialogOpen(true)}
-              variant="ghost"
-              className="h-9 px-4 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-lg"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline ml-1.5">New Board</span>
-            </Button>
+            {activeBoard && (
+              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewMode('board')}
+                  className={`h-8 px-3 rounded-md transition-all ${
+                    viewMode === 'board'
+                      ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
+                      : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Layout className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Board</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setViewMode('timeline'); setIsAIOpen(false); }}
+                  className={`h-8 px-3 rounded-md transition-all ${
+                    viewMode === 'timeline'
+                      ? 'bg-[#78fcd6]/20 text-[#78fcd6]'
+                      : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Clock className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Timeline</span>
+                </Button>
+              </div>
+            )}
+
+            {userBoards.length === 0 && (
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}
+                variant="ghost"
+                className="h-9 px-4 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-lg"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline ml-1.5">New Board</span>
+              </Button>
+            )}
 
             {repoUrl && (
               <a
@@ -290,82 +249,12 @@ export function AppShell() {
         }}
       />
 
-      {/* Create Board Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-        setIsCreateDialogOpen(open);
-        if (!open) setSelectedTemplate(null);
-      }}>
-        <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
-          <DialogHeader>
-            <DialogTitle>Create New Board</DialogTitle>
-            <DialogDescription className="text-[#A8B2B2]">
-              Create a new project board to organize your work.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <TemplatePicker selected={selectedTemplate} onSelect={setSelectedTemplate} />
-            <div className="relative flex items-center gap-3 py-1">
-              <div className="flex-1 border-t border-white/10" />
-              <span className="text-xs text-[#A8B2B2]">or</span>
-              <div className="flex-1 border-t border-white/10" />
-            </div>
-            <input
-              ref={importFileRef}
-              type="file"
-              accept=".json,application/json"
-              onChange={handleFileImport}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => importFileRef.current?.click()}
-              className="w-full border border-dashed border-white/20 hover:border-[#78fcd6]/40 hover:bg-[#78fcd6]/5 rounded-lg p-3 text-sm text-[#A8B2B2] hover:text-[#78fcd6] transition-colors flex items-center justify-center gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              Import from JSON file
-            </button>
-            <div className="space-y-2">
-              <Label htmlFor="name">Board Name</Label>
-              <Input
-                id="name"
-                value={newBoardName}
-                onChange={(e) => setNewBoardName(e.target.value)}
-                placeholder="e.g., Website Launch"
-                maxLength={100}
-                className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
-                onKeyDown={(e) => e.key === 'Enter' && handleCreateBoard()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (optional)</Label>
-              <Input
-                id="description"
-                value={newBoardDescription}
-                onChange={(e) => setNewBoardDescription(e.target.value)}
-                placeholder="Brief description of your project"
-                maxLength={500}
-                className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsCreateDialogOpen(false)}
-              className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateBoard}
-              disabled={!newBoardName.trim()}
-              className="gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50"
-            >
-              Create Board
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CreateBoardDialog
+        isOpen={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onOpenSignIn={() => setIsSignInModalOpen(true)}
+        onUpgrade={() => setIsUpgradePromptOpen(true)}
+      />
     </div>
   );
 }

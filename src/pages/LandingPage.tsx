@@ -17,6 +17,7 @@ import {
   Rocket,
   Pencil,
   ArrowRight,
+  Hand,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignInModal } from "@/components/auth/SignInModal";
@@ -165,17 +166,51 @@ function EmbeddedBoard({
   ariaLabel?: string;
   timeoutMs?: number;
 }) {
+  const [isMobile] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 639px)").matches,
+  );
   const [status, setStatus] = useState<"loading" | "loaded" | "failed">(
     "loading",
   );
   const loadedRef = useRef(false);
 
   useEffect(() => {
+    if (isMobile) return;
     const t = window.setTimeout(() => {
       if (!loadedRef.current) setStatus("failed");
     }, timeoutMs);
     return () => window.clearTimeout(t);
-  }, [timeoutMs]);
+  }, [timeoutMs, isMobile]);
+
+  if (isMobile) {
+    return (
+      <div
+        aria-label={ariaLabel}
+        className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0E1414] shadow-2xl shadow-black/60"
+      >
+        <div
+          className="h-[550px] w-full overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label="Drag horizontally to explore the board"
+        >
+          <img
+            src={fallbackSrc}
+            alt={fallbackAlt}
+            loading="lazy"
+            draggable={false}
+            className="block h-full w-auto max-w-none select-none"
+          />
+        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-[#78fcd6] opacity-60 shadow-lg backdrop-blur-sm"
+        >
+          <Hand className="h-5 w-5" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -236,6 +236,79 @@
   .animate-border-glow {
     animation: border-glow 3s ease-in-out infinite;
   }
+
+  /* AI Generate button — dazzling first-impression CTA */
+  .ai-generate-btn {
+    position: relative;
+    overflow: hidden;
+    background-image: linear-gradient(100deg, #78fcd6 0%, #6cc7ff 25%, #b57dff 50%, #6cc7ff 75%, #78fcd6 100%);
+    background-size: 200% 100%;
+    animation: ai-btn-shimmer 6s linear infinite, ai-btn-glow 2.4s ease-in-out infinite;
+    transition: transform 160ms ease, filter 160ms ease;
+  }
+  .ai-generate-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.08) saturate(1.15);
+  }
+  .ai-generate-btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .ai-generate-btn:disabled {
+    animation: none;
+    filter: saturate(0.55) brightness(0.8);
+  }
+  .ai-generate-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(100deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%);
+    background-size: 220% 100%;
+    animation: ai-btn-sheen 3.6s linear infinite;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+  .ai-sparkle {
+    animation: ai-sparkle-spin 2.8s ease-in-out infinite;
+    transform-origin: center;
+  }
+}
+
+@keyframes ai-btn-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes ai-btn-glow {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(120, 252, 214, 0.35),
+                0 0 32px rgba(108, 199, 255, 0.18),
+                0 4px 20px rgba(181, 125, 255, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(120, 252, 214, 0.55),
+                0 0 48px rgba(108, 199, 255, 0.28),
+                0 6px 28px rgba(181, 125, 255, 0.22);
+  }
+}
+@keyframes ai-btn-sheen {
+  0% { background-position: 200% 0; opacity: 0; }
+  8% { opacity: 1; }
+  40% { opacity: 1; }
+  50% { background-position: -120% 0; opacity: 0; }
+  100% { background-position: -120% 0; opacity: 0; }
+}
+@keyframes ai-sparkle-spin {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  40% { transform: scale(1.18) rotate(14deg); }
+  60% { transform: scale(1.18) rotate(-10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-generate-btn,
+  .ai-generate-btn::after,
+  .ai-sparkle {
+    animation: none !important;
+  }
 }
 
 @keyframes float {

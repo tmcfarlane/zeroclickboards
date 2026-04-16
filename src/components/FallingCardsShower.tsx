@@ -44,11 +44,13 @@ const LABEL_COLORS = [
 ];
 
 const DESKTOP_COUNT = 44;
-const MOBILE_COUNT = 24;
-const TRIGGER_DISTANCE_FROM_BOTTOM = 900;
-const RESET_DISTANCE_FROM_BOTTOM = 1600;
+const MOBILE_COUNT = 14;
+const TRIGGER_DISTANCE_DESKTOP = 900;
+const TRIGGER_DISTANCE_MOBILE = 700;
+const RESET_DISTANCE_MOBILE = 1400;
 const RELEASE_WINDOW_MS = 1800;
-const MOUSE_REPEL_RADIUS = 280;
+const MOUSE_REPEL_RADIUS_DESKTOP = 280;
+const MOUSE_REPEL_RADIUS_MOBILE = 110;
 const MOUSE_REPEL_STRENGTH = 0.22;
 const FOOTER_FALLBACK_HEIGHT = 80;
 const FLOOR_GAP_ABOVE_FOOTER = 4;
@@ -251,7 +253,9 @@ export function FallingCardsShower() {
       const tick = () => {
         if (genRef.current !== myGen) return;
         const cursor = cursorRef.current;
-        const r = MOUSE_REPEL_RADIUS;
+        const r = isMobileRef.current
+          ? MOUSE_REPEL_RADIUS_MOBILE
+          : MOUSE_REPEL_RADIUS_DESKTOP;
         const rSq = r * r;
 
         for (let i = 0; i < specs.length; i++) {
@@ -284,16 +288,17 @@ export function FallingCardsShower() {
       rafRef.current = requestAnimationFrame(tick);
     };
 
+    const triggerDist = isMobileRef.current
+      ? TRIGGER_DISTANCE_MOBILE
+      : TRIGGER_DISTANCE_DESKTOP;
+
     const checkScroll = () => {
       const distToBottom =
         document.documentElement.scrollHeight -
         window.scrollY -
         window.innerHeight;
 
-      if (
-        !triggeredRef.current &&
-        distToBottom < TRIGGER_DISTANCE_FROM_BOTTOM
-      ) {
+      if (!triggeredRef.current && distToBottom < triggerDist) {
         triggeredRef.current = true;
         if (!isMobileRef.current) {
           window.removeEventListener("scroll", checkScroll);
@@ -305,7 +310,7 @@ export function FallingCardsShower() {
       if (
         isMobileRef.current &&
         triggeredRef.current &&
-        distToBottom > RESET_DISTANCE_FROM_BOTTOM
+        distToBottom > RESET_DISTANCE_MOBILE
       ) {
         triggeredRef.current = false;
         teardownPhysics();
@@ -338,9 +343,11 @@ export function FallingCardsShower() {
 
   const specs = specsRef.current;
   const tiny = isTinyRef.current;
+  const mobile = isMobileRef.current;
+  const blurClass = mobile ? "" : "backdrop-blur-sm";
   const cardClass = tiny
-    ? "absolute left-0 top-0 whitespace-nowrap rounded-lg border border-white/10 bg-[#14191a]/90 px-3 py-1.5 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.75)] backdrop-blur-sm will-change-transform"
-    : "absolute left-0 top-0 whitespace-nowrap rounded-xl border border-white/10 bg-[#14191a]/90 px-5 py-3 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.75)] backdrop-blur-sm will-change-transform";
+    ? `absolute left-0 top-0 whitespace-nowrap rounded-lg border border-white/10 bg-[#14191a]/95 px-3 py-1.5 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.75)] ${blurClass} will-change-transform`
+    : `absolute left-0 top-0 whitespace-nowrap rounded-xl border border-white/10 bg-[#14191a]/90 px-5 py-3 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.75)] ${blurClass} will-change-transform`;
   const labelClass = tiny
     ? "mb-1 h-[3px] w-8 rounded-full"
     : "mb-2 h-[5px] w-12 rounded-full";
