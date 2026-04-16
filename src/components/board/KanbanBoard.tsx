@@ -158,57 +158,6 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
     };
   }, []);
 
-  useEffect(() => {
-    const el = mobileCardListRef.current;
-    if (!el || !isCompact) return;
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isSwiping = false;
-
-    function onTouchStart(e: TouchEvent) {
-      if (activeDragData) return;
-      const touch = e.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      isSwiping = false;
-    }
-
-    function onTouchMove(e: TouchEvent) {
-      if (activeDragData) return;
-      if (isSwiping) return;
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - touchStartX);
-      const dy = Math.abs(touch.clientY - touchStartY);
-      if (dx > 10 || dy > 10) {
-        isSwiping = dx > dy;
-      }
-    }
-
-    function onTouchEnd(e: TouchEvent) {
-      if (activeDragData || !isSwiping) return;
-      const touch = e.changedTouches[0];
-      const dx = touch.clientX - touchStartX;
-      if (Math.abs(dx) < 50) return;
-
-      if (dx < 0 && activeColumnIndex < filteredColumns.length - 1) {
-        setActiveColumnIndex(activeColumnIndex + 1);
-      } else if (dx > 0 && activeColumnIndex > 0) {
-        setActiveColumnIndex(activeColumnIndex - 1);
-      }
-    }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [isCompact, activeDragData, activeColumnIndex, filteredColumns.length]);
-
   const ALL_LABELS: CardLabel[] = ['red', 'yellow', 'green', 'blue', 'purple', 'gray'];
   const LABEL_COLORS: Record<CardLabel, string> = {
     red: 'bg-red-500',
@@ -475,6 +424,57 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
 
   const activeColumn = filteredColumns[activeColumnIndex] ?? filteredColumns[0];
   const activeColumnCards = activeColumn?.cards.filter(c => !c.isArchived) ?? [];
+
+  useEffect(() => {
+    const el = mobileCardListRef.current;
+    if (!el || !isCompact) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+
+    function onTouchStart(e: TouchEvent) {
+      if (activeDragData) return;
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      isSwiping = false;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (activeDragData) return;
+      if (isSwiping) return;
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - touchStartX);
+      const dy = Math.abs(touch.clientY - touchStartY);
+      if (dx > 10 || dy > 10) {
+        isSwiping = dx > dy;
+      }
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      if (activeDragData || !isSwiping) return;
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      if (Math.abs(dx) < 50) return;
+
+      if (dx < 0 && activeColumnIndex < filteredColumns.length - 1) {
+        setActiveColumnIndex(activeColumnIndex + 1);
+      } else if (dx > 0 && activeColumnIndex > 0) {
+        setActiveColumnIndex(activeColumnIndex - 1);
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [isCompact, activeDragData, activeColumnIndex, filteredColumns.length]);
 
   return (
     <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
