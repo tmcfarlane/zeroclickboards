@@ -20,11 +20,16 @@ const TRIAL_PHRASES = [
 ];
 
 const UPSELL_PHRASES = [
-  'Unlock unlimited AI',
+  'Unlock unlimited AI \u00b7 $3/mo',
   'Free and open source \u00b7 AI is $3/mo',
   'Cheaper than a coffee \u00b7 unlimited AI',
   'Support open source \u00b7 $3/mo',
-  'Unlimited AI for $3/mo',
+  'This AI still isn\u2019t paying for itself',
+  'Open source doesn\u2019t pay the AI bills',
+  'The code is free \u2014 the AI isn\u2019t',
+  'No pressure \u00b7 unlimited AI, $3/mo',
+  'Ready when you are \u00b7 $3/mo',
+  '$3/mo keeps the lights on',
 ];
 
 export function UpgradeToProBanner() {
