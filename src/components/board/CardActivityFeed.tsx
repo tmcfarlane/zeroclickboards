@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCardActivities } from '@/hooks/useCards';
 import { useBoardStore } from '@/store/useBoardStore';
+import type { Json } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,7 +25,15 @@ function formatTimeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-const ACTIVITY_CONFIG: Record<string, { icon: typeof MessageSquare; format: (data: any) => string }> = {
+interface ActivityData {
+  text?: string;
+  column?: string;
+  from?: string;
+  to?: string;
+  added?: string[];
+  removed?: string[];
+}
+const ACTIVITY_CONFIG: Record<string, { icon: typeof MessageSquare; format: (data: ActivityData | null | undefined) => string }> = {
   comment: {
     icon: MessageSquare,
     format: (data) => data?.text || '',
@@ -83,7 +92,7 @@ export function CardActivityFeed({ cardId }: CardActivityFeedProps) {
       await addActivity({
         user_id: currentUserId,
         type: 'comment',
-        data: { text: commentText.trim() } as any,
+        data: { text: commentText.trim() } as Json,
       });
       setCommentText('');
     } catch (err) {
@@ -146,7 +155,7 @@ export function CardActivityFeed({ cardId }: CardActivityFeedProps) {
               };
               const Icon = config.icon;
               const isComment = activity.type === 'comment';
-              const text = config.format(activity.data);
+              const text = config.format(activity.data as ActivityData | null | undefined);
 
               return (
                 <div

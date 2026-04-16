@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useBoardStore } from '@/store/useBoardStore';
 import * as cardsApi from '@/lib/database/cards';
+import type { Json } from '@/types';
 
 export function useActivityLogger() {
   const currentUserId = useBoardStore((s) => s.currentUserId);
@@ -12,7 +13,7 @@ export function useActivityLogger() {
         card_id: cardId,
         user_id: currentUserId,
         type,
-        data: data as any,
+        data: data as Json,
       }).then(({ error }) => {
         if (error) console.error('[activity] log failed:', error.message);
       });
