@@ -273,7 +273,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
       const targetColumnIndex = over.data.current.columnIndex as number;
       const sourceColumnId = active.data.current.columnId as string;
       if (sourceColumnId !== targetColumnId) {
-        moveCard(board.id, sourceColumnId, targetColumnId, active.id as string);
+        moveCard(board.id, sourceColumnId, targetColumnId, active.id as string, 0);
         if (origin) {
           const cardId = active.id as string;
           const origColId = origin.columnId;
@@ -282,11 +282,12 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
           useUndoStore.getState().pushAction({
             description: 'Move card',
             undo: () => { useBoardStore.getState().moveCard(bId, targetColumnId, origColId, cardId, origIdx); },
-            redo: () => { useBoardStore.getState().moveCard(bId, origColId, targetColumnId, cardId); },
+            redo: () => { useBoardStore.getState().moveCard(bId, origColId, targetColumnId, cardId, 0); },
           });
         }
       }
       setActiveColumnIndex(targetColumnIndex);
+      requestAnimationFrame(() => { mobileCardListRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); });
       return;
     }
 
