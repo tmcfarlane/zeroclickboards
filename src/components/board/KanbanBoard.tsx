@@ -763,6 +763,9 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         </div>
       </div>
 
+      {/* Mobile Column Tabs */}
+      <MobileColumnTabs columns={filteredColumns} activeIndex={activeColumnIndex} onTabChange={setActiveColumnIndex} />
+
       {/* Board Columns */}
       <DndContext
         sensors={sensors}
