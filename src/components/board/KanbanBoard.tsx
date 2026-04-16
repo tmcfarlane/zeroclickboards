@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners, type CollisionDetection } from '@dnd-kit/core';
-import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, arrayMove, horizontalListSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
 import type { Board, CardLabel } from '@/types';
@@ -9,7 +9,7 @@ import { ArchiveView } from './ArchiveView';
 import { ViewToggle } from './ViewToggle';
 import { BoardSelector } from './BoardSelector';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles, X } from 'lucide-react';
 import { ShareBoardDialog } from './ShareBoardDialog';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
 import { downloadBoardJSON } from '@/lib/board-io';
@@ -38,6 +38,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useIsCompact } from '@/hooks/use-is-compact';
+import { MobileColumnTabs } from './MobileColumnTabs';
+import { MobileBottomBar } from './MobileBottomBar';
+import { MobileSearchOverlay } from './MobileSearchOverlay';
+import { CardEditor, type CardEditorSaveData } from './CardEditor';
 
 interface KanbanBoardProps {
   board: Board;
@@ -46,7 +51,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardProps) {
-  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
+  const { addColumn, addCard, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,6 +65,11 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
   const hiddenColumnIds = board.hiddenColumnIds ?? [];
+  const isCompact = useIsCompact();
+  const [activeColumnIndex, setActiveColumnIndex] = useState(0);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isMobileAddCardOpen, setIsMobileAddCardOpen] = useState(false);
 
   const hideColumn = (columnId: string) => {
     if (hiddenColumnIds.includes(columnId)) return;
@@ -353,6 +363,17 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
     }
   };
 
+  const handleMobileAddCard = (data: CardEditorSaveData) => {
+    if (!activeColumn) return;
+    addCard(board.id, activeColumn.id, data.title, data.content, data.targetDate, {
+      labels: data.labels,
+      coverImage: data.coverImage,
+      attachments: data.attachments,
+      recurrence: data.recurrence,
+    });
+    setIsMobileAddCardOpen(false);
+  };
+
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfWeek = new Date(startOfToday);
@@ -393,10 +414,133 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
     }),
   }));
 
+  useEffect(() => {
+    if (activeColumnIndex >= filteredColumns.length && filteredColumns.length > 0) {
+      setActiveColumnIndex(filteredColumns.length - 1);
+    }
+  }, [filteredColumns.length, activeColumnIndex]);
+
+  const activeColumn = filteredColumns[activeColumnIndex] ?? filteredColumns[0];
+  const activeColumnCards = activeColumn?.cards.filter(c => !c.isArchived) ?? [];
+
   return (
     <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
+      {/* Mobile Header */}
+      <div className="relative flex sm:hidden items-center justify-between px-3 pt-3 pb-2 border-b border-white/5">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <BoardSelector onCreateBoardClick={onNewBoardClick} />
+        </div>
+        <div className="flex items-center gap-1">
+          <ViewToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5">
+                <MoreHorizontal className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-[#111515] border-white/10">
+              <DropdownMenuItem onClick={() => setIsMobileSearchOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Search className="w-4 h-4" />
+                Search
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsFilterOpen(!isFilterOpen)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <SlidersHorizontal className="w-4 h-4" />
+                Filter
+                {(selectedLabels.length > 0 || dueDateFilter) && (
+                  <span className="ml-auto w-2 h-2 bg-[#78fcd6] rounded-full" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Share2 className="w-4 h-4" />
+                Share
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => setIsAddColumnDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Plus className="w-4 h-4" />
+                Add Column
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { const template = boardToTemplate(board); saveUserBoardTemplate(template); toast.success('Board saved as template'); }} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <BookmarkPlus className="w-4 h-4" />
+                Save as Template
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { downloadBoardJSON(board); toast.success('Board exported'); }} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Download className="w-4 h-4" />
+                Export to JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsBackgroundPickerOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Palette className="w-4 h-4" />
+                Change Background
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsArchiveOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Archive className="w-4 h-4" />
+                Archive
+              </DropdownMenuItem>
+              {hiddenColumns.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuLabel className="text-[#A8B2B2] text-xs">Hidden Columns</DropdownMenuLabel>
+                  {hiddenColumns.map((col) => (
+                    <DropdownMenuItem key={col.id} onClick={() => showColumn(col.id)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                      <Eye className="w-4 h-4" />
+                      {col.title}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <MobileSearchOverlay isOpen={isMobileSearchOpen} onClose={() => setIsMobileSearchOpen(false)} value={searchQuery} onChange={setSearchQuery} />
+      </div>
+
+      {/* Mobile Filter Panel */}
+      {isFilterOpen && (
+        <div className="sm:hidden px-3 py-3 border-b border-white/10 bg-[#111515]/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-[#A8B2B2]">Filters</p>
+            <button type="button" onClick={() => setIsFilterOpen(false)} className="text-[#A8B2B2] hover:text-[#F2F7F7]">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                <Tag className="w-3 h-3" /> Labels
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_LABELS.map((label) => (
+                  <button key={label} type="button" onClick={() => { setSelectedLabels(selectedLabels.includes(label) ? selectedLabels.filter((l) => l !== label) : [...selectedLabels, label]); }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-colors ${selectedLabels.includes(label) ? 'border-[#78fcd6]/50 bg-[#78fcd6]/10 text-[#78fcd6]' : 'border-white/10 bg-white/5 text-[#A8B2B2]'}`}>
+                    <div className={`w-3 h-3 rounded ${LABEL_COLORS[label]}`} />
+                    <span className="capitalize">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3" /> Due Date
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DUE_DATE_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
+                    className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${dueDateFilter === opt.value ? 'border-[#78fcd6]/50 bg-[#78fcd6]/20 text-[#78fcd6]' : 'border-white/10 text-[#A8B2B2] bg-white/5'}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {(selectedLabels.length > 0 || dueDateFilter) && (
+              <Button variant="ghost" size="sm" onClick={() => { setSelectedLabels([]); setDueDateFilter(null); }} className="h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7]">
+                Clear All
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Board Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
+      <div className="hidden sm:flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
         <div className="flex items-center gap-3 min-w-0">
           <BoardSelector onCreateBoardClick={onNewBoardClick} />
           <ViewToggle />
