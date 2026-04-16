@@ -133,7 +133,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
     <>
       <div
         ref={setNodeRef}
-        style={style}
+        style={{ ...style, touchAction: 'none' }}
         data-kanban-card
         {...attributes}
         {...listeners}
