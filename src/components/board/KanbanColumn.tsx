@@ -87,7 +87,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
         ref={setNodeRef}
         style={style}
         data-kanban-column
-        className="w-[calc(100vw-32px)] sm:w-80 flex-shrink-0 flex flex-col max-h-full snap-start"
+        className="w-72 sm:w-80 flex-shrink-0 flex flex-col max-h-full"
       >
         {/* Column Header */}
         <div
