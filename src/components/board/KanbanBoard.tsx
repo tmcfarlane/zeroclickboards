@@ -267,6 +267,29 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
 
     if (!over) return;
 
+    // Mobile: card dropped on a column tab — move to that column and switch view
+    if (over.data.current?.type === 'column-tab' && active.data.current?.type === 'card') {
+      const targetColumnId = over.data.current.columnId as string;
+      const targetColumnIndex = over.data.current.columnIndex as number;
+      const sourceColumnId = active.data.current.columnId as string;
+      if (sourceColumnId !== targetColumnId) {
+        moveCard(board.id, sourceColumnId, targetColumnId, active.id as string);
+        if (origin) {
+          const cardId = active.id as string;
+          const origColId = origin.columnId;
+          const origIdx = origin.index;
+          const bId = board.id;
+          useUndoStore.getState().pushAction({
+            description: 'Move card',
+            undo: () => { useBoardStore.getState().moveCard(bId, targetColumnId, origColId, cardId, origIdx); },
+            redo: () => { useBoardStore.getState().moveCard(bId, origColId, targetColumnId, cardId); },
+          });
+        }
+      }
+      setActiveColumnIndex(targetColumnIndex);
+      return;
+    }
+
     // Record undo for cross-column card moves using the origin captured at drag start
     if (origin && active.data.current?.type === 'card') {
       const cardId = active.id as string;
@@ -876,9 +899,6 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         </div>
       </div>
 
-      {/* Mobile Column Tabs */}
-      <MobileColumnTabs columns={filteredColumns} activeIndex={activeColumnIndex} onTabChange={setActiveColumnIndex} />
-
       {/* Board Columns */}
       <DndContext
         sensors={sensors}
@@ -888,6 +908,9 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
+        {/* Mobile Column Tabs (inside DndContext so tabs are droppable) */}
+        <MobileColumnTabs columns={filteredColumns} activeIndex={activeColumnIndex} onTabChange={setActiveColumnIndex} />
+
         {isCompact ? (
           activeColumn && (
             <div ref={mobileCardListRef} className="flex-1 overflow-y-auto">
