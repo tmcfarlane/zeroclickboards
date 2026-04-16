@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Sparkles, X, ArrowRight, Loader2 } from 'lucide-react';
+import { Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/components/auth/AuthProvider';
@@ -33,7 +33,6 @@ const UPSELL_PHRASES = [
 ];
 
 export function UpgradeToProBanner() {
-  const [isDismissed, setIsDismissed] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const { hasSubscription, trialEligible } = useSubscription();
   const { isSignedIn } = useAuth();
@@ -44,7 +43,7 @@ export function UpgradeToProBanner() {
     return pool[Math.floor(Math.random() * pool.length)];
   }, [trialEligible]);
 
-  if (!isSignedIn || hasSubscription || isDismissed) return null;
+  if (!isSignedIn || hasSubscription) return null;
 
   const handleCheckout = async () => {
     setIsCheckingOut(true);
@@ -108,14 +107,6 @@ export function UpgradeToProBanner() {
           {tooltip}
         </TooltipContent>
       </Tooltip>
-      <button
-        type="button"
-        onClick={() => setIsDismissed(true)}
-        className="p-1 rounded text-[#A8B2B2]/40 hover:text-[#A8B2B2] hover:bg-white/5 transition-colors"
-        aria-label="Dismiss upgrade prompt"
-      >
-        <X className="w-3 h-3" />
-      </button>
     </div>
   );
 }
