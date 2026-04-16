@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners, type CollisionDetection } from '@dnd-kit/core';
-import { SortableContext, arrayMove, horizontalListSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
 import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
-import { KanbanCard } from './KanbanCard';
+
 import { ArchiveView } from './ArchiveView';
 import { ViewToggle } from './ViewToggle';
 import { BoardSelector } from './BoardSelector';
@@ -40,7 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useIsCompact } from '@/hooks/use-is-compact';
-import { MobileColumnTabs } from './MobileColumnTabs';
+
 import { MobileBottomBar } from './MobileBottomBar';
 import { MobileSearchOverlay } from './MobileSearchOverlay';
 import { CardEditor, type CardEditorSaveData } from './CardEditor';
@@ -93,11 +93,8 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   // Vertical wheel → horizontal board scroll everywhere on the board.
   // Only exception: if mouse is inside a column card list that has room to scroll vertically.
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const mobileCardListRef = useRef<HTMLDivElement>(null);
   const isDraggingBoard = useRef(false);
   const dragStart = useRef({ x: 0, scrollLeft: 0 });
-  const edgeScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastPointerX = useRef<number | null>(null);
 
   useEffect(() => {
     const el = scrollContainerRef.current;
@@ -425,116 +422,6 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   }, [filteredColumns.length, activeColumnIndex]);
 
   const activeColumn = filteredColumns[activeColumnIndex] ?? filteredColumns[0];
-  const activeColumnCards = activeColumn?.cards.filter(c => !c.isArchived) ?? [];
-
-  // Refs for edge-drag so the effect doesn't re-register on every render
-  const dragStateRef = useRef({ activeDragData, activeColumnIndex, filteredColumns, boardId: board.id });
-  dragStateRef.current = { activeDragData, activeColumnIndex, filteredColumns, boardId: board.id };
-
-  // Mobile: move card to adjacent column when dragged to screen edge
-  const isDragging = !!activeDragData;
-  useEffect(() => {
-    if (!isCompact || !isDragging) {
-      lastPointerX.current = null;
-      return;
-    }
-
-    const EDGE_ZONE = 50;
-    const EDGE_DELAY = 400;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    function onPointerMove(e: PointerEvent) {
-      lastPointerX.current = e.clientX;
-
-      if (timer) clearTimeout(timer);
-      const x = e.clientX;
-      const w = window.innerWidth;
-      if (x < EDGE_ZONE || x > w - EDGE_ZONE) {
-        timer = setTimeout(checkEdge, EDGE_DELAY);
-      }
-    }
-
-    function checkEdge() {
-      const { activeDragData: drag, activeColumnIndex: colIdx, filteredColumns: cols, boardId } = dragStateRef.current;
-      const x = lastPointerX.current;
-      if (x === null || !drag) return;
-      const w = window.innerWidth;
-
-      if (x < EDGE_ZONE && colIdx > 0) {
-        const prevCol = cols[colIdx - 1];
-        if (prevCol) {
-          moveCard(boardId, drag.sourceColumnId, prevCol.id, drag.cardId);
-          setActiveDragData({ ...drag, sourceColumnId: prevCol.id });
-          setActiveColumnIndex(colIdx - 1);
-        }
-      } else if (x > w - EDGE_ZONE && colIdx < cols.length - 1) {
-        const nextCol = cols[colIdx + 1];
-        if (nextCol) {
-          moveCard(boardId, drag.sourceColumnId, nextCol.id, drag.cardId);
-          setActiveDragData({ ...drag, sourceColumnId: nextCol.id });
-          setActiveColumnIndex(colIdx + 1);
-        }
-      }
-    }
-
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      if (timer) clearTimeout(timer);
-    };
-  }, [isCompact, isDragging, moveCard]);
-
-  useEffect(() => {
-    const el = mobileCardListRef.current;
-    if (!el || !isCompact) return;
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isSwiping = false;
-
-    function onTouchStart(e: TouchEvent) {
-      if (activeDragData) return;
-      const touch = e.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      isSwiping = false;
-    }
-
-    function onTouchMove(e: TouchEvent) {
-      if (activeDragData) return;
-      if (isSwiping) return;
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - touchStartX);
-      const dy = Math.abs(touch.clientY - touchStartY);
-      if (dx > 10 || dy > 10) {
-        isSwiping = dx > dy;
-      }
-    }
-
-    function onTouchEnd(e: TouchEvent) {
-      if (activeDragData || !isSwiping) return;
-      const touch = e.changedTouches[0];
-      const dx = touch.clientX - touchStartX;
-      if (Math.abs(dx) < 50) return;
-
-      if (dx < 0 && activeColumnIndex < filteredColumns.length - 1) {
-        setActiveColumnIndex(activeColumnIndex + 1);
-      } else if (dx > 0 && activeColumnIndex > 0) {
-        setActiveColumnIndex(activeColumnIndex - 1);
-      }
-    }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [isCompact, activeDragData, activeColumnIndex, filteredColumns.length]);
 
   return (
     <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
@@ -876,9 +763,6 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         </div>
       </div>
 
-      {/* Mobile Column Tabs */}
-      <MobileColumnTabs columns={filteredColumns} activeIndex={activeColumnIndex} onTabChange={setActiveColumnIndex} />
-
       {/* Board Columns */}
       <DndContext
         sensors={sensors}
@@ -888,46 +772,27 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        {isCompact ? (
-          activeColumn && (
-            <div ref={mobileCardListRef} className="flex-1 overflow-y-auto">
-              <div className="p-3 space-y-2">
-                <SortableContext items={activeColumnCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                  {activeColumnCards.map((card) => (
-                    <KanbanCard key={card.id} boardId={board.id} columnId={activeColumn.id} card={card} />
-                  ))}
-                </SortableContext>
-                {activeColumnCards.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-[#A8B2B2]">
-                    <p className="text-sm">No cards in this column</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )
-        ) : (
-          <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab">
-            <div className="h-full flex items-start gap-4 p-4 min-w-max">
-              <SortableContext
-                items={visibleColumns.map((c) => c.id)}
-                strategy={horizontalListSortingStrategy}
-              >
-                {filteredColumns.map((column) => (
-                  <KanbanColumn
-                    key={column.id}
-                    boardId={board.id}
-                    column={column}
-                    onHide={() => hideColumn(column.id)}
-                    isDragOver={dragOverColumnId === column.id}
-                  />
-                ))}
-              </SortableContext>
+        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab sm:snap-none snap-x snap-mandatory">
+          <div className="h-full flex items-start gap-4 p-4 min-w-max">
+            <SortableContext
+              items={visibleColumns.map((c) => c.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              {filteredColumns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  boardId={board.id}
+                  column={column}
+                  onHide={() => hideColumn(column.id)}
+                  isDragOver={dragOverColumnId === column.id}
+                />
+              ))}
+            </SortableContext>
           </div>
         </div>
-        )}
         <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
           {activeCard ? (
-            <div className={`${isCompact ? 'w-[calc(100vw-24px)]' : 'w-80'} bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2`}>
+            <div className="w-[calc(100vw-32px)] sm:w-80 bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2">
               <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{activeCard.title}</p>
               {activeCard.description && (
                 <p className="text-xs text-[#A8B2B2] mt-1 line-clamp-1">{activeCard.description}</p>
