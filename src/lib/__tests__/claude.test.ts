@@ -77,6 +77,7 @@ describe('formatColumnAsInstructions', () => {
     const column: Column = {
       id: 'col1',
       title: 'To Do',
+      order: 0,
       cards: [makeCard({ title: 'Card A' }), makeCard({ title: 'Card B' })],
     };
     const result = formatColumnAsInstructions(column);
@@ -90,6 +91,7 @@ describe('formatColumnAsInstructions', () => {
     const column: Column = {
       id: 'col1',
       title: 'Done',
+      order: 0,
       cards: [
         makeCard({ title: 'Active' }),
         makeCard({ title: 'Archived', isArchived: true }),
@@ -102,7 +104,7 @@ describe('formatColumnAsInstructions', () => {
   });
 
   it('handles empty column', () => {
-    const column: Column = { id: 'col1', title: 'Empty', cards: [] };
+    const column: Column = { id: 'col1', title: 'Empty', order: 0, cards: [] };
     const result = formatColumnAsInstructions(column);
     expect(result).toContain('0 cards:');
   });
