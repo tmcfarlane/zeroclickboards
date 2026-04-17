@@ -29,12 +29,12 @@ type FeedbackFormValues = z.infer<typeof feedbackSchema>;
 // ─── Pipeline step data ─────────────────────────────────────────────────────────
 
 const PIPELINE_STEPS = [
-  { n: 1, label: 'You submit a feature request' },
+  { n: 1, label: 'You submit feedback — a bug, feature idea, improvement, or anything else' },
   { n: 2, label: 'A GitHub issue is created automatically' },
   { n: 3, label: 'An AI Agent picks it up and begins working immediately' },
   { n: 4, label: 'Project owners and contributors review the AI\'s PR' },
   { n: 5, label: 'AI iterates based on PR feedback' },
-  { n: 6, label: 'Feature is approved and shipped' },
+  { n: 6, label: 'The change is approved and shipped' },
 ];
 
 // ─── Component ──────────────────────────────────────────────────────────────────
@@ -95,10 +95,10 @@ export function FeedbackPage() {
 
         {/* Section A: Pipeline explanation */}
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8">
-          <h2 className="mb-2 text-2xl font-bold text-[#F2F7F7]">How Feature Requests Work</h2>
+          <h2 className="mb-2 text-2xl font-bold text-[#F2F7F7]">How Your Feedback Works</h2>
           <p className="mb-8 text-[#A8B2B2] leading-relaxed">
-            We genuinely encourage you to submit feature requests. You might be surprised how quickly
-            they get built.
+            Whether it's a bug report, feature idea, or improvement — we genuinely encourage you to
+            share it. You might be surprised how quickly things get built.
           </p>
 
           <ol className="relative space-y-0">
@@ -127,7 +127,7 @@ export function FeedbackPage() {
 
         {/* Section B: Feedback form */}
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8">
-          <h2 className="mb-6 text-2xl font-bold text-[#F2F7F7]">Submit a Feature Request</h2>
+          <h2 className="mb-6 text-2xl font-bold text-[#F2F7F7]">Submit Feedback</h2>
 
           {isSubmitted ? (
             <div className="flex flex-col items-center gap-4 py-10 text-center">
