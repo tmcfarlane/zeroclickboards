@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import path from "path";
 import fs from "fs/promises";
 import react from "@vitejs/plugin-react";
@@ -166,13 +167,14 @@ function apiRoutesPlugin() {
             // Invoke with Vercel's Node signature: handler(req, res).
             // Handlers write directly to res; await in case of async work.
             await handler(req, res);
-          } catch (err: any) {
+          } catch (err) {
             console.error(`[api-routes] Error in /api/${routePath}:`, err);
             if (!res.headersSent) {
               res.statusCode = 500;
               res.setHeader("content-type", "application/json");
+              const message = err instanceof Error ? err.message : "Internal server error";
               res.end(
-                JSON.stringify({ error: err.message || "Internal server error" }),
+                JSON.stringify({ error: message }),
               );
             } else if (!res.writableEnded) {
               res.end();
@@ -192,5 +194,12 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
+    css: false,
+    include: ["src/**/*.test.{ts,tsx}"],
   },
 });
