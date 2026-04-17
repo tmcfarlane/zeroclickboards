@@ -122,17 +122,17 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
   );
 
   const { rangeStart, rangeEnd, days, gridCols } = useMemo(() => {
-    const ws = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const we = endOfWeek(currentDate, { weekStartsOn: 1 });
-    const ms = subDays(currentDate, 1);
-    const me = addDays(currentDate, 1);
-    const start = isMobile ? ms : ws;
-    const end = isMobile ? me : we;
+    const wStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const wEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+    const mStart = subDays(currentDate, 1);
+    const mEnd = addDays(currentDate, 1);
+    const rStart = isMobile ? mStart : wStart;
+    const rEnd = isMobile ? mEnd : wEnd;
     return {
-      rangeStart: start,
-      rangeEnd: end,
-      days: eachDayOfInterval({ start, end }),
-      gridCols: isMobile ? 'grid-cols-3' : 'grid-cols-7',
+      rangeStart: rStart,
+      rangeEnd: rEnd,
+      days: eachDayOfInterval({ start: rStart, end: rEnd }),
+      gridCols: isMobile ? 'grid-cols-3' as const : 'grid-cols-7' as const,
     };
   }, [currentDate, isMobile]);
 

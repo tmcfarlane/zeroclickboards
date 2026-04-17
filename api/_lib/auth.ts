@@ -1,6 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
- 
 console.log(JSON.stringify({ step: 'auth-module:loaded', ts: Date.now() }))
 
 // Support both vercel dev (SUPABASE_URL from project settings)
@@ -9,7 +8,6 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
- 
 console.log(JSON.stringify({
   step: 'auth-module:env',
   hasUrl: !!SUPABASE_URL,
@@ -33,7 +31,6 @@ const authFetchWithTimeout = makeFetchWithTimeout(AUTH_FETCH_TIMEOUT_MS)
 
 function logStep(route: string, step: string, startedAt: number, extra?: Record<string, unknown>) {
   const durationMs = Date.now() - startedAt
-   
   console.log(JSON.stringify({ route, step, durationMs, ...extra }))
 }
 
@@ -83,7 +80,6 @@ export async function getUserFromRequest(req: unknown): Promise<{ userId: string
   const token = authHeader.slice(7)
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-     
     console.log(JSON.stringify({ step: 'auth:missing-env', hasUrl: !!SUPABASE_URL, hasAnonKey: !!SUPABASE_ANON_KEY }))
     return null
   }
@@ -94,18 +90,15 @@ export async function getUserFromRequest(req: unknown): Promise<{ userId: string
     const { data, error } = await client.auth.getUser(token)
     const durationMs = Date.now() - startedAt
     if (error || !data.user) {
-       
       console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: false, error: error?.message ?? 'no-user' }))
       return null
     }
     if (durationMs > 500) {
-       
       console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: true, slow: true }))
     }
     return { userId: data.user.id, email: data.user.email ?? '', token }
   } catch (err) {
     const durationMs = Date.now() - startedAt
-     
     console.log(JSON.stringify({ step: 'auth:getUser', durationMs, ok: false, error: err instanceof Error ? err.message : 'unknown' }))
     return null
   }
