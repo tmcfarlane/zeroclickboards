@@ -474,26 +474,6 @@ export function ShareBoardDialog({
               </div>
             )}
 
-            {/* Permission legend */}
-            <div className="pt-3 border-t border-white/5 space-y-2">
-              <p className="text-xs font-medium text-[#A8B2B2]">
-                Permission levels
-              </p>
-              <div className="grid grid-cols-3 gap-2 text-xs text-[#A8B2B2]/80">
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-[#F2F7F7]">View</span>
-                  <span>Can see the board</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-[#F2F7F7]">Comment</span>
-                  <span>View + add comments</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-[#F2F7F7]">Modify</span>
-                  <span>Full edit access</span>
-                </div>
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
