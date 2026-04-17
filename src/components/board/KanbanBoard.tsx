@@ -502,8 +502,8 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
 
   return (
     <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
-      {/* Mobile Header */}
-      <div className="relative flex sm:hidden items-center justify-between pl-3 pr-4 pt-4 pb-2 border-b border-white/5">
+      {/* Mobile Header (hidden when search is open) */}
+      <div className={`relative ${isMobileSearchOpen ? 'hidden' : 'flex'} sm:hidden items-center justify-between pl-3 pr-4 pt-4 pb-2 border-b border-white/5`}>
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <BoardSelector onCreateBoardClick={onNewBoardClick} />
         </div>
