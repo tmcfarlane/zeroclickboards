@@ -167,14 +167,13 @@ function apiRoutesPlugin() {
             // Invoke with Vercel's Node signature: handler(req, res).
             // Handlers write directly to res; await in case of async work.
             await handler(req, res);
-          } catch (err: any) {
+          } catch (err) {
             console.error(`[api-routes] Error in /api/${routePath}:`, err);
             if (!res.headersSent) {
               res.statusCode = 500;
               res.setHeader("content-type", "application/json");
-              res.end(
-                JSON.stringify({ error: err.message || "Internal server error" }),
-              );
+              const message = err instanceof Error ? err.message : "Internal server error";
+              res.end(JSON.stringify({ error: message }));
             } else if (!res.writableEnded) {
               res.end();
             }

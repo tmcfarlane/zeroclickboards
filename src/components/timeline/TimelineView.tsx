@@ -121,16 +121,20 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-
-  const mobileStart = subDays(currentDate, 1);
-  const mobileEnd = addDays(currentDate, 1);
-
-  const rangeStart = isMobile ? mobileStart : weekStart;
-  const rangeEnd = isMobile ? mobileEnd : weekEnd;
-  const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
-  const gridCols = isMobile ? 'grid-cols-3' : 'grid-cols-7';
+  const { rangeStart, rangeEnd, days, gridCols } = useMemo(() => {
+    const ws = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const we = endOfWeek(currentDate, { weekStartsOn: 1 });
+    const ms = subDays(currentDate, 1);
+    const me = addDays(currentDate, 1);
+    const start = isMobile ? ms : ws;
+    const end = isMobile ? me : we;
+    return {
+      rangeStart: start,
+      rangeEnd: end,
+      days: eachDayOfInterval({ start, end }),
+      gridCols: isMobile ? 'grid-cols-3' : 'grid-cols-7',
+    };
+  }, [currentDate, isMobile]);
 
   // Get all cards with target dates, expanding recurring cards into per-occurrence entries.
   const timelineCards = useMemo(() => {
