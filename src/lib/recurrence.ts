@@ -73,7 +73,7 @@ export function calculateNextTargetDate(
   currentTargetDate: string | undefined,
   config: RecurrenceConfig
 ): string {
-  const base = currentTargetDate ? new Date(currentTargetDate) : new Date();
+  const base = currentTargetDate ? parseLocalDate(currentTargetDate) : new Date();
   // Ensure we work with date only (no time component issues)
   base.setHours(12, 0, 0, 0);
 
@@ -115,7 +115,7 @@ export function calculateNextTargetDate(
     }
   }
 
-  return base.toISOString().split('T')[0];
+  return toDateString(base);
 }
 
 export function createRecurringCardCopy(card: Card, columnId?: string): Card {
