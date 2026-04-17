@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Board, Card, CardLabel } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +18,12 @@ import {
   endOfWeek,
   addWeeks,
   subWeeks,
+  addDays,
+  subDays,
   eachDayOfInterval,
   isSameDay,
 } from 'date-fns';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   DndContext,
   DragOverlay,
@@ -111,6 +114,7 @@ interface ActiveDrag {
 export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+  const isMobile = useIsMobile();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -119,7 +123,14 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  const mobileStart = subDays(currentDate, 1);
+  const mobileEnd = addDays(currentDate, 1);
+
+  const rangeStart = isMobile ? mobileStart : weekStart;
+  const rangeEnd = isMobile ? mobileEnd : weekEnd;
+  const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+  const gridCols = isMobile ? 'grid-cols-3' : 'grid-cols-7';
 
   // Get all cards with target dates, expanding recurring cards into per-occurrence entries.
   const timelineCards = useMemo(() => {
@@ -131,8 +142,8 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
         const occurrences = getOccurrencesInRange(
           card.targetDate,
           card.recurrence,
-          weekStart,
-          weekEnd
+          rangeStart,
+          rangeEnd
         );
         occurrences.forEach((occurrenceDate) => {
           cards.push({
@@ -148,7 +159,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
     return cards.sort(
       (a, b) => parseLocalDate(a.occurrenceDate).getTime() - parseLocalDate(b.occurrenceDate).getTime()
     );
-  }, [board, weekStart, weekEnd]);
+  }, [board, rangeStart, rangeEnd]);
 
   // Group cards by column (swimlanes). Always include every column so empty
   // statuses still render as drop targets.
@@ -166,9 +177,52 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
     }));
   }, [timelineCards, board.columns]);
 
-  const goToPreviousWeek = () => setCurrentDate(subWeeks(currentDate, 1));
-  const goToNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+  const goToPrevious = () => setCurrentDate(isMobile ? subDays(currentDate, 3) : subWeeks(currentDate, 1));
+  const goToNext = () => setCurrentDate(isMobile ? addDays(currentDate, 3) : addWeeks(currentDate, 1));
   const goToToday = () => setCurrentDate(new Date());
+
+  const touchStartX = useRef<number | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const isAnimating = useRef(false);
+
+  const navigateWithSlide = useCallback((direction: 'left' | 'right') => {
+    const el = gridRef.current;
+    if (!el || isAnimating.current) return;
+    isAnimating.current = true;
+
+    el.style.transition = 'transform 150ms ease-out, opacity 150ms ease-out';
+    el.style.transform = direction === 'left' ? 'translateX(-30%)' : 'translateX(30%)';
+    el.style.opacity = '0';
+
+    setTimeout(() => {
+      setCurrentDate(prev =>
+        direction === 'left'
+          ? (isMobile ? addDays(prev, 3) : addWeeks(prev, 1))
+          : (isMobile ? subDays(prev, 3) : subWeeks(prev, 1))
+      );
+      el.style.transition = 'none';
+      el.style.transform = '';
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.transition = 'opacity 150ms ease-out';
+          el.style.opacity = '1';
+          setTimeout(() => { isAnimating.current = false; }, 150);
+        });
+      });
+    }, 150);
+  }, [isMobile]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  }, []);
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(delta) < 50) return;
+    navigateWithSlide(delta < 0 ? 'left' : 'right');
+  }, [navigateWithSlide]);
 
   const isToday = (date: Date) => isSameDay(date, new Date());
 
@@ -276,9 +330,9 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
               <Calendar className="w-4 h-4 sm:mr-1.5 text-[#A8B2B2]" />
               <span className="hidden sm:inline">Today</span>
             </Button>
-            <div className="flex items-center bg-white/5 rounded-lg">
+            <div className="hidden md:flex items-center bg-white/5 rounded-lg">
               <Button
-                onClick={goToPreviousWeek}
+                onClick={goToPrevious}
                 variant="ghost"
                 size="sm"
                 className="h-9 w-9 p-0 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
@@ -286,7 +340,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
                 <ChevronLeft className="w-5 h-5" />
               </Button>
               <Button
-                onClick={goToNextWeek}
+                onClick={goToNext}
                 variant="ghost"
                 size="sm"
                 className="h-9 w-9 p-0 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
@@ -297,12 +351,16 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
           </div>
         </div>
         <p className="text-sm text-[#A8B2B2]">
-          {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
+          {format(rangeStart, 'MMM d')} - {format(rangeEnd, 'MMM d, yyyy')}
         </p>
       </div>
 
       {/* Timeline Grid */}
-      <div className="flex-1 overflow-auto scrollbar-thin">
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin"
+        onTouchStart={isMobile ? handleTouchStart : undefined}
+        onTouchEnd={isMobile ? handleTouchEnd : undefined}
+      >
         <div className="p-4">
           <DndContext
             sensors={sensors}
@@ -310,93 +368,95 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
-            {/* Days Header */}
-            <div className="grid grid-cols-7 gap-2 mb-4">
-              {days.map((day) => (
-                <div
-                  key={day.toISOString()}
-                  className={`relative text-center p-1.5 sm:p-3 rounded-lg ${
-                    isToday(day)
-                      ? 'bg-[#78fcd6]/20 border border-[#78fcd6]/40 shadow-[0_0_0_1px_rgba(120,252,214,0.25),0_0_24px_-8px_rgba(120,252,214,0.6)]'
-                      : 'bg-white/5 border border-white/5'
-                  }`}
-                >
-                  {isToday(day) && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#78fcd6] text-[#0B0F0F] text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full">
-                      Today
-                    </span>
-                  )}
-                  <div className={`text-xs font-medium ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#A8B2B2]'}`}>
-                    {format(day, 'EEE')}
-                  </div>
-                  <div className={`text-sm sm:text-lg font-semibold ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#F2F7F7]'}`}>
-                    {format(day, 'd')}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Swimlanes */}
-            {!hasAnyTimelineCards ? (
-              <div className="text-center py-16">
-                <Clock className="w-12 h-12 text-[#A8B2B2] mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No cards with target dates</h3>
-                <p className="text-sm text-[#A8B2B2]">
-                  Add target dates to cards to see them on the timeline
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {swimlanes.map((lane) => {
-                  const cardsByDay = new Map<number, TimelineCardEntry[]>();
-                  lane.cards.forEach((item) => {
-                    const position = getCardPosition(item.occurrenceDate);
-                    if (position === null) return;
-                    const bucket = cardsByDay.get(position) ?? [];
-                    bucket.push(item);
-                    cardsByDay.set(position, bucket);
-                  });
-                  const maxStack = Math.max(1, ...Array.from(cardsByDay.values(), (b) => b.length));
-
-                  return (
-                    <div key={lane.columnId} className="space-y-2">
-                      {/* Swimlane Header */}
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-[#78fcd6]/30" />
-                        <span className="text-sm font-medium text-[#A8B2B2]">{lane.columnName}</span>
-                        <span className="text-xs text-[#A8B2B2]/60">({lane.cards.length})</span>
-                      </div>
-
-                      {/* Swimlane Grid */}
-                      <div className="grid grid-cols-7 gap-2">
-                        {days.map((day, dayIdx) => {
-                          const dayCards = cardsByDay.get(dayIdx) ?? [];
-                          const dateStr = format(day, 'yyyy-MM-dd');
-                          return (
-                            <TimelineCell
-                              key={`cell-${lane.columnId}-${dateStr}`}
-                              columnId={lane.columnId}
-                              dateStr={dateStr}
-                              isToday={isToday(day)}
-                              minHeight={maxStack * 3.5 + 0.5}
-                            >
-                              {dayCards.map((item) => (
-                                <TimelineCardItem
-                                  key={`${item.card.id}-${item.occurrenceDate}`}
-                                  boardId={board.id}
-                                  columnId={lane.columnId}
-                                  item={item}
-                                />
-                              ))}
-                            </TimelineCell>
-                          );
-                        })}
-                      </div>
+            <div ref={gridRef}>
+              {/* Days Header */}
+              <div className={`grid ${gridCols} gap-2 mb-4`}>
+                {days.map((day) => (
+                  <div
+                    key={day.toISOString()}
+                    className={`relative text-center p-1.5 sm:p-3 rounded-lg ${
+                      isToday(day)
+                        ? 'bg-[#78fcd6]/20 border border-[#78fcd6]/40 shadow-[0_0_0_1px_rgba(120,252,214,0.25),0_0_24px_-8px_rgba(120,252,214,0.6)]'
+                        : 'bg-white/5 border border-white/5'
+                    }`}
+                  >
+                    {isToday(day) && (
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#78fcd6] text-[#0B0F0F] text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full">
+                        Today
+                      </span>
+                    )}
+                    <div className={`text-xs font-medium ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#A8B2B2]'}`}>
+                      {format(day, 'EEE')}
                     </div>
-                  );
-                })}
+                    <div className={`text-sm sm:text-lg font-semibold ${isToday(day) ? 'text-[#78fcd6]' : 'text-[#F2F7F7]'}`}>
+                      {format(day, 'd')}
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+
+              {/* Swimlanes */}
+              {!hasAnyTimelineCards ? (
+                <div className="text-center py-16">
+                  <Clock className="w-12 h-12 text-[#A8B2B2] mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No cards with target dates</h3>
+                  <p className="text-sm text-[#A8B2B2]">
+                    Add target dates to cards to see them on the timeline
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {swimlanes.map((lane) => {
+                    const cardsByDay = new Map<number, TimelineCardEntry[]>();
+                    lane.cards.forEach((item) => {
+                      const position = getCardPosition(item.occurrenceDate);
+                      if (position === null) return;
+                      const bucket = cardsByDay.get(position) ?? [];
+                      bucket.push(item);
+                      cardsByDay.set(position, bucket);
+                    });
+                    const maxStack = Math.max(1, ...Array.from(cardsByDay.values(), (b) => b.length));
+
+                    return (
+                      <div key={lane.columnId} className="space-y-2">
+                        {/* Swimlane Header */}
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-[#78fcd6]/30" />
+                          <span className="text-sm font-medium text-[#A8B2B2]">{lane.columnName}</span>
+                          <span className="text-xs text-[#A8B2B2]/60">({lane.cards.length})</span>
+                        </div>
+
+                        {/* Swimlane Grid */}
+                        <div className={`grid ${gridCols} gap-2`}>
+                          {days.map((day, dayIdx) => {
+                            const dayCards = cardsByDay.get(dayIdx) ?? [];
+                            const dateStr = format(day, 'yyyy-MM-dd');
+                            return (
+                              <TimelineCell
+                                key={`cell-${lane.columnId}-${dateStr}`}
+                                columnId={lane.columnId}
+                                dateStr={dateStr}
+                                isToday={isToday(day)}
+                                minHeight={maxStack * 3.5 + 0.5}
+                              >
+                                {dayCards.map((item) => (
+                                  <TimelineCardItem
+                                    key={`${item.card.id}-${item.occurrenceDate}`}
+                                    boardId={board.id}
+                                    columnId={lane.columnId}
+                                    item={item}
+                                  />
+                                ))}
+                              </TimelineCell>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
               {activeCard ? (
