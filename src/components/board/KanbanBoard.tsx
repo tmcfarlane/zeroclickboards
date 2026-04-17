@@ -567,8 +567,10 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <MobileSearchOverlay isOpen={isMobileSearchOpen} onClose={() => setIsMobileSearchOpen(false)} value={searchQuery} onChange={setSearchQuery} />
       </div>
+
+      {/* Mobile Search */}
+      <MobileSearchOverlay isOpen={isMobileSearchOpen} onClose={() => setIsMobileSearchOpen(false)} value={searchQuery} onChange={setSearchQuery} />
 
       {/* Mobile Filter Panel */}
       {isFilterOpen && (
