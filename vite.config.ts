@@ -173,9 +173,7 @@ function apiRoutesPlugin() {
               res.statusCode = 500;
               res.setHeader("content-type", "application/json");
               const message = err instanceof Error ? err.message : "Internal server error";
-              res.end(
-                JSON.stringify({ error: message }),
-              );
+              res.end(JSON.stringify({ error: message }));
             } else if (!res.writableEnded) {
               res.end();
             }
