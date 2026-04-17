@@ -174,7 +174,7 @@ export function ShareBoardDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-[calc(100%-2rem)] sm:max-w-lg">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-[calc(100%-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto top-[50%] left-[50%]">
         <DialogHeader>
           <DialogTitle>Share "{boardName}"</DialogTitle>
         </DialogHeader>
