@@ -22,13 +22,13 @@ beforeEach(() => {
 
 describe('BoardSelector', () => {
   it('shows "Select Board" when no active board', () => {
-    render(<BoardSelector />);
+    render(<BoardSelector onCreateBoardClick={vi.fn()} />);
     expect(screen.getByText('Select Board')).toBeInTheDocument();
   });
 
   it('shows active board name', () => {
     useBoardStore.getState().createBoard('My Project');
-    render(<BoardSelector />);
+    render(<BoardSelector onCreateBoardClick={vi.fn()} />);
     expect(screen.getByText('My Project')).toBeInTheDocument();
   });
 
@@ -37,7 +37,7 @@ describe('BoardSelector', () => {
     useBoardStore.getState().createBoard('Board A');
     useBoardStore.getState().createBoard('Board B');
 
-    render(<BoardSelector />);
+    render(<BoardSelector onCreateBoardClick={vi.fn()} />);
 
     const trigger = screen.getByRole('button');
     await user.click(trigger);
