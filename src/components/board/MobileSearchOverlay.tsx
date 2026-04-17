@@ -22,7 +22,7 @@ export function MobileSearchOverlay({ isOpen, onClose, value, onChange }: Mobile
   if (!isOpen) return null;
 
   return (
-    <div className="absolute inset-x-0 top-0 z-20 flex items-center gap-2 px-3 py-2 bg-[#0B0F0F] border-b border-white/10 sm:hidden">
+    <div className="absolute inset-x-0 top-full z-20 flex items-center gap-2 px-3 py-2 bg-[#0B0F0F] border-b border-white/10 sm:hidden">
       <Search className="w-4 h-4 text-[#A8B2B2] shrink-0" />
       <Input
         ref={inputRef}
