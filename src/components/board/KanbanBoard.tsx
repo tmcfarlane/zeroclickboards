@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext, DragOverlay, type DragEndEvent, type DragOverEvent, type DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors, closestCorners, type CollisionDetection } from '@dnd-kit/core';
-import { SortableContext, arrayMove, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, arrayMove, horizontalListSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
 import type { Board, CardLabel } from '@/types';
 import { KanbanColumn } from './KanbanColumn';
+import { KanbanCard } from './KanbanCard';
 import { ArchiveView } from './ArchiveView';
+import { ViewToggle } from './ViewToggle';
+import { BoardSelector } from './BoardSelector';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles, X } from 'lucide-react';
 import { ShareBoardDialog } from './ShareBoardDialog';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
 import { downloadBoardJSON } from '@/lib/board-io';
@@ -36,14 +39,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useIsCompact } from '@/hooks/use-is-compact';
+import { MobileColumnTabs } from './MobileColumnTabs';
+import { MobileBottomBar } from './MobileBottomBar';
+import { MobileSearchOverlay } from './MobileSearchOverlay';
+import { CardEditor, type CardEditorSaveData } from './CardEditor';
 
 interface KanbanBoardProps {
   board: Board;
   onAIClick?: () => void;
+  onNewBoardClick: () => void;
 }
 
-export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
-  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
+export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardProps) {
+  const { addColumn, addCard, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +66,11 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
   const hiddenColumnIds = board.hiddenColumnIds ?? [];
+  const isCompact = useIsCompact();
+  const [activeColumnIndex, setActiveColumnIndex] = useState(0);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isMobileAddCardOpen, setIsMobileAddCardOpen] = useState(false);
 
   const hideColumn = (columnId: string) => {
     if (hiddenColumnIds.includes(columnId)) return;
@@ -79,6 +93,7 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
   // Vertical wheel → horizontal board scroll everywhere on the board.
   // Only exception: if mouse is inside a column card list that has room to scroll vertically.
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const mobileCardListRef = useRef<HTMLDivElement>(null);
   const isDraggingBoard = useRef(false);
   const dragStart = useRef({ x: 0, scrollLeft: 0 });
 
@@ -250,6 +265,30 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
 
     if (!over) return;
 
+    // Mobile: card dropped on a column tab — move to that column and switch view
+    if (over.data.current?.type === 'column-tab' && active.data.current?.type === 'card') {
+      const targetColumnId = over.data.current.columnId as string;
+      const targetColumnIndex = over.data.current.columnIndex as number;
+      const sourceColumnId = active.data.current.columnId as string;
+      if (sourceColumnId !== targetColumnId) {
+        moveCard(board.id, sourceColumnId, targetColumnId, active.id as string, 0);
+        if (origin) {
+          const cardId = active.id as string;
+          const origColId = origin.columnId;
+          const origIdx = origin.index;
+          const bId = board.id;
+          useUndoStore.getState().pushAction({
+            description: 'Move card',
+            undo: () => { useBoardStore.getState().moveCard(bId, targetColumnId, origColId, cardId, origIdx); },
+            redo: () => { useBoardStore.getState().moveCard(bId, origColId, targetColumnId, cardId, 0); },
+          });
+        }
+      }
+      setActiveColumnIndex(targetColumnIndex);
+      requestAnimationFrame(() => { mobileCardListRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); });
+      return;
+    }
+
     // Record undo for cross-column card moves using the origin captured at drag start
     if (origin && active.data.current?.type === 'card') {
       const cardId = active.id as string;
@@ -350,6 +389,17 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
     }
   };
 
+  const handleMobileAddCard = (data: CardEditorSaveData) => {
+    if (!activeColumn) return;
+    addCard(board.id, activeColumn.id, data.title, data.content, data.targetDate, {
+      labels: data.labels,
+      coverImage: data.coverImage,
+      attachments: data.attachments,
+      recurrence: data.recurrence,
+    });
+    setIsMobileAddCardOpen(false);
+  };
+
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfWeek = new Date(startOfToday);
@@ -390,14 +440,191 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
     }),
   }));
 
+  useEffect(() => {
+    if (activeColumnIndex >= filteredColumns.length && filteredColumns.length > 0) {
+      setActiveColumnIndex(filteredColumns.length - 1);
+    }
+  }, [filteredColumns.length, activeColumnIndex]);
+
+  const activeColumn = filteredColumns[activeColumnIndex] ?? filteredColumns[0];
+  const activeColumnCards = activeColumn?.cards.filter(c => !c.isArchived) ?? [];
+
+  useEffect(() => {
+    const el = mobileCardListRef.current;
+    if (!el || !isCompact) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+
+    function onTouchStart(e: TouchEvent) {
+      if (activeDragData) return;
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      isSwiping = false;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (activeDragData) return;
+      if (isSwiping) return;
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - touchStartX);
+      const dy = Math.abs(touch.clientY - touchStartY);
+      if (dx > 10 || dy > 10) {
+        isSwiping = dx > dy;
+      }
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      if (activeDragData || !isSwiping) return;
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      if (Math.abs(dx) < 50) return;
+
+      if (dx < 0 && activeColumnIndex < filteredColumns.length - 1) {
+        setActiveColumnIndex(activeColumnIndex + 1);
+      } else if (dx > 0 && activeColumnIndex > 0) {
+        setActiveColumnIndex(activeColumnIndex - 1);
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [isCompact, activeDragData, activeColumnIndex, filteredColumns.length]);
+
   return (
     <div className="h-full flex flex-col" style={board.background ? { background: board.background } : undefined}>
-      {/* Board Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
-        <div>
-          <h1 className="text-lg font-semibold">{board.name}</h1>
+      {/* Mobile Header (hidden when search is open) */}
+      <div className={`relative ${isMobileSearchOpen ? 'hidden' : 'flex'} sm:hidden items-center justify-between pl-3 pr-4 pt-4 pb-2 border-b border-white/5`}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <BoardSelector onCreateBoardClick={onNewBoardClick} />
         </div>
-        
+        <div className="flex items-center gap-1">
+          <ViewToggle />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5">
+                <MoreHorizontal className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-[#111515] border-white/10">
+              <DropdownMenuItem onClick={() => setIsMobileSearchOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Search className="w-4 h-4" />
+                Search
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsFilterOpen(!isFilterOpen)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <SlidersHorizontal className="w-4 h-4" />
+                Filter
+                {(selectedLabels.length > 0 || dueDateFilter) && (
+                  <span className="ml-auto w-2 h-2 bg-[#78fcd6] rounded-full" />
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Share2 className="w-4 h-4" />
+                Share
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => setIsAddColumnDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Plus className="w-4 h-4" />
+                Add Column
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { const template = boardToTemplate(board); saveUserBoardTemplate(template); toast.success('Board saved as template'); }} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <BookmarkPlus className="w-4 h-4" />
+                Save as Template
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { downloadBoardJSON(board); toast.success('Board exported'); }} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Download className="w-4 h-4" />
+                Export to JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsBackgroundPickerOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Palette className="w-4 h-4" />
+                Change Background
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsArchiveOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                <Archive className="w-4 h-4" />
+                Archive
+              </DropdownMenuItem>
+              {hiddenColumns.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuLabel className="text-[#A8B2B2] text-xs">Hidden Columns</DropdownMenuLabel>
+                  {hiddenColumns.map((col) => (
+                    <DropdownMenuItem key={col.id} onClick={() => showColumn(col.id)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+                      <Eye className="w-4 h-4" />
+                      {col.title}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Mobile Search */}
+      <MobileSearchOverlay isOpen={isMobileSearchOpen} onClose={() => setIsMobileSearchOpen(false)} value={searchQuery} onChange={setSearchQuery} />
+
+      {/* Mobile Filter Panel */}
+      {isFilterOpen && (
+        <div className="sm:hidden px-3 py-3 border-b border-white/10 bg-[#111515]/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-medium text-[#A8B2B2]">Filters</p>
+            <button type="button" onClick={() => setIsFilterOpen(false)} className="text-[#A8B2B2] hover:text-[#F2F7F7]">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                <Tag className="w-3 h-3" /> Labels
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_LABELS.map((label) => (
+                  <button key={label} type="button" onClick={() => { setSelectedLabels(selectedLabels.includes(label) ? selectedLabels.filter((l) => l !== label) : [...selectedLabels, label]); }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-colors ${selectedLabels.includes(label) ? 'border-[#78fcd6]/50 bg-[#78fcd6]/10 text-[#78fcd6]' : 'border-white/10 bg-white/5 text-[#A8B2B2]'}`}>
+                    <div className={`w-3 h-3 rounded ${LABEL_COLORS[label]}`} />
+                    <span className="capitalize">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-[#A8B2B2] mb-2 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3" /> Due Date
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DUE_DATE_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
+                    className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${dueDateFilter === opt.value ? 'border-[#78fcd6]/50 bg-[#78fcd6]/20 text-[#78fcd6]' : 'border-white/10 text-[#A8B2B2] bg-white/5'}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {(selectedLabels.length > 0 || dueDateFilter) && (
+              <Button variant="ghost" size="sm" onClick={() => { setSelectedLabels([]); setDueDateFilter(null); }} className="h-7 text-xs text-[#A8B2B2] hover:text-[#F2F7F7]">
+                Clear All
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Board Header */}
+      <div className="hidden sm:flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
+        <div className="flex items-center gap-3 min-w-0">
+          <BoardSelector onCreateBoardClick={onNewBoardClick} />
+          <ViewToggle />
+        </div>
+
         <div className="flex items-center gap-1.5">
           {/* Ask AI */}
           {onAIClick && (
@@ -624,35 +851,63 @@ export function KanbanBoard({ board, onAIClick }: KanbanBoardProps) {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab">
-          <div className="h-full flex items-start gap-4 p-4 min-w-max">
-            <SortableContext
-              items={visibleColumns.map((c) => c.id)}
-              strategy={horizontalListSortingStrategy}
-            >
-              {filteredColumns.map((column) => (
-                <KanbanColumn
-                  key={column.id}
-                  boardId={board.id}
-                  column={column}
-                  onHide={() => hideColumn(column.id)}
-                  isDragOver={dragOverColumnId === column.id}
-                />
-              ))}
-            </SortableContext>
-            <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
-              {activeCard ? (
-                <div className="w-72 sm:w-80 bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2">
-                  <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{activeCard.title}</p>
-                  {activeCard.description && (
-                    <p className="text-xs text-[#A8B2B2] mt-1 line-clamp-1">{activeCard.description}</p>
-                  )}
-                </div>
-              ) : null}
-            </DragOverlay>
+        {/* Mobile Column Tabs (inside DndContext so tabs are droppable) */}
+        <MobileColumnTabs columns={filteredColumns} activeIndex={activeColumnIndex} onTabChange={setActiveColumnIndex} />
+
+        {isCompact ? (
+          activeColumn && (
+            <div ref={mobileCardListRef} className="flex-1 overflow-y-auto">
+              <div className="p-3 space-y-2">
+                <SortableContext items={activeColumnCards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                  {activeColumnCards.map((card) => (
+                    <KanbanCard key={card.id} boardId={board.id} columnId={activeColumn.id} card={card} />
+                  ))}
+                </SortableContext>
+                {activeColumnCards.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-[#A8B2B2]">
+                    <p className="text-sm">No cards in this column</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        ) : (
+          <div ref={scrollContainerRef} className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-thin cursor-grab">
+            <div className="h-full flex items-start gap-4 p-4 min-w-max">
+              <SortableContext
+                items={visibleColumns.map((c) => c.id)}
+                strategy={horizontalListSortingStrategy}
+              >
+                {filteredColumns.map((column) => (
+                  <KanbanColumn
+                    key={column.id}
+                    boardId={board.id}
+                    column={column}
+                    onHide={() => hideColumn(column.id)}
+                    isDragOver={dragOverColumnId === column.id}
+                  />
+                ))}
+              </SortableContext>
           </div>
         </div>
+        )}
+        <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+          {activeCard ? (
+            <div className={`${isCompact ? 'w-[calc(100vw-24px)]' : 'w-80'} bg-[#1a1f1f] border border-[#78fcd6]/30 rounded-lg p-3 shadow-2xl shadow-[#78fcd6]/10 opacity-90 rotate-2`}>
+              <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{activeCard.title}</p>
+              {activeCard.description && (
+                <p className="text-xs text-[#A8B2B2] mt-1 line-clamp-1">{activeCard.description}</p>
+              )}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
+
+      {/* Mobile Bottom Bar */}
+      <MobileBottomBar onAIClick={onAIClick} onAddCard={() => setIsMobileAddCardOpen(true)} />
+
+      {/* Mobile Add Card Dialog */}
+      <CardEditor isOpen={isMobileAddCardOpen} onClose={() => setIsMobileAddCardOpen(false)} onSave={handleMobileAddCard} mode="create" />
 
       {/* Share Board Dialog */}
       <ShareBoardDialog

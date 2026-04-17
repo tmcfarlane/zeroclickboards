@@ -174,12 +174,12 @@ export function ShareBoardDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-lg">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Share "{boardName}"</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="share" className="w-full">
+        <Tabs defaultValue="share" className="w-full overflow-hidden">
           <TabsList className="w-full bg-white/5 border border-white/10">
             <TabsTrigger
               value="share"
@@ -339,7 +339,7 @@ export function ShareBoardDialog({
           </TabsContent>
 
           {/* ── Permissions Tab ── */}
-          <TabsContent value="permissions" className="space-y-4 mt-4">
+          <TabsContent value="permissions" className="space-y-4 mt-4 overflow-hidden">
             {/* Owner */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
               <div className="flex items-center gap-3">
@@ -474,26 +474,6 @@ export function ShareBoardDialog({
               </div>
             )}
 
-            {/* Permission legend */}
-            <div className="pt-3 border-t border-white/5 space-y-2">
-              <p className="text-xs font-medium text-[#A8B2B2]">
-                Permission levels
-              </p>
-              <div className="grid grid-cols-3 gap-2 text-xs text-[#A8B2B2]/80">
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-[#F2F7F7]">View</span>
-                  <span>Can see the board</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-[#F2F7F7]">Comment</span>
-                  <span>View + add comments</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-[#F2F7F7]">Modify</span>
-                  <span>Full edit access</span>
-                </div>
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

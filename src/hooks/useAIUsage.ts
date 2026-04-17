@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthContext } from '@/components/auth/AuthProvider'
+import { apiFetch } from '@/lib/apiFetch'
 
 interface AIUsageData {
   used: number
@@ -14,11 +15,7 @@ export function useAIUsage() {
   const { data, isLoading } = useQuery<AIUsageData>({
     queryKey: ['ai-usage', session?.user?.id],
     queryFn: async () => {
-      const res = await fetch('/api/ai/usage', {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-      })
+      const res = await apiFetch('/api/ai/usage', { session })
       if (!res.ok) throw new Error('Failed to fetch AI usage')
       return res.json()
     },

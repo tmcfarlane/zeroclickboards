@@ -61,17 +61,17 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] max-w-xl p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[96vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="px-4 sm:px-6 pt-6 pb-4">
           <DialogTitle className="text-xl font-bold text-center">Choose Your Plan</DialogTitle>
           <DialogDescription className="text-[#A8B2B2] text-center">
             Get more done with AI-powered board management
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-3 px-6 pb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-4 sm:px-6 pb-6">
           {/* Free tier */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 flex flex-col">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 flex flex-col order-2 sm:order-1">
             <div className="mb-4">
               <h3 className="text-sm font-semibold text-[#A8B2B2] uppercase tracking-wider">Free</h3>
               <div className="mt-2">
@@ -107,7 +107,7 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
           </div>
 
           {/* Pro tier */}
-          <div className="rounded-xl border border-[#78fcd6]/30 bg-[#78fcd6]/[0.04] p-4 flex flex-col relative">
+          <div className="rounded-xl border border-[#78fcd6]/30 bg-[#78fcd6]/[0.04] p-4 flex flex-col relative order-1 sm:order-2">
             <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#78fcd6] text-[#0B0F0F] text-[10px] font-bold uppercase tracking-wider">
               Recommended
             </div>
@@ -155,7 +155,7 @@ export function AIUpgradePrompt({ isOpen, onOpenChange }: AIUpgradePromptProps) 
           </div>
         </div>
 
-        <div className="px-6 pb-5 text-center">
+        <div className="px-4 sm:px-6 pb-5 text-center">
           <p className="text-[11px] text-[#A8B2B2]/60">
             Cancel anytime &middot; Secure checkout powered by Stripe
           </p>

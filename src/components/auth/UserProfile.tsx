@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, LogOut, ChevronDown, Sparkles, Settings, Shield } from 'lucide-react';
+import { User, LogIn, LogOut, ChevronDown, Sparkles, Settings, Shield, Tag } from 'lucide-react';
 import { useAuthContext } from './AuthProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -14,9 +14,10 @@ import {
 
 interface UserProfileProps {
   onSignInClick: () => void;
+  onPricingClick?: () => void;
 }
 
-export function UserProfile({ onSignInClick }: UserProfileProps) {
+export function UserProfile({ onSignInClick, onPricingClick }: UserProfileProps) {
   const navigate = useNavigate();
   const { isSignedIn, isLoaded, user, signOut } = useAuthContext();
   const { hasSubscription } = useSubscription();
@@ -93,6 +94,15 @@ export function UserProfile({ onSignInClick }: UserProfileProps) {
           <Settings className="w-4 h-4 mr-2" />
           Account
         </DropdownMenuItem>
+        {onPricingClick && (
+          <DropdownMenuItem
+            onClick={onPricingClick}
+            className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+          >
+            <Tag className="w-4 h-4 mr-2" />
+            Pricing
+          </DropdownMenuItem>
+        )}
         {isAdmin && (
           <DropdownMenuItem
             onClick={() => navigate('/admin')}

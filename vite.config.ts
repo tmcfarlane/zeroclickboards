@@ -163,51 +163,20 @@ function apiRoutesPlugin() {
               return;
             }
 
-            // Convert Node IncomingMessage → Web Request
-            const host = req.headers.host || "localhost";
-            const fullUrl = `http://${host}${req.url}`;
-
-            const headers = new Headers();
-            for (const [key, value] of Object.entries(req.headers)) {
-              if (value)
-                headers.set(
-                  key,
-                  Array.isArray(value) ? value.join(", ") : value,
-                );
-            }
-
-            let body: Buffer | undefined;
-            if (req.method !== "GET" && req.method !== "HEAD") {
-              body = await new Promise<Buffer>((resolve) => {
-                const chunks: Buffer[] = [];
-                req.on("data", (chunk: Buffer) => chunks.push(chunk));
-                req.on("end", () => resolve(Buffer.concat(chunks)));
-              });
-            }
-
-            const request = new Request(fullUrl, {
-              method: req.method,
-              headers,
-              body: body && body.length > 0 ? body : undefined,
-            });
-
-            // Call the handler and convert Web Response → Node response
-            const response: Response = await handler(request);
-
-            res.statusCode = response.status;
-            response.headers.forEach((value: string, key: string) => {
-              res.setHeader(key, value);
-            });
-
-            const responseBody = await response.arrayBuffer();
-            res.end(Buffer.from(responseBody));
+            // Invoke with Vercel's Node signature: handler(req, res).
+            // Handlers write directly to res; await in case of async work.
+            await handler(req, res);
           } catch (err: any) {
             console.error(`[api-routes] Error in /api/${routePath}:`, err);
-            res.statusCode = 500;
-            res.setHeader("content-type", "application/json");
-            res.end(
-              JSON.stringify({ error: err.message || "Internal server error" }),
-            );
+            if (!res.headersSent) {
+              res.statusCode = 500;
+              res.setHeader("content-type", "application/json");
+              res.end(
+                JSON.stringify({ error: err.message || "Internal server error" }),
+              );
+            } else if (!res.writableEnded) {
+              res.end();
+            }
           }
         },
       );
