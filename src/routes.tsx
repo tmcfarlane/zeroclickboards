@@ -11,6 +11,7 @@ import { EmbedBoardPage } from '@/pages/EmbedBoardPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AccountPage } from '@/pages/AccountPage';
 import { AdminPage } from '@/pages/AdminPage';
+import { AuthCliPage } from '@/pages/AuthCliPage';
 
 export function AppRoutes() {
   return (
@@ -33,6 +34,9 @@ export function AppRoutes() {
 
       {/* Embed (no chrome, no auth) */}
       <Route path="/embed/:boardId" element={<EmbedBoardPage />} />
+
+      {/* CLI sign-in bridge (no chrome; manages its own auth) */}
+      <Route path="/auth/cli" element={<AuthCliPage />} />
 
       {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />
