@@ -13,11 +13,24 @@
   "engines": {
     "node": ">=18"
   },
+  "homepage": "https://board.zeroclickdev.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tmcfarlane/zeroclickboards.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/tmcfarlane/zeroclickboards/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "smoke": "node dist/smoke.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",

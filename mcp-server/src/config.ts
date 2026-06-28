@@ -1,11 +1,14 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-// When this package is published, the public ZeroBoard Supabase URL + anon key
-// are baked in as defaults (both are publishable; RLS enforces per-user access).
-// In-repo they are read from the environment so no secrets are committed.
-const DEFAULT_SUPABASE_URL = '';
-const DEFAULT_SUPABASE_ANON_KEY = '';
+// Public ZeroBoard Supabase project defaults so the published package works with
+// zero configuration. Both values are PUBLISHABLE: the anon key is a `role: anon`
+// JWT (the same one shipped in the web app's browser bundle), and Postgres RLS
+// (`auth.uid() = user_id`) enforces per-user access. The service-role key is
+// never included. Override with ZEROBOARD_SUPABASE_URL / ZEROBOARD_SUPABASE_ANON_KEY.
+const DEFAULT_SUPABASE_URL = 'https://lhupamtkfuntxwosogtz.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxodXBhbXRrZnVudHh3b3NvZ3R6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1OTIwNzEsImV4cCI6MjA3NzE2ODA3MX0.RRzUk5vf5cqvc-gjCua_LMT5UubaM6OJdMJ_LBls88U';
 
 export const SUPABASE_URL =
   process.env.ZEROBOARD_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
