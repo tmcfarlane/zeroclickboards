@@ -93,3 +93,23 @@ export interface FullBoard {
   createdAt: string;
   updatedAt: string;
 }
+
+// Shape returned by the web app's /api/ai/board-template endpoint (the AI board
+// generator the web UI uses). Mirrors that endpoint's response schema.
+export interface TemplateCard {
+  title: string;
+  description?: string;
+  content?: { type: 'text' | 'checklist'; text?: string; checklist?: { text: string }[] };
+  labels?: CardLabel[];
+}
+
+export interface TemplateColumn {
+  title: string;
+  sampleCards?: TemplateCard[];
+}
+
+export interface BoardTemplate {
+  name: string;
+  description?: string;
+  columns: TemplateColumn[];
+}
