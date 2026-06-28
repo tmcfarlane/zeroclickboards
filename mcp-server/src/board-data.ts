@@ -1,0 +1,489 @@
+import { randomUUID } from 'node:crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  type BoardData,
+  type BoardRow,
+  type BoardSummary,
+  type Card,
+  type CardContent,
+  type CardLabel,
+  type Column,
+  type FullBoard,
+} from './types.js';
+
+// ---------------------------------------------------------------------------
+// Helpers — these intentionally mirror src/store/useBoardStore.ts so the MCP
+// server and the web UI read/write the boards.data JSONB identically.
+// ---------------------------------------------------------------------------
+
+const nowIso = (): string => new Date().toISOString();
+const newId = (): string => randomUUID();
+
+function createDefaultColumns(): Column[] {
+  return [
+    { id: newId(), title: 'To Do', cards: [], order: 0 },
+    { id: newId(), title: 'Blocked', cards: [], order: 1 },
+    { id: newId(), title: 'In Progress', cards: [], order: 2 },
+    { id: newId(), title: 'Resolved', cards: [], order: 3 },
+    { id: newId(), title: 'Closed', cards: [], order: 4 },
+  ];
+}
+
+function asRecord(data: unknown): Record<string, unknown> | null {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  return data as Record<string, unknown>;
+}
+
+export function decodeData(data: unknown): BoardData {
+  const rec = asRecord(data);
+  const columns = rec && Array.isArray(rec.columns) ? (rec.columns as unknown as Column[]) : createDefaultColumns();
+  const background = rec && typeof rec.background === 'string' ? rec.background : undefined;
+  const hiddenColumnIds =
+    rec && Array.isArray(rec.hiddenColumnIds)
+      ? (rec.hiddenColumnIds.filter((v) => typeof v === 'string') as string[])
+      : [];
+  return { columns, background, hiddenColumnIds };
+}
+
+/** Re-encode columns into the JSONB shape, preserving background/hiddenColumnIds. */
+function encodeData(columns: Column[], base: BoardData): BoardData {
+  return {
+    columns,
+    ...(base.background ? { background: base.background } : {}),
+    ...(base.hiddenColumnIds && base.hiddenColumnIds.length > 0
+      ? { hiddenColumnIds: base.hiddenColumnIds }
+      : {}),
+  };
+}
+
+const SELECT_COLS = 'id,user_id,name,description,data,created_at,updated_at,is_public,embed_enabled';
+
+function rowToFullBoard(row: BoardRow): FullBoard {
+  const decoded = decodeData(row.data);
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? undefined,
+    columns: decoded.columns,
+    background: decoded.background,
+    hiddenColumnIds: decoded.hiddenColumnIds ?? [],
+    isPublic: row.is_public,
+    embedEnabled: row.embed_enabled,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToSummary(row: BoardRow): BoardSummary {
+  const { columns } = decodeData(row.data);
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description ?? undefined,
+    columnCount: columns.length,
+    cardCount: columns.reduce((n, c) => n + c.cards.length, 0),
+    updatedAt: row.updated_at,
+    createdAt: row.created_at,
+  };
+}
+
+class BoardError extends Error {}
+const notFound = (what: string, id: string): never => {
+  throw new BoardError(`${what} ${id} not found`);
+};
+
+async function getRow(client: SupabaseClient, boardId: string): Promise<BoardRow> {
+  const { data, error } = await client.from('boards').select(SELECT_COLS).eq('id', boardId).single();
+  if (error || !data) return notFound('Board', boardId);
+  return data as unknown as BoardRow;
+}
+
+/**
+ * Read-modify-write the columns of a board's JSONB. Reads the freshest row
+ * immediately before writing to narrow the last-write-wins window (the web app
+ * also overwrites the whole columns array on a debounce — concurrent edits are
+ * last-write-wins; see README "Concurrency").
+ */
+async function mutateColumns(
+  client: SupabaseClient,
+  boardId: string,
+  mutator: (columns: Column[]) => Column[],
+): Promise<FullBoard> {
+  const row = await getRow(client, boardId);
+  const base = decodeData(row.data);
+  const nextColumns = mutator(structuredClone(base.columns));
+  const nextData = encodeData(nextColumns, base);
+  const { data, error } = await client
+    .from('boards')
+    .update({ data: nextData, updated_at: nowIso() })
+    .eq('id', boardId)
+    .select(SELECT_COLS)
+    .single();
+  if (error || !data) throw new BoardError(error?.message ?? 'Update failed');
+  return rowToFullBoard(data as unknown as BoardRow);
+}
+
+function findColumn(columns: Column[], columnId: string): Column {
+  const col = columns.find((c) => c.id === columnId);
+  if (!col) notFound('Column', columnId);
+  return col!;
+}
+
+function locateCard(columns: Column[], cardId: string): { column: Column; card: Card; index: number } {
+  for (const column of columns) {
+    const index = column.cards.findIndex((c) => c.id === cardId);
+    if (index !== -1) return { column, card: column.cards[index], index };
+  }
+  return notFound('Card', cardId);
+}
+
+// ---------------------------------------------------------------------------
+// Boards
+// ---------------------------------------------------------------------------
+
+export async function listBoards(client: SupabaseClient): Promise<BoardSummary[]> {
+  const { data, error } = await client
+    .from('boards')
+    .select(SELECT_COLS)
+    .order('created_at', { ascending: true });
+  if (error) throw new BoardError(error.message);
+  return (data as unknown as BoardRow[]).map(rowToSummary);
+}
+
+export async function getBoard(client: SupabaseClient, boardId: string): Promise<FullBoard> {
+  return rowToFullBoard(await getRow(client, boardId));
+}
+
+export async function createBoard(
+  client: SupabaseClient,
+  userId: string,
+  name: string,
+  description?: string,
+  columns?: Column[],
+): Promise<FullBoard> {
+  const id = newId();
+  const now = nowIso();
+  const data: BoardData = { columns: columns ?? createDefaultColumns() };
+  const { data: row, error } = await client
+    .from('boards')
+    .insert({
+      id,
+      user_id: userId,
+      name,
+      description: description ?? null,
+      data,
+      created_at: now,
+      updated_at: now,
+    })
+    .select(SELECT_COLS)
+    .single();
+  if (error || !row) throw new BoardError(error?.message ?? 'Insert failed');
+  return rowToFullBoard(row as unknown as BoardRow);
+}
+
+export async function updateBoardMeta(
+  client: SupabaseClient,
+  boardId: string,
+  patch: { name?: string; description?: string },
+): Promise<FullBoard> {
+  const update: Record<string, unknown> = { updated_at: nowIso() };
+  if (patch.name !== undefined) update.name = patch.name;
+  if (patch.description !== undefined) update.description = patch.description;
+  const { data, error } = await client
+    .from('boards')
+    .update(update)
+    .eq('id', boardId)
+    .select(SELECT_COLS)
+    .single();
+  if (error || !data) throw new BoardError(error?.message ?? 'Update failed');
+  return rowToFullBoard(data as unknown as BoardRow);
+}
+
+export async function deleteBoard(client: SupabaseClient, boardId: string): Promise<{ id: string }> {
+  const { error } = await client.from('boards').delete().eq('id', boardId);
+  if (error) throw new BoardError(error.message);
+  return { id: boardId };
+}
+
+// ---------------------------------------------------------------------------
+// Columns
+// ---------------------------------------------------------------------------
+
+export function addColumn(client: SupabaseClient, boardId: string, title: string): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const maxOrder = columns.reduce((m, c) => Math.max(m, c.order), -1);
+    return [...columns, { id: newId(), title, cards: [], order: maxOrder + 1 }];
+  });
+}
+
+export function updateColumn(
+  client: SupabaseClient,
+  boardId: string,
+  columnId: string,
+  title: string,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    findColumn(columns, columnId).title = title;
+    return columns;
+  });
+}
+
+export function removeColumn(client: SupabaseClient, boardId: string, columnId: string): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    findColumn(columns, columnId);
+    return columns.filter((c) => c.id !== columnId);
+  });
+}
+
+export function reorderColumns(
+  client: SupabaseClient,
+  boardId: string,
+  orderedColumnIds: string[],
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const map = new Map(columns.map((c) => [c.id, c]));
+    if (orderedColumnIds.some((id) => !map.has(id)) || orderedColumnIds.length !== columns.length) {
+      throw new BoardError('orderedColumnIds must list every existing column id exactly once');
+    }
+    return orderedColumnIds.map((id, index) => ({ ...map.get(id)!, order: index }));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Cards
+// ---------------------------------------------------------------------------
+
+export interface NewCardInput {
+  title: string;
+  description?: string;
+  content?: CardContent;
+  targetDate?: string;
+  labels?: CardLabel[];
+  coverImage?: string;
+}
+
+export function addCard(
+  client: SupabaseClient,
+  boardId: string,
+  columnId: string,
+  input: NewCardInput,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const column = findColumn(columns, columnId);
+    const now = nowIso();
+    const card: Card = {
+      id: newId(),
+      title: input.title,
+      description: input.description,
+      content: input.content ?? { type: 'text', text: '' },
+      targetDate: input.targetDate,
+      labels: input.labels ?? [],
+      coverImage: input.coverImage,
+      isArchived: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    column.cards.push(card);
+    return columns;
+  });
+}
+
+export function updateCard(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  patch: Partial<Pick<Card, 'title' | 'description' | 'content' | 'targetDate' | 'labels' | 'coverImage'>>,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    Object.assign(card, patch, { updatedAt: nowIso() });
+    return columns;
+  });
+}
+
+export function moveCard(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  targetColumnId: string,
+  targetIndex?: number,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { column: sourceColumn, card, index } = locateCard(columns, cardId);
+    const target = findColumn(columns, targetColumnId);
+    sourceColumn.cards.splice(index, 1);
+    const insertAt = targetIndex === undefined ? target.cards.length : Math.max(0, Math.min(targetIndex, target.cards.length));
+    target.cards.splice(insertAt, 0, card);
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+export function removeCard(client: SupabaseClient, boardId: string, cardId: string): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { column } = locateCard(columns, cardId);
+    column.cards = column.cards.filter((c) => c.id !== cardId);
+    return columns;
+  });
+}
+
+export function setCardArchived(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  archived: boolean,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    card.isArchived = archived;
+    card.archivedAt = archived ? nowIso() : undefined;
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+export function duplicateCard(client: SupabaseClient, boardId: string, cardId: string): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { column, card } = locateCard(columns, cardId);
+    const now = nowIso();
+    column.cards.push({ ...structuredClone(card), id: newId(), title: `${card.title} (copy)`, createdAt: now, updatedAt: now });
+    return columns;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Card detail mutations
+// ---------------------------------------------------------------------------
+
+export function addChecklistItem(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  text: string,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    const checklist = card.content.type === 'checklist' && card.content.checklist ? card.content.checklist : [];
+    card.content = { ...card.content, type: 'checklist', checklist: [...checklist, { id: newId(), text, completed: false }] };
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+export function toggleChecklistItem(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  itemId: string,
+  completed?: boolean,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    const items = card.content.checklist;
+    if (!items) throw new BoardError(`Card ${cardId} has no checklist`);
+    const item = items.find((i) => i.id === itemId);
+    if (!item) notFound('Checklist item', itemId);
+    item!.completed = completed ?? !item!.completed;
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+export function setLabel(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  label: CardLabel,
+  present: boolean,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    const labels = new Set(card.labels ?? []);
+    if (present) labels.add(label);
+    else labels.delete(label);
+    card.labels = [...labels];
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+export function setTargetDate(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  targetDate: string | null,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    card.targetDate = targetDate ?? undefined;
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+export function setCoverImage(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  coverImage: string | null,
+): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    card.coverImage = coverImage ?? undefined;
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+export interface SearchHit {
+  boardId: string;
+  boardName: string;
+  columnId: string;
+  columnName: string;
+  cardId: string;
+  cardTitle: string;
+  snippet?: string;
+}
+
+function cardText(card: Card): string {
+  const parts = [card.title, card.description ?? '', card.content.text ?? ''];
+  if (card.content.checklist) parts.push(...card.content.checklist.map((i) => i.text));
+  return parts.join('\n');
+}
+
+export async function search(
+  client: SupabaseClient,
+  query: string,
+  includeArchived = false,
+): Promise<SearchHit[]> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const { data, error } = await client.from('boards').select(SELECT_COLS);
+  if (error) throw new BoardError(error.message);
+  const hits: SearchHit[] = [];
+  for (const row of data as unknown as BoardRow[]) {
+    const { columns } = decodeData(row.data);
+    for (const column of columns) {
+      for (const card of column.cards) {
+        if (card.isArchived && !includeArchived) continue;
+        const text = cardText(card);
+        if (text.toLowerCase().includes(q)) {
+          hits.push({
+            boardId: row.id,
+            boardName: row.name,
+            columnId: column.id,
+            columnName: column.title,
+            cardId: card.id,
+            cardTitle: card.title,
+            snippet: card.description || card.content.text || undefined,
+          });
+        }
+      }
+    }
+  }
+  return hits;
+}
