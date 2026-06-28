@@ -38,20 +38,30 @@ function upsertEnv(text, key, value) {
 }
 
 async function main() {
-  let envText = readFileSync(ENV_PATH, 'utf8')
+  // Local runs read .env.local; CI passes everything via process.env (secrets),
+  // where no .env.local exists — tolerate its absence.
+  let envText = ''
+  try {
+    envText = readFileSync(ENV_PATH, 'utf8')
+  } catch {
+    /* no .env.local (e.g. CI) */
+  }
   const env = parseEnv(envText)
+  const pick = (key) => process.env[key] || env[key]
 
-  const url = env.VITE_SUPABASE_URL
-  const anon = env.VITE_SUPABASE_ANON_KEY
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
+  const url = pick('VITE_SUPABASE_URL')
+  const anon = pick('VITE_SUPABASE_ANON_KEY')
+  const serviceKey = pick('SUPABASE_SERVICE_ROLE_KEY')
   if (!url || !anon || !serviceKey) {
-    throw new Error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY in .env.local')
+    throw new Error(
+      'Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY (set in .env.local or the environment)',
+    )
   }
 
   // Stable, clearly-non-production identity (plus-addressed so it is deliverable
   // but obviously a test account). Password is generated once and reused.
-  const email = env.E2E_EMAIL || 'e2e+playwright@zeroclickdev.ai'
-  const password = env.E2E_PASSWORD || `Pw-${randomBytes(12).toString('base64url')}`
+  const email = pick('E2E_EMAIL') || 'e2e+playwright@zeroclickdev.ai'
+  const password = pick('E2E_PASSWORD') || `Pw-${randomBytes(12).toString('base64url')}`
 
   const admin = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
