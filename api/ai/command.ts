@@ -185,7 +185,7 @@ export default async function handler(req: unknown, res: NodeRes) {
   }
 
   const apiKey = process.env.AI_GATEWAY_API_KEY?.trim();
-  const modelId = (process.env.AI_GATEWAY_MODEL || 'gpt-5.2').trim();
+  const modelId = (process.env.AI_GATEWAY_MODEL || 'anthropic/claude-haiku-4.5').trim();
 
   if (!apiKey) {
     return sendJson(res, 500, { error: 'Missing AI_GATEWAY_API_KEY' });
