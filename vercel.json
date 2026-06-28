@@ -44,6 +44,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/auth/cli",
+      "destination": "/index.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/index.html"
     },

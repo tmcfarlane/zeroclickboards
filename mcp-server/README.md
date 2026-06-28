@@ -7,8 +7,12 @@ An [MCP](https://modelcontextprotocol.io) server for **ZeroBoard** — manage yo
 ## Quick start
 
 ```bash
-# Sign in once (stores a refreshable session under ~/.zeroboard)
+# Sign in once — opens your browser (Google or email); stores a refreshable
+# session under ~/.zeroboard.
 npx -y @zeroclickdev/zeroboard-mcp login
+
+# Headless / no browser? Use password sign-in instead:
+ZEROBOARD_EMAIL=you@example.com ZEROBOARD_PASSWORD=… npx -y @zeroclickdev/zeroboard-mcp login --password
 
 # Check who you are
 npx -y @zeroclickdev/zeroboard-mcp status
@@ -57,7 +61,9 @@ Destructive tools (`delete_board`, `delete_card`, `remove_column`) carry a `dest
 ## Auth & security
 
 - Uses **Supabase Auth** with the public anon key only — **never** the service‑role key. Postgres **RLS** (`auth.uid() = user_id`) enforces that you only ever see/modify your own data.
-- `login` stores `{ access_token, refresh_token }` in `~/.zeroboard/credentials.json` (mode `0600`). The long‑lived server auto‑refreshes the access token and rewrites the rotated refresh token. `logout` wipes it.
+- `login` opens the ZeroBoard web app's `/auth/cli` page, which signs you in with the app's normal Supabase auth (Google or email) and hands the session back to a short‑lived loopback listener on `127.0.0.1`, gated by a one‑time random `state`. No password is typed into the CLI. (`--password` / `ZEROBOARD_EMAIL`+`ZEROBOARD_PASSWORD` do a headless password grant instead.)
+- The CLI validates the delivered session before accepting it, so a stale/expired session is rejected rather than stored.
+- It stores `{ access_token, refresh_token }` in `~/.zeroboard/credentials.json` (mode `0600`). The long‑lived server auto‑refreshes the access token and rewrites the rotated refresh token. `logout` wipes it.
 - Card titles/contents are returned verbatim to your agent. As with any data source, treat board text as **untrusted input** (possible prompt injection) — the server never executes it.
 
 ## Concurrency
@@ -69,7 +75,9 @@ Board columns/cards live in a single `boards.data` JSONB blob (the same source o
 | Env var | Purpose |
 | --- | --- |
 | `ZEROBOARD_SUPABASE_URL` / `ZEROBOARD_SUPABASE_ANON_KEY` | Override the target project (defaults baked in at publish; fall back to `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`) |
-| `ZEROBOARD_EMAIL` / `ZEROBOARD_PASSWORD` | Non‑interactive `login` credentials |
+| `ZEROBOARD_EMAIL` / `ZEROBOARD_PASSWORD` | Non‑interactive `login --password` credentials |
+| `ZEROBOARD_WEB_URL` | ZeroBoard web app base URL for browser login (default `https://board.zeroclickdev.ai`) |
+| `ZEROBOARD_NO_BROWSER=1` | Don't auto‑open a browser during `login` (just print the URL) |
 | `ZEROBOARD_READONLY=1` | Read‑only mode |
 
 ## Development
@@ -82,7 +90,7 @@ npm run smoke   # exercises the data layer against real Supabase (needs E2E_EMAI
 
 ## Roadmap
 
-- Browser **PKCE login** via a hosted `/auth/cli` route (Google OAuth + email), replacing password‑grant `login`.
+- ✅ Browser login via the hosted `/auth/cli` route (Google + email) — done; a future hardening is a full server-side PKCE code exchange (the current flow binds the loopback delivery with a one‑time `state` and validates the session before storing).
 - `generate_board` tool backed by the existing `/api/ai/board-template` endpoint.
 - A dedicated `/api/v1` layer for scoped/read‑only tokens, audit logging, and conditional updates.
 - Realtime: a `list_changes(since)` poll tool and (where clients support it) resource‑update notifications.

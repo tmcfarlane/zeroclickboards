@@ -7,7 +7,8 @@ const HELP = `zeroboard-mcp — ZeroBoard MCP server
 Usage:
   zeroboard-mcp [serve]      Start the MCP server over stdio (default)
   zeroboard-mcp --read-only  Start in read-only mode (no write tools)
-  zeroboard-mcp login        Sign in (\`--email\`/\`--password\` or ZEROBOARD_EMAIL/PASSWORD, else prompts)
+  zeroboard-mcp login        Sign in via the browser (Google or email). Use \`--password\`
+                             (or ZEROBOARD_EMAIL/PASSWORD) for headless password sign-in.
   zeroboard-mcp logout       Clear stored credentials
   zeroboard-mcp status       Show the signed-in account
 `;

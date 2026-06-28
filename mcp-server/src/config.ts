@@ -13,6 +13,9 @@ export const SUPABASE_URL =
 export const SUPABASE_ANON_KEY =
   process.env.ZEROBOARD_SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY;
 
+/** The ZeroBoard web app, used for the browser sign-in (`/auth/cli`) flow. */
+export const WEB_BASE_URL = (process.env.ZEROBOARD_WEB_URL ?? 'https://board.zeroclickdev.ai').replace(/\/$/, '');
+
 /** Read-only mode: only non-mutating tools are registered. */
 export const READ_ONLY =
   process.env.ZEROBOARD_READONLY === '1' || process.argv.includes('--read-only');
