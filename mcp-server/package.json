@@ -1,0 +1,39 @@
+{
+  "name": "@zeroclickdev/zeroboard-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for ZeroBoard — manage your boards, columns, and cards from any MCP-compatible agent (Claude Code, Cursor, Zed, Windsurf).",
+  "type": "module",
+  "bin": {
+    "zeroboard-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "smoke": "node dist/smoke.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "kanban",
+    "zeroboard",
+    "supabase"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.0",
+    "@supabase/supabase-js": "^2.56.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

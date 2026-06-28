@@ -92,3 +92,21 @@ jobs:
     # test user (its data is sandboxed from real users). For full isolation from
     # production data, point VITE_SUPABASE_URL/ANON at an ephemeral Supabase branch
     # created per-run (supabase branches) instead of the main project.
+
+  mcp-server:
+    name: MCP Server Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      # The data-layer smoke test (npm run smoke) needs Supabase + E2E creds and
+      # writes to a live project, so it is run locally/manually, not in CI.
