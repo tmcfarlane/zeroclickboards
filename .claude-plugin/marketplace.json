@@ -1,0 +1,15 @@
+{
+  "name": "zeroclickdev",
+  "owner": { "name": "ZeroClickDev" },
+  "description": "Official ZeroClickDev Claude Code plugins.",
+  "plugins": [
+    {
+      "name": "zeroboard",
+      "source": "./plugin",
+      "description": "Manage your ZeroBoard kanban boards from Claude Code — MCP server + standup/triage commands + a meeting-transcript-to-cards skill.",
+      "version": "0.1.0",
+      "homepage": "https://board.zeroclickdev.ai",
+      "keywords": ["mcp", "kanban", "zeroboard", "project-management"]
+    }
+  ]
+}

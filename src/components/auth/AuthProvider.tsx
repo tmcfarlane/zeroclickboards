@@ -10,7 +10,10 @@ export interface AuthContextValue {
   user: User | null;
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>;
   signOut: () => Promise<{ error: string | null }>;
 }
 
@@ -87,11 +90,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return { error: error?.message ?? null };
       },
       signUpWithEmail: async (email, password) => {
-        const { error } = await supabase.auth.signUp({ email, password });
-        return { error: error?.message ?? null };
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        // When email confirmation is enabled, signUp succeeds with no session —
+        // the user is NOT signed in yet and must confirm via email first.
+        return { error: error?.message ?? null, needsEmailConfirmation: !error && !data?.session };
       },
       signOut: async () => {
-        const { error } = await supabase.auth.signOut();
+        // Local scope only: a routine sign-out should not revoke the user's
+        // sessions on their other devices (the default 'global' scope would).
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
         return { error: error?.message ?? null };
       },
     };

@@ -43,6 +43,56 @@ jobs:
           VITE_SUPABASE_URL: https://placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-key
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # Secrets are unavailable on forked PRs; only attempt e2e on same-repo runs.
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Skip (rather than fail) when the repo owner hasn't configured the
+      # Supabase/E2E secrets yet, so this job never blocks CI unexpectedly.
+      - name: Check for required secrets
+        id: guard
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Supabase/E2E secrets not configured — skipping e2e."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install Playwright browser
+        if: steps.guard.outputs.run == 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Provision dedicated test user
+        if: steps.guard.outputs.run == 'true'
+        run: npm run test:e2e:setup
+      - name: Run Playwright e2e
+        if: steps.guard.outputs.run == 'true'
+        run: npm run test:e2e
+      - name: Upload report on failure
+        if: ${{ steps.guard.outputs.run == 'true' && failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+    # NOTE: e2e runs against the project's Supabase using a dedicated, RLS-isolated
+    # test user (its data is sandboxed from real users). For full isolation from
+    # production data, point VITE_SUPABASE_URL/ANON at an ephemeral Supabase branch
+    # created per-run (supabase branches) instead of the main project.
+
   mcp-server:
     name: MCP Server Build
     runs-on: ubuntu-latest

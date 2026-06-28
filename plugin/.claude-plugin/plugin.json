@@ -1,0 +1,17 @@
+{
+  "name": "zeroboard",
+  "displayName": "ZeroBoard",
+  "version": "0.1.0",
+  "description": "Manage your ZeroBoard kanban boards, columns, and cards from Claude Code — bundles the ZeroBoard MCP server plus standup/triage commands and a meeting-transcript-to-cards skill.",
+  "author": { "name": "ZeroClickDev" },
+  "homepage": "https://board.zeroclickdev.ai",
+  "repository": "https://github.com/tmcfarlane/zeroclickboards",
+  "license": "MIT",
+  "keywords": ["mcp", "kanban", "zeroboard", "project-management"],
+  "mcpServers": {
+    "zeroboard": {
+      "command": "npx",
+      "args": ["-y", "@zeroclickdev/zeroboard-mcp"]
+    }
+  }
+}
