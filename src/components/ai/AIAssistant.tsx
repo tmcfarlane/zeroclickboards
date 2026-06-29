@@ -61,6 +61,7 @@ async function parseCommandWithAI(
   context: string,
   lastCommand?: { type: string; params: Record<string, unknown> },
   accessToken?: string | null,
+  boardId?: string | null,
 ): Promise<AIResponse> {
   try {
     const headers: Record<string, string> = {
@@ -72,7 +73,7 @@ async function parseCommandWithAI(
     const res = await fetch("/api/ai/command", {
       method: "POST",
       headers,
-      body: JSON.stringify({ text: input, context, lastCommand }),
+      body: JSON.stringify({ text: input, context, lastCommand, boardId }),
       signal: AbortSignal.timeout(35_000),
     });
 
@@ -725,6 +726,25 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       return typeof value === "string" ? value : undefined;
     };
 
+    // Phase 1b: the server resolves titles to concrete ids and includes them in
+    // params (cardId / columnId / toColumnId). Prefer those ids when present —
+    // this disambiguates same-titled cards. When absent, the existing
+    // title-based matching below runs unchanged.
+    const cardById = () => {
+      const id = getString("cardId");
+      if (!id) return null;
+      for (const column of activeBoard?.columns ?? []) {
+        const card = column.cards.find((c) => c.id === id);
+        if (card) return { column, card };
+      }
+      return null;
+    };
+    const columnById = (key: string) => {
+      const id = getString(key);
+      if (!id) return null;
+      return activeBoard?.columns.find((c) => c.id === id) ?? null;
+    };
+
     switch (command.type) {
       case "create_board": {
         const name = getString("name") || "New Board";
@@ -742,6 +762,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "remove_column": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          removeColumn(activeBoardId, colHit.id);
+          return `Removed column "${colHit.title}"`;
+        }
         const title = getString("title");
         const column = activeBoard?.columns.find((c) =>
           title ? c.title.toLowerCase() === title.toLowerCase() : false,
@@ -756,6 +781,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "rename_column": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          const toTitle = getString("toTitle") || "Renamed Column";
+          renameColumn(activeBoardId, colHit.id, toTitle);
+          return `Renamed column to "${toTitle}"`;
+        }
         const fromTitle = getString("fromTitle");
         const toTitle = getString("toTitle") || "Renamed Column";
         const column = activeBoard?.columns.find((c) =>
@@ -776,7 +807,10 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
         const title = getString("title") || "New Task";
         const columnTitle = getString("columnTitle");
 
-        if (columnTitle) {
+        const colById = columnById("columnId");
+        if (colById) {
+          columnId = colById.id;
+        } else if (columnTitle) {
           const column = activeBoard?.columns.find((c) =>
             c.title.toLowerCase().includes(columnTitle.toLowerCase()),
           );
@@ -810,6 +844,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "remove_card": {
         if (!activeBoardId) return "No active board.";
+        const rmHit = cardById();
+        if (rmHit) {
+          removeCard(activeBoardId, rmHit.column.id, rmHit.card.id);
+          lastCardTitle.current = rmHit.card.title;
+          return `Removed card "${rmHit.card.title}"`;
+        }
         let removed = false;
         const title = getString("title") || lastCardTitle.current || undefined;
         activeBoard?.columns.forEach((column) => {
@@ -831,6 +871,28 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "move_card": {
         if (!activeBoardId) return "No active board.";
+
+        const mvHit = cardById();
+        if (mvHit) {
+          // Card resolved by id — resolve the destination by id first, else by
+          // title. (Don't fall back to re-searching the card by title, which
+          // could match a different same-titled card.)
+          const moveToTitle = getString("toColumnTitle");
+          const targetColumn =
+            columnById("toColumnId") ??
+            (moveToTitle
+              ? activeBoard?.columns.find((c) =>
+                  c.title.toLowerCase().includes(moveToTitle.toLowerCase()),
+                )
+              : undefined);
+          if (!targetColumn)
+            return moveToTitle
+              ? `Column "${moveToTitle}" not found.`
+              : "Column not found.";
+          moveCard(activeBoardId, mvHit.column.id, targetColumn.id, mvHit.card.id);
+          lastCardTitle.current = mvHit.card.title;
+          return `Moved "${mvHit.card.title}" to ${targetColumn.title}`;
+        }
 
         let sourceColumnId: string | undefined;
         let cardId: string | undefined;
@@ -929,6 +991,13 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
           return `Set due date to ${targetDate} on ${count} card${count !== 1 ? "s" : ""}${filter}${scope}`;
         }
 
+        const dateHit = cardById();
+        if (dateHit) {
+          editCard(activeBoardId, dateHit.column.id, dateHit.card.id, { targetDate });
+          lastCardTitle.current = dateHit.card.title;
+          return `Set due date for "${dateHit.card.title}" to ${targetDate}`;
+        }
+
         let updated = false;
         const cardTitle =
           getString("cardTitle") || lastCardTitle.current || undefined;
@@ -954,6 +1023,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "extract_card_json": {
         if (!activeBoardId) return "No active board.";
+        const exHit = cardById();
+        if (exHit) {
+          lastCardTitle.current = exHit.card.title;
+          downloadJson(exHit.card, `card-${exHit.card.title.toLowerCase().replace(/\s+/g, "-")}`);
+          return `Downloaded JSON for card "${exHit.card.title}"`;
+        }
         const cardTitle =
           getString("cardTitle") || lastCardTitle.current || undefined;
         if (!cardTitle)
@@ -976,6 +1051,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "extract_column_json": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          downloadJson(colHit, `column-${colHit.title.toLowerCase().replace(/\s+/g, "-")}`);
+          return `Downloaded JSON for column "${colHit.title}" (${colHit.cards.length} cards)`;
+        }
         const columnTitle = getString("columnTitle");
         if (!columnTitle) return "Please specify a column name.";
         const column = activeBoard?.columns.find((c) =>
@@ -991,6 +1071,13 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "clear_column": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          const cardCount = colHit.cards.length;
+          if (cardCount === 0) return `Column "${colHit.title}" is already empty.`;
+          colHit.cards.forEach((card) => removeCard(activeBoardId, colHit.id, card.id));
+          return `Cleared ${cardCount} card${cardCount !== 1 ? "s" : ""} from "${colHit.title}"`;
+        }
         const columnTitle = getString("columnTitle");
         if (!columnTitle) return "Please specify a column name.";
         const column = activeBoard?.columns.find((c) =>
@@ -1008,6 +1095,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "count_cards": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          const active = colHit.cards.filter((c) => !c.isArchived).length;
+          return `"${colHit.title}" has ${active} card${active !== 1 ? "s" : ""}`;
+        }
         const columnTitle = getString("columnTitle");
         if (columnTitle) {
           const column = activeBoard?.columns.find((c) =>
@@ -1035,6 +1127,13 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
         const cardTitle =
           getString("cardTitle") || lastCardTitle.current || undefined;
         const newTitle = getString("newTitle");
+        const rnHit = cardById();
+        if (rnHit) {
+          if (!newTitle) return "Please specify the new title.";
+          editCard(activeBoardId, rnHit.column.id, rnHit.card.id, { title: newTitle });
+          lastCardTitle.current = newTitle;
+          return `Renamed "${rnHit.card.title}" to "${newTitle}"`;
+        }
         if (!cardTitle)
           return "No card specified and no previous card to reference.";
         if (!newTitle) return "Please specify the new title.";
@@ -1082,6 +1181,14 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
             : `All cards already have the ${label} label`;
         }
 
+        const lblHit = cardById();
+        if (lblHit) {
+          const existing = lblHit.card.labels ?? [];
+          if (existing.includes(label)) return `"${lblHit.card.title}" already has the ${label} label`;
+          editCard(activeBoardId, lblHit.column.id, lblHit.card.id, { labels: [...existing, label] });
+          lastCardTitle.current = lblHit.card.title;
+          return `Added ${label} label to "${lblHit.card.title}"`;
+        }
         if (!cardTitle) return "No card specified and no previous card to reference.";
         for (const column of activeBoard?.columns ?? []) {
           const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
@@ -1120,6 +1227,14 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
             : `No cards have the ${label} label`;
         }
 
+        const rmLblHit = cardById();
+        if (rmLblHit) {
+          const existing = rmLblHit.card.labels ?? [];
+          if (!existing.includes(label)) return `"${rmLblHit.card.title}" doesn't have the ${label} label`;
+          editCard(activeBoardId, rmLblHit.column.id, rmLblHit.card.id, { labels: existing.filter((l) => l !== label) });
+          lastCardTitle.current = rmLblHit.card.title;
+          return `Removed ${label} label from "${rmLblHit.card.title}"`;
+        }
         if (!cardTitle) return "No card specified and no previous card to reference.";
         for (const column of activeBoard?.columns ?? []) {
           const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
@@ -1163,6 +1278,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
             : "No cards found to update.";
         }
 
+        const clHit = cardById();
+        if (clHit) {
+          editCard(activeBoardId, clHit.column.id, clHit.card.id, { content: buildChecklist(clHit.card.content) });
+          lastCardTitle.current = clHit.card.title;
+          return `Added checklist (${items.length} items) to "${clHit.card.title}"`;
+        }
         if (!cardTitle) return "No card specified and no previous card to reference.";
         for (const column of activeBoard?.columns ?? []) {
           const card = column.cards.find((c) => c.title.toLowerCase().includes(cardTitle.toLowerCase()));
@@ -1179,6 +1300,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
         if (!activeBoardId) return "No active board.";
         const description = getString("description");
         if (!description) return "Please specify a description.";
+        const sdHit = cardById();
+        if (sdHit) {
+          editCard(activeBoardId, sdHit.column.id, sdHit.card.id, { description });
+          lastCardTitle.current = sdHit.card.title;
+          return `Set description for "${sdHit.card.title}"`;
+        }
         const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
         if (!cardTitle) return "No card specified and no previous card to reference.";
         for (const column of activeBoard?.columns ?? []) {
@@ -1194,6 +1321,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "archive_card": {
         if (!activeBoardId) return "No active board.";
+        const arHit = cardById();
+        if (arHit) {
+          archiveCard(activeBoardId, arHit.column.id, arHit.card.id);
+          lastCardTitle.current = arHit.card.title;
+          return `Archived "${arHit.card.title}"`;
+        }
         const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
         if (!cardTitle) return "No card specified and no previous card to reference.";
         for (const column of activeBoard?.columns ?? []) {
@@ -1209,6 +1342,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "restore_card": {
         if (!activeBoardId) return "No active board.";
+        const rsHit = cardById();
+        if (rsHit) {
+          restoreCard(activeBoardId, rsHit.column.id, rsHit.card.id);
+          lastCardTitle.current = rsHit.card.title;
+          return `Restored "${rsHit.card.title}"`;
+        }
         const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
         if (!cardTitle) return "No card specified and no previous card to reference.";
         for (const column of activeBoard?.columns ?? []) {
@@ -1224,6 +1363,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "duplicate_card": {
         if (!activeBoardId) return "No active board.";
+        const dpHit = cardById();
+        if (dpHit) {
+          duplicateCard(activeBoardId, dpHit.column.id, dpHit.card.id);
+          lastCardTitle.current = dpHit.card.title;
+          return `Duplicated "${dpHit.card.title}"`;
+        }
         const cardTitle = getString("cardTitle") || lastCardTitle.current || undefined;
         if (!cardTitle) return "No card specified and no previous card to reference.";
         for (const column of activeBoard?.columns ?? []) {
@@ -1285,6 +1430,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       boardContext,
       lastCommand,
       session?.access_token,
+      activeBoardId,
     );
 
     // Update usage from response — only update counter when charged
@@ -1292,9 +1438,15 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       updateUsage(aiResponse.usage);
     }
 
-    // Handle timeout — fall back to local parser
-    if (aiResponse.timedOut) {
-      console.warn("[AI Command] Gateway timed out, falling back to local parser");
+    // The AI service is unavailable when it returns no commands (gateway error,
+    // timeout, or invalid output). In that case we fall back to the local regex
+    // parser — but make it visible rather than silent.
+    const usedFallback = aiResponse.commands === null && !aiResponse.limitReached;
+    if (usedFallback) {
+      console.warn(
+        "[AI Command] AI service unavailable — using local fallback parser",
+        { timedOut: aiResponse.timedOut ?? false },
+      );
     }
 
     // Handle daily limit reached
@@ -1353,6 +1505,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       timestamp: new Date().toISOString(),
       command: commands[0],
       commands: commands.length > 1 ? commands : undefined,
+      fallback: usedFallback,
     };
 
     setMessages((prev) => [...prev, assistantMessage]);
@@ -1487,6 +1640,16 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
                   </div>
                 ) : (
                   <div className="whitespace-pre-line">{message.content}</div>
+                )}
+                {message.fallback && message.role === "assistant" && (
+                  <p
+                    className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-400/80 italic"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                    AI service was unavailable — used basic parsing, so this may be less accurate.
+                  </p>
                 )}
               </div>
             </div>
