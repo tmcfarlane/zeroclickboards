@@ -16,6 +16,8 @@ import {
   type NodeRes,
 } from '../_lib/auth.js';
 import { boardCore } from '../_lib/board-core.js';
+import type { FullBoard } from '../_lib/board-core.js';
+import { resolveCommandIds } from '../_lib/resolve-commands.js';
 
 export const config = {
   runtime: 'nodejs',
@@ -74,6 +76,23 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + '…[truncated]' : s;
 }
 
+// Compact, id-annotated snapshot of a board for the model context. Includes ids
+// so the model can reference existing cards/columns precisely; excludes archived
+// cards and heavy fields to keep the context small.
+function compactBoard(board: FullBoard) {
+  return {
+    boardId: board.id,
+    boardName: board.name,
+    columns: board.columns.map((c) => ({
+      id: c.id,
+      title: c.title,
+      cards: c.cards
+        .filter((card) => !card.isArchived)
+        .map((card) => ({ id: card.id, title: card.title })),
+    })),
+  };
+}
+
 const SYSTEM_PROMPT = `You are a command planner for a Trello-like kanban app. Your job is to translate a user's request into one or more structured board commands, then submit them by calling the \`submit_commands\` tool exactly once.
 
 ## Security rules
@@ -88,6 +107,9 @@ const SYSTEM_PROMPT = `You are a command planner for a Trello-like kanban app. Y
 - \`submit_commands\` { commands }: REQUIRED final step. Submit the full ordered list of commands to run. Call this exactly once.
 
 Most requests need no search — the active board is already in <board_context>. Only use \`search\`/\`get_board\` when the target isn't in <board_context>. Always finish by calling \`submit_commands\`.
+
+## Using ids
+When <board_context> includes ids (fields like "id" on columns and cards), and a command operates on an EXISTING card or column, copy the exact id verbatim into the command params: \`cardId\` for the target card, \`columnId\` for a target column, \`toColumnId\` for a move's destination. This disambiguates cards that share a title. Do NOT set ids for items you are creating (e.g. a new add_card). If you are unsure of an id, omit it and rely on the title field — the server resolves titles to ids as a fallback.
 
 ## Supported command types
 create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, edit_card, remove_card, move_card, set_target_date, switch_view, extract_card_json, extract_column_json, clear_column, count_cards, rename_card, add_label, remove_label, add_checklist, set_description, archive_card, restore_card, duplicate_card, unknown
@@ -214,8 +236,34 @@ export default async function handler(req: unknown, res: NodeRes) {
   }
 
   const text = truncate(rawText, MAX_TEXT_LEN);
-  const context = truncate(rawContext, MAX_CONTEXT_LEN);
   const lastCommand = truncate(rawLastCmd, MAX_LAST_CMD_LEN);
+  const boardId = typeof body?.boardId === 'string' ? body.boardId : undefined;
+
+  const gateway = createOpenAI({
+    baseURL: 'https://ai-gateway.vercel.sh/v1',
+    apiKey,
+  });
+
+  // Supabase client scoped to the user (RLS-enforced). The read tools below run
+  // against the user's real boards so the model is grounded in actual board
+  // state — eliminating the title-only guessing of the previous parser.
+  const supabase = createAuthenticatedClient(authUser.token);
+
+  // Fetch the active board up front (with ids) when the client tells us which
+  // board it's on. This grounds the model with authoritative state AND lets us
+  // resolve the model's title references to concrete ids afterwards (Phase 1b).
+  const activeBoard: FullBoard | null = boardId
+    ? await boardCore.getBoard(supabase, boardId).catch((err) => {
+        console.error('[ai/command] getBoard failed:', err instanceof Error ? err.message : err);
+        return null;
+      })
+    : null;
+
+  // Prefer an id-annotated snapshot of the real board over the client's
+  // title-only context, so the model can reference existing items by id.
+  const context = activeBoard
+    ? truncate(JSON.stringify(compactBoard(activeBoard)), MAX_CONTEXT_LEN)
+    : truncate(rawContext, MAX_CONTEXT_LEN);
 
   // Wrap untrusted inputs in XML tags. The model is instructed (system prompt
   // § Security rules) to treat tag contents as data, not instructions. This
@@ -234,16 +282,6 @@ export default async function handler(req: unknown, res: NodeRes) {
     text,
     '</user_request>',
   ].join('\n');
-
-  const gateway = createOpenAI({
-    baseURL: 'https://ai-gateway.vercel.sh/v1',
-    apiKey,
-  });
-
-  // Supabase client scoped to the user (RLS-enforced). The read tools below run
-  // against the user's real boards so the model is grounded in actual board
-  // state — eliminating the title-only guessing of the previous parser.
-  const supabase = createAuthenticatedClient(authUser.token);
 
   // The model delivers its result by calling `submit_commands`. We capture the
   // args here rather than scraping JSON out of free text — tool-calling gives
@@ -310,11 +348,16 @@ export default async function handler(req: unknown, res: NodeRes) {
 
   const tGateway = performance.now();
 
-  const commands = out.commands;
-  if (!commands || commands.length === 0) {
+  const rawCommands = out.commands;
+  if (!rawCommands || rawCommands.length === 0) {
     console.error('[ai/command] model did not submit any commands');
     return sendJson(res, 502, { error: 'AI did not produce any commands' });
   }
+
+  // Resolve title references to concrete ids against the authoritative board.
+  // Backfills ids the model didn't supply; preserves any it did. The client
+  // prefers ids and falls back to the title params when an id is absent.
+  const commands = activeBoard ? resolveCommandIds(activeBoard, rawCommands) : rawCommands;
 
   const resolvedType = commands[0]?.type ?? 'unknown';
   const isCharged = resolvedType !== 'unknown';
