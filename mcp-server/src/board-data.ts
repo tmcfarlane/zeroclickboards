@@ -9,6 +9,7 @@ import {
   type CardLabel,
   type Column,
   type FullBoard,
+  type BoardTemplate,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -179,6 +180,40 @@ export async function createBoard(
     .single();
   if (error || !row) throw new BoardError(error?.message ?? 'Insert failed');
   return rowToFullBoard(row as unknown as BoardRow);
+}
+
+/** Create a board from an AI-generated template (maps template cards to Cards). */
+export function createBoardFromTemplate(
+  client: SupabaseClient,
+  userId: string,
+  template: BoardTemplate,
+): Promise<FullBoard> {
+  const now = nowIso();
+  const columns: Column[] = template.columns.map((col, i) => ({
+    id: newId(),
+    title: col.title,
+    order: i,
+    cards: (col.sampleCards ?? []).map((c): Card => {
+      const content: CardContent =
+        c.content?.type === 'checklist'
+          ? {
+              type: 'checklist',
+              checklist: (c.content.checklist ?? []).map((it) => ({ id: newId(), text: it.text, completed: false })),
+            }
+          : { type: 'text', text: c.content?.text ?? '' };
+      return {
+        id: newId(),
+        title: c.title,
+        description: c.description,
+        content,
+        labels: c.labels ?? [],
+        isArchived: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }),
+  }));
+  return createBoard(client, userId, template.name, template.description, columns);
 }
 
 export async function updateBoardMeta(

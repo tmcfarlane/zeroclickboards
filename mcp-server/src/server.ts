@@ -6,6 +6,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { READ_ONLY } from './config.js';
 import { getAuthedClient, NotAuthenticatedError } from './supabase.js';
 import * as db from './board-data.js';
+import { generateBoardTemplate } from './ai.js';
 import { CARD_LABELS, type CardContent, type CardLabel } from './types.js';
 
 const text = (data: unknown): CallToolResult => ({
@@ -112,6 +113,24 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
     'create_board',
     { title: 'Create board', description: 'Create a new board with the default columns.', inputSchema: { name: z.string(), description: z.string().optional() } },
     async ({ name, description }) => safe(() => db.createBoard(client, user.id, name, description)),
+  );
+
+  server.registerTool(
+    'generate_board',
+    {
+      title: 'Generate board (AI)',
+      description:
+        'Create a new board from a natural-language description using ZeroBoard AI (e.g. "a sprint board for a mobile app launch"). Subject to the daily AI limit on the free plan.',
+      inputSchema: { prompt: z.string().describe('What the board is for') },
+    },
+    async ({ prompt }) =>
+      safe(async () => {
+        const { data } = await client.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) throw new Error('No active session — run `zeroboard-mcp login`.');
+        const template = await generateBoardTemplate(prompt, token);
+        return db.createBoardFromTemplate(client, user.id, template);
+      }),
   );
 
   server.registerTool(
