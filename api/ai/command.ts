@@ -1,4 +1,4 @@
-import { generateText, tool, stepCountIs, hasToolCall } from 'ai';
+import { generateText, tool, stepCountIs } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import {
@@ -76,21 +76,41 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + '…[truncated]' : s;
 }
 
-// Compact, id-annotated snapshot of a board for the model context. Includes ids
-// so the model can reference existing cards/columns precisely; excludes archived
-// cards and heavy fields to keep the context small.
-function compactBoard(board: FullBoard) {
-  return {
+// Build a compact, id-annotated snapshot of a board for the model context.
+// Includes ids so the model can reference existing cards/columns precisely.
+// Stays within `maxLen` by dropping whole {id,title} card entries at a SEMANTIC
+// boundary rather than slicing the JSON mid-string — so every id the model sees
+// is complete and the context is always valid JSON. Archived cards are excluded.
+function compactBoardContext(board: FullBoard, maxLen: number): string {
+  const snapshot: {
+    boardId: string;
+    boardName: string;
+    columns: { id: string; title: string; cards: { id: string; title: string }[] }[];
+    truncated?: boolean;
+  } = {
     boardId: board.id,
     boardName: board.name,
-    columns: board.columns.map((c) => ({
-      id: c.id,
-      title: c.title,
-      cards: c.cards
-        .filter((card) => !card.isArchived)
-        .map((card) => ({ id: card.id, title: card.title })),
-    })),
+    columns: board.columns.map((c) => ({ id: c.id, title: c.title, cards: [] })),
   };
+  // Column ids/titles are essential, so they're always included; cards are
+  // filled greedily until the budget is reached.
+  let used = JSON.stringify(snapshot).length;
+  let truncated = false;
+  outer: for (let i = 0; i < board.columns.length; i++) {
+    for (const card of board.columns[i].cards) {
+      if (card.isArchived) continue;
+      const entry = { id: card.id, title: card.title };
+      const cost = JSON.stringify(entry).length + 1; // +1 for the joining comma
+      if (used + cost > maxLen) {
+        truncated = true;
+        break outer;
+      }
+      snapshot.columns[i].cards.push(entry);
+      used += cost;
+    }
+  }
+  if (truncated) snapshot.truncated = true;
+  return JSON.stringify(snapshot);
 }
 
 const SYSTEM_PROMPT = `You are a command planner for a Trello-like kanban app. Your job is to translate a user's request into one or more structured board commands, then submit them by calling the \`submit_commands\` tool exactly once.
@@ -109,7 +129,7 @@ const SYSTEM_PROMPT = `You are a command planner for a Trello-like kanban app. Y
 Most requests need no search — the active board is already in <board_context>. Only use \`search\`/\`get_board\` when the target isn't in <board_context>. Always finish by calling \`submit_commands\`.
 
 ## Using ids
-When <board_context> includes ids (fields like "id" on columns and cards), and a command operates on an EXISTING card or column, copy the exact id verbatim into the command params: \`cardId\` for the target card, \`columnId\` for a target column, \`toColumnId\` for a move's destination. This disambiguates cards that share a title. Do NOT set ids for items you are creating (e.g. a new add_card). If you are unsure of an id, omit it and rely on the title field — the server resolves titles to ids as a fallback.
+When <board_context> includes ids (fields like "id" on columns and cards), and a command operates on an EXISTING card or column, copy the exact id verbatim into the command params: \`cardId\` for the target card, \`columnId\` for a target column, \`toColumnId\` for a move's destination. This disambiguates cards that share a title. Do NOT set ids for items you are creating (e.g. a new add_card). If you are unsure of an id, omit it and rely on the title field — the server resolves titles to ids as a fallback. Archived cards are NOT shown in <board_context>; for restore_card, trust the user's card title and omit cardId.
 
 ## Supported command types
 create_board, delete_board, rename_board, add_column, remove_column, rename_column, add_card, edit_card, remove_card, move_card, set_target_date, switch_view, extract_card_json, extract_column_json, clear_column, count_cards, rename_card, add_label, remove_label, add_checklist, set_description, archive_card, restore_card, duplicate_card, unknown
@@ -262,7 +282,7 @@ export default async function handler(req: unknown, res: NodeRes) {
   // Prefer an id-annotated snapshot of the real board over the client's
   // title-only context, so the model can reference existing items by id.
   const context = activeBoard
-    ? truncate(JSON.stringify(compactBoard(activeBoard)), MAX_CONTEXT_LEN)
+    ? compactBoardContext(activeBoard, MAX_CONTEXT_LEN)
     : truncate(rawContext, MAX_CONTEXT_LEN);
 
   // Wrap untrusted inputs in XML tags. The model is instructed (system prompt
@@ -303,7 +323,7 @@ export default async function handler(req: unknown, res: NodeRes) {
     get_board: tool({
       description: 'Read a board (its columns and cards, with ids) by board id.',
       inputSchema: z.object({ boardId: z.string() }),
-      execute: async ({ boardId }) => boardCore.getBoard(supabase, boardId),
+      execute: async ({ boardId: toolBoardId }) => boardCore.getBoard(supabase, toolBoardId),
     }),
     submit_commands: tool({
       description:
@@ -334,10 +354,12 @@ export default async function handler(req: unknown, res: NodeRes) {
       tools,
       // Force a tool call every step so the model can't terminate with a plain
       // text answer (which would leave us with no commands). It calls read
-      // tools as needed and must finish with submit_commands; we stop as soon
-      // as it does. stepCountIs is a backstop against a runaway read loop.
+      // tools as needed and must finish with submit_commands. We stop only once
+      // commands are actually captured — NOT merely when submit_commands is
+      // attempted — so that a submit whose args fail schema validation lets the
+      // forced-tool loop retry instead of dead-ending. stepCountIs is a backstop.
       toolChoice: 'required',
-      stopWhen: [hasToolCall('submit_commands'), stepCountIs(6)],
+      stopWhen: [() => out.commands !== null, stepCountIs(6)],
       temperature: 0.2,
       abortSignal: AbortSignal.timeout(35_000),
     });

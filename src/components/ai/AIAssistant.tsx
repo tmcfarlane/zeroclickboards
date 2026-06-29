@@ -873,11 +873,25 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
         if (!activeBoardId) return "No active board.";
 
         const mvHit = cardById();
-        const mvTarget = columnById("toColumnId");
-        if (mvHit && mvTarget) {
-          moveCard(activeBoardId, mvHit.column.id, mvTarget.id, mvHit.card.id);
+        if (mvHit) {
+          // Card resolved by id — resolve the destination by id first, else by
+          // title. (Don't fall back to re-searching the card by title, which
+          // could match a different same-titled card.)
+          const moveToTitle = getString("toColumnTitle");
+          const targetColumn =
+            columnById("toColumnId") ??
+            (moveToTitle
+              ? activeBoard?.columns.find((c) =>
+                  c.title.toLowerCase().includes(moveToTitle.toLowerCase()),
+                )
+              : undefined);
+          if (!targetColumn)
+            return moveToTitle
+              ? `Column "${moveToTitle}" not found.`
+              : "Column not found.";
+          moveCard(activeBoardId, mvHit.column.id, targetColumn.id, mvHit.card.id);
           lastCardTitle.current = mvHit.card.title;
-          return `Moved "${mvHit.card.title}" to ${mvTarget.title}`;
+          return `Moved "${mvHit.card.title}" to ${targetColumn.title}`;
         }
 
         let sourceColumnId: string | undefined;
