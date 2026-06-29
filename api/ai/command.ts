@@ -1,4 +1,4 @@
-import { generateText, tool, stepCountIs } from 'ai';
+import { generateText, tool, stepCountIs, hasToolCall } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import {
@@ -322,8 +322,9 @@ export default async function handler(req: unknown, res: NodeRes) {
 
   const tPreFetch = performance.now();
 
+  let genResult;
   try {
-    await generateText({
+    genResult = await generateText({
       // Use the chat-completions API (not the default Responses API): the
       // gateway rejects multi-step tool-result message shapes for Anthropic
       // models on the Responses API ("input.N.output: Invalid input" 400).
@@ -331,8 +332,12 @@ export default async function handler(req: unknown, res: NodeRes) {
       system: SYSTEM_PROMPT,
       prompt: userPrompt,
       tools,
-      // Allow a few read steps before the final submit_commands call.
-      stopWhen: stepCountIs(6),
+      // Force a tool call every step so the model can't terminate with a plain
+      // text answer (which would leave us with no commands). It calls read
+      // tools as needed and must finish with submit_commands; we stop as soon
+      // as it does. stepCountIs is a backstop against a runaway read loop.
+      toolChoice: 'required',
+      stopWhen: [hasToolCall('submit_commands'), stepCountIs(6)],
       temperature: 0.2,
       abortSignal: AbortSignal.timeout(35_000),
     });
@@ -350,7 +355,11 @@ export default async function handler(req: unknown, res: NodeRes) {
 
   const rawCommands = out.commands;
   if (!rawCommands || rawCommands.length === 0) {
-    console.error('[ai/command] model did not submit any commands');
+    console.error('[ai/command] model did not submit any commands', {
+      finishReason: genResult?.finishReason,
+      steps: genResult?.steps?.length,
+      text: genResult?.text?.slice(0, 300),
+    });
     return sendJson(res, 502, { error: 'AI did not produce any commands' });
   }
 
