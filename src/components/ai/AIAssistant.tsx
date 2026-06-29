@@ -762,6 +762,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "remove_column": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          removeColumn(activeBoardId, colHit.id);
+          return `Removed column "${colHit.title}"`;
+        }
         const title = getString("title");
         const column = activeBoard?.columns.find((c) =>
           title ? c.title.toLowerCase() === title.toLowerCase() : false,
@@ -776,6 +781,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "rename_column": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          const toTitle = getString("toTitle") || "Renamed Column";
+          renameColumn(activeBoardId, colHit.id, toTitle);
+          return `Renamed column to "${toTitle}"`;
+        }
         const fromTitle = getString("fromTitle");
         const toTitle = getString("toTitle") || "Renamed Column";
         const column = activeBoard?.columns.find((c) =>
@@ -998,6 +1009,12 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "extract_card_json": {
         if (!activeBoardId) return "No active board.";
+        const exHit = cardById();
+        if (exHit) {
+          lastCardTitle.current = exHit.card.title;
+          downloadJson(exHit.card, `card-${exHit.card.title.toLowerCase().replace(/\s+/g, "-")}`);
+          return `Downloaded JSON for card "${exHit.card.title}"`;
+        }
         const cardTitle =
           getString("cardTitle") || lastCardTitle.current || undefined;
         if (!cardTitle)
@@ -1020,6 +1037,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "extract_column_json": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          downloadJson(colHit, `column-${colHit.title.toLowerCase().replace(/\s+/g, "-")}`);
+          return `Downloaded JSON for column "${colHit.title}" (${colHit.cards.length} cards)`;
+        }
         const columnTitle = getString("columnTitle");
         if (!columnTitle) return "Please specify a column name.";
         const column = activeBoard?.columns.find((c) =>
@@ -1035,6 +1057,13 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "clear_column": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          const cardCount = colHit.cards.length;
+          if (cardCount === 0) return `Column "${colHit.title}" is already empty.`;
+          colHit.cards.forEach((card) => removeCard(activeBoardId, colHit.id, card.id));
+          return `Cleared ${cardCount} card${cardCount !== 1 ? "s" : ""} from "${colHit.title}"`;
+        }
         const columnTitle = getString("columnTitle");
         if (!columnTitle) return "Please specify a column name.";
         const column = activeBoard?.columns.find((c) =>
@@ -1052,6 +1081,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
       case "count_cards": {
         if (!activeBoardId) return "No active board.";
+        const colHit = columnById("columnId");
+        if (colHit) {
+          const active = colHit.cards.filter((c) => !c.isArchived).length;
+          return `"${colHit.title}" has ${active} card${active !== 1 ? "s" : ""}`;
+        }
         const columnTitle = getString("columnTitle");
         if (columnTitle) {
           const column = activeBoard?.columns.find((c) =>
