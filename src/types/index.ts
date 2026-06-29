@@ -89,6 +89,8 @@ export interface AIMessage {
   timestamp: string;
   command?: AICommand;
   commands?: AICommand[];
+  /** True when the AI service was unavailable and the local fallback parser handled this message. */
+  fallback?: boolean;
 }
 
 // Timeline types

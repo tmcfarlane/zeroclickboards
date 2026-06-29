@@ -1424,9 +1424,15 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       updateUsage(aiResponse.usage);
     }
 
-    // Handle timeout — fall back to local parser
-    if (aiResponse.timedOut) {
-      console.warn("[AI Command] Gateway timed out, falling back to local parser");
+    // The AI service is unavailable when it returns no commands (gateway error,
+    // timeout, or invalid output). In that case we fall back to the local regex
+    // parser — but make it visible rather than silent.
+    const usedFallback = aiResponse.commands === null && !aiResponse.limitReached;
+    if (usedFallback) {
+      console.warn(
+        "[AI Command] AI service unavailable — using local fallback parser",
+        { timedOut: aiResponse.timedOut ?? false },
+      );
     }
 
     // Handle daily limit reached
@@ -1485,6 +1491,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
       timestamp: new Date().toISOString(),
       command: commands[0],
       commands: commands.length > 1 ? commands : undefined,
+      fallback: usedFallback,
     };
 
     setMessages((prev) => [...prev, assistantMessage]);
@@ -1619,6 +1626,16 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
                   </div>
                 ) : (
                   <div className="whitespace-pre-line">{message.content}</div>
+                )}
+                {message.fallback && message.role === "assistant" && (
+                  <p
+                    className="mt-1.5 flex items-center gap-1 text-[10px] text-amber-400/80 italic"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                    AI service was unavailable — used basic parsing, so this may be less accurate.
+                  </p>
                 )}
               </div>
             </div>
