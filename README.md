@@ -68,6 +68,12 @@ Tell it what to do in plain English — create cards, move tasks, organize your 
 
 ![AI assistant creating and organizing cards from natural language](docs/screenshots/ai-assist.png)
 
+### MCP Server
+
+Manage your boards from any MCP-compatible coding agent — Claude Code, Claude Desktop, Cursor, Zed, or Windsurf. Authenticate once with your ZeroBoard account, then create, move, search, and organize cards conversationally without leaving your editor. Runnable via `npx @zeroclickdev/zeroboard-mcp` (with a read-only mode for untrusted agents).
+
+![ZeroBoard MCP server — manage your boards from any AI coding agent](docs/screenshots/zeroboard-mcp-ad.gif)
+
 ### Timeline View
 
 Visualize card target dates on a Gantt-style timeline for project planning.
