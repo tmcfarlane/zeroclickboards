@@ -22,7 +22,7 @@
 
 <p align="center">
   <a href="https://board.zeroclickdev.ai/">
-    <img src="docs/screenshots/ZeroBoardAI.gif" alt="ZeroBoard demo — AI-powered Kanban boards" width="720">
+    <img src="docs/screenshots/zeroboard-mcp-ad.gif" alt="ZeroBoard — manage your boards from any AI coding agent via MCP" width="512">
   </a>
 </p>
 
@@ -71,8 +71,6 @@ Tell it what to do in plain English — create cards, move tasks, organize your 
 ### MCP Server
 
 Manage your boards from any MCP-compatible coding agent — Claude Code, Claude Desktop, Cursor, Zed, or Windsurf. Authenticate once with your ZeroBoard account, then create, move, search, and organize cards conversationally without leaving your editor. Runnable via `npx @zeroclickdev/zeroboard-mcp` (with a read-only mode for untrusted agents).
-
-![ZeroBoard MCP server — manage your boards from any AI coding agent](docs/screenshots/zeroboard-mcp-ad.gif)
 
 ### Timeline View
 
