@@ -53,6 +53,13 @@ describe('resolveCommandIds', () => {
     expect(r.params.cardId).toBe('c2');
   });
 
+  it('resolves cardId + columnId for edit_card', () => {
+    const [r] = resolveCommandIds(board, [cmd('edit_card', { cardTitle: 'Write docs', title: 'Write the docs' })]);
+    expect(r.params.cardId).toBe('c2');
+    expect(r.params.columnId).toBe('col-todo');
+    expect(r.params.title).toBe('Write the docs'); // untouched
+  });
+
   it('remove_card resolves the card under the `title` param', () => {
     const [r] = resolveCommandIds(board, [cmd('remove_card', { title: 'Write docs' })]);
     expect(r.params.cardId).toBe('c2');

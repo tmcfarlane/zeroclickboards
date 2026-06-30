@@ -169,6 +169,7 @@ Example — columns ["TODO","In Progress","Done"], user says "Fill the board wit
 - add_label / remove_label: { cardTitle?, label: "red"|"yellow"|"green"|"blue"|"purple"|"gray", allCards?: boolean }
 - add_checklist: { cardTitle?, checklistItems: string[], allCards?: boolean }
 - set_description: { cardTitle?, description }
+- edit_card: { cardTitle?, title?, description?, text? } — update any provided fields of an existing card. Prefer the specific commands (rename_card, set_description) when only one field changes; use edit_card when changing several at once.
 - archive_card / restore_card / duplicate_card: { cardTitle }
 
 ## Examples
@@ -182,6 +183,7 @@ Example — columns ["TODO","In Progress","Done"], user says "Fill the board wit
 - "Clear the TODO column" → clear_column { columnTitle:"TODO" }
 - "How many cards in Done?" → count_cards { columnTitle:"Done" }
 - "Rename card 'old' to 'new'" → rename_card { cardTitle:"old", newTitle:"new" }
+- "Update 'Fix bug': rename to 'Fix login' and set its text to 'See ticket 42'" → edit_card { cardTitle:"Fix bug", title:"Fix login", text:"See ticket 42" }
 - "Archive 'Old task'" → archive_card { cardTitle:"Old task" }
 - "Set description of 'Fix bug' to '...'" → set_description { cardTitle:"Fix bug", description:"..." }
 - "Set due date Friday on 'Fix bug'" → set_target_date { cardTitle:"Fix bug", date:"friday" }
