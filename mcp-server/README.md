@@ -27,6 +27,12 @@ Then add the server to your agent (below). The default command (no subcommand) r
 claude mcp add zeroboard -- npx -y @zeroclickdev/zeroboard-mcp
 ```
 
+**Claude Desktop** — `claude_desktop_config.json` (Settings → Developer → Edit Config)
+```json
+{ "mcpServers": { "zeroboard": { "command": "npx", "args": ["-y", "@zeroclickdev/zeroboard-mcp"] } } }
+```
+Restart Claude Desktop after editing; the `zeroboard` tools appear under the tools (🔌) menu.
+
 **Cursor** — `~/.cursor/mcp.json`
 ```json
 { "mcpServers": { "zeroboard": { "command": "npx", "args": ["-y", "@zeroclickdev/zeroboard-mcp"] } } }
@@ -94,7 +100,7 @@ npm run smoke   # exercises the data layer against real Supabase (needs E2E_EMAI
 - ✅ `generate_board` tool backed by the existing `/api/ai/board-template` endpoint — done.
 - A dedicated `/api/v1` layer for scoped/read‑only tokens, audit logging, and conditional updates.
 - Realtime: a `list_changes(since)` poll tool and (where clients support it) resource‑update notifications.
-- A Claude Code **plugin** that bundles this server plus slash commands and a transcript‑to‑cards skill.
+- ✅ A Claude Code **plugin** that bundles this server plus slash commands — done.
 
 ## License
 
