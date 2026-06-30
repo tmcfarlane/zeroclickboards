@@ -1319,6 +1319,45 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
         return `Card "${cardTitle}" not found.`;
       }
 
+      case "edit_card": {
+        if (!activeBoardId) return "No active board.";
+        const newTitle = getString("title");
+        const description = getString("description");
+        const bodyText = getString("text");
+        if (
+          newTitle === undefined &&
+          description === undefined &&
+          bodyText === undefined
+        )
+          return "Nothing to update — specify a new title, description, or text.";
+        const updates: Parameters<typeof editCard>[3] = {};
+        if (newTitle !== undefined) updates.title = newTitle;
+        if (description !== undefined) updates.description = description;
+        if (bodyText !== undefined) updates.content = { type: "text", text: bodyText };
+
+        const editHit = cardById();
+        if (editHit) {
+          editCard(activeBoardId, editHit.column.id, editHit.card.id, updates);
+          lastCardTitle.current = newTitle ?? editHit.card.title;
+          return `Updated "${editHit.card.title}"`;
+        }
+        const cardTitle =
+          getString("cardTitle") || lastCardTitle.current || undefined;
+        if (!cardTitle)
+          return "No card specified and no previous card to reference.";
+        for (const column of activeBoard?.columns ?? []) {
+          const card = column.cards.find((c) =>
+            c.title.toLowerCase().includes(cardTitle.toLowerCase()),
+          );
+          if (card) {
+            editCard(activeBoardId, column.id, card.id, updates);
+            lastCardTitle.current = newTitle ?? card.title;
+            return `Updated "${card.title}"`;
+          }
+        }
+        return `Card "${cardTitle}" not found.`;
+      }
+
       case "archive_card": {
         if (!activeBoardId) return "No active board.";
         const arHit = cardById();

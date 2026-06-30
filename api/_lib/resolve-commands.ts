@@ -102,6 +102,7 @@ export function resolveCommandIds(board: FullBoard, commands: PlanCommand[]): Pl
         if (p.allCards !== true) resolveCard('cardTitle');
         break;
       case 'rename_card':
+      case 'edit_card':
       case 'archive_card':
       case 'duplicate_card':
       case 'set_description':
