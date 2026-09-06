@@ -65,6 +65,106 @@ describe('CardEditor text fields', () => {
   });
 });
 
+describe('CardEditor due dates', () => {
+  it.each([
+    ['2026-02-28T23:30:00-08:00', '2026-02-28'],
+    ['2024-02-29T00:00:00.123Z', '2024-02-29'],
+    ['0099-03-04', '0099-03-04'],
+  ])('displays legacy date %s as %s without introducing a date edit', async (targetDate, displayedDate) => {
+    const user = userEvent.setup();
+    const initial = card({ targetDate });
+    const save = open(initial);
+    expect(screen.getByLabelText('Due date')).toHaveAttribute('type', 'date');
+    expect(screen.getByLabelText('Due date')).toHaveValue(displayedDate);
+    await user.type(screen.getByPlaceholderText('Card title...'), ' renamed');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const [submitted, baseline] = save.mock.calls[0];
+    expect(submitted.targetDate).toBe(displayedDate);
+    expect(baseline.targetDate).toBe(displayedDate);
+    expect(submitted.description).toBe(initial.description);
+    expect(submitted.content).toEqual(initial.content);
+  });
+
+  it.each(['2026-02-30', 'not-a-date', '2026-02-28T99:30:00Z'])('shows invalid saved date %s for repair and preserves it during an unrelated edit', async (targetDate) => {
+    const user = userEvent.setup();
+    const save = open(card({ targetDate }));
+    expect(screen.getByLabelText('Due date')).toHaveValue('');
+    expect(screen.getByRole('status')).toHaveTextContent(targetDate);
+    expect(screen.getByRole('status')).toHaveTextContent('It will stay unchanged until you do.');
+    await user.type(screen.getByPlaceholderText('Card title...'), ' renamed');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const [submitted, baseline] = save.mock.calls[0];
+    expect(submitted.targetDate).toBe(targetDate);
+    expect(baseline.targetDate).toBe(targetDate);
+  });
+
+  it.each(['change', 'remove'] as const)('can explicitly %s an invalid saved date', async (action) => {
+    const user = userEvent.setup();
+    const initial = card({ targetDate: '2026-02-30' });
+    const save = open(initial);
+    if (action === 'change') fireEvent.change(screen.getByLabelText('Due date'), { target: { value: '2026-03-01' } });
+    else await user.click(screen.getByRole('button', { name: 'Remove due date' }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].targetDate).toBe(action === 'change' ? '2026-03-01' : undefined);
+    expect(save.mock.calls[0][0].content).toEqual(initial.content);
+    expect(save.mock.calls[0][0].description).toBe(initial.description);
+  });
+
+  it('retains a draft when the native picker reports an incomplete date, then saves a correction', async () => {
+    const user = userEvent.setup();
+    const save = open(card({ targetDate: '2026-03-01' }));
+    await user.type(screen.getByPlaceholderText('Card title...'), ' draft');
+    const input = screen.getByLabelText('Due date');
+    let badInput = true;
+    Object.defineProperty(input, 'validity', { configurable: true, get: () => ({ badInput }) });
+    // Native date editors can expose badInput before a React change event.
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a complete, valid date or remove the due date.');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByPlaceholderText('Card title...')).toHaveValue('Card with separate text draft');
+    badInput = false;
+    fireEvent.change(input, { target: { value: '2026-03-02' } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0]).toMatchObject({ title: 'Card with separate text draft', targetDate: '2026-03-02' });
+  });
+
+  it('distinguishes an incomplete empty native value from deliberate date removal', async () => {
+    const user = userEvent.setup();
+    const save = open(card({ targetDate: '2026-03-01' }));
+    const input = screen.getByLabelText('Due date');
+    Object.defineProperty(input, 'validity', { configurable: true, get: () => ({ badInput: true }) });
+    fireEvent.change(input, { target: { value: '' } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Remove due date' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].targetDate).toBeUndefined();
+  });
+
+  it('rejects a complete picker value beyond the supported finite date range', async () => {
+    const user = userEvent.setup();
+    const save = open(card({ targetDate: '2026-03-01' }));
+    const input = screen.getByLabelText('Due date');
+    fireEvent.change(input, { target: { value: '999999-01-01' } });
+    expect(input).toHaveValue('999999-01-01');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a complete, valid date or remove the due date.');
+    expect(input).toHaveValue('999999-01-01');
+  });
+
+  it('allows clearing a complete native date without a validation error', async () => {
+    const user = userEvent.setup();
+    const save = open(card({ targetDate: '2026-03-01' }));
+    fireEvent.change(screen.getByLabelText('Due date'), { target: { value: '' } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].targetDate).toBeUndefined();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
 describe('CardEditor recurrence', () => {
   it.each(['', '0', '100', '1.5'])('keeps an invalid interval draft open (%s) and saves after correction', async (value) => {
     const user = userEvent.setup();

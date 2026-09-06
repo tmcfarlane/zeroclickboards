@@ -1,12 +1,18 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Card, RecurrenceConfig } from '@/types';
 import { parseLocalDate } from '@/lib/utils';
+import { formatCalendarDate } from '@/lib/calendar-date';
 
 function toDateString(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  const value = formatCalendarDate(d);
+  if (!value) throw new Error('The next due date is outside the supported calendar. Update the due date or recurrence before archiving.');
+  return value;
+}
+
+function daysInCalendarMonth(date: Date): number {
+  // Gregorian month lengths repeat every 400 years. Using an equivalent safe
+  // year avoids overflowing Date when the final supported month is partial.
+  return new Date(2000 + date.getFullYear() % 400, date.getMonth() + 1, 0).getDate();
 }
 
 // Active recurrence weeks are Monday–Sunday, matching the timeline. Weekday
@@ -36,8 +42,10 @@ export function getOccurrencesInRange(
   rangeEnd: Date
 ): string[] {
   const base = parseLocalDate(baseDateStr);
-  const start = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
-  const end = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate());
+  const start = new Date(rangeStart);
+  const end = new Date(rangeEnd);
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
   if (![base, start, end].every((date) => Number.isFinite(date.getTime())) || start > end || base > end) return [];
   if (!config) return base >= start ? [toDateString(base)] : [];
 
@@ -75,7 +83,7 @@ export function getOccurrencesInRange(
       if (occurrence > 0) {
         candidate.setDate(1);
         candidate.setMonth(base.getMonth() + occurrence * interval);
-        const lastDay = new Date(candidate.getFullYear(), candidate.getMonth() + 1, 0).getDate();
+        const lastDay = daysInCalendarMonth(candidate);
         candidate.setDate(Math.min(targetDay, lastDay));
       }
       if (!Number.isFinite(candidate.getTime()) || candidate > end) break;
@@ -100,7 +108,10 @@ export function calculateNextTargetDate(
   currentTargetDate: string | undefined,
   config: RecurrenceConfig
 ): string {
-  const base = currentTargetDate ? parseLocalDate(currentTargetDate) : new Date();
+  const base = currentTargetDate === undefined ? new Date() : parseLocalDate(currentTargetDate);
+  if (!Number.isFinite(base.getTime())) {
+    throw new Error('Correct or remove the invalid due date before archiving this recurring card.');
+  }
   // Ensure we work with date only (no time component issues)
   base.setHours(12, 0, 0, 0);
 
@@ -132,7 +143,7 @@ export function calculateNextTargetDate(
       base.setDate(1);
       base.setMonth(base.getMonth() + interval);
       // Clamp to last day of month if needed
-      const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+      const lastDay = daysInCalendarMonth(base);
       base.setDate(Math.min(targetDay, lastDay));
       break;
     }

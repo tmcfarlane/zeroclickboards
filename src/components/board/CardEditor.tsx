@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { LabelPicker } from './LabelPicker';
 import { CardActivityFeed } from './CardActivityFeed';
 import { getAllCardTemplates, deleteUserCardTemplate, type CardTemplate } from '@/lib/templates';
+import { normalizeCalendarDate } from '@/lib/calendar-date';
 
 export interface CardEditorSaveData {
   title: string;
@@ -128,6 +129,11 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   const [contentType, setContentType] = useState<CardContent['type']>('text');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [targetDate, setTargetDate] = useState('');
+  const [targetDateTouched, setTargetDateTouched] = useState(false);
+  const [targetDateBadInput, setTargetDateBadInput] = useState(false);
+  const [targetDateError, setTargetDateError] = useState<string | undefined>(undefined);
+  const [invalidOriginalDate, setInvalidOriginalDate] = useState<string | undefined>(undefined);
+  const targetDateInputRef = useRef<HTMLInputElement>(null);
   const [labels, setLabels] = useState<CardLabel[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
@@ -153,12 +159,14 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         const initialDescription = initialData.description ?? '';
         const initialBodyText = initialData.content.text ?? '';
         const initialContentType = initialData.content.type === 'image' ? 'text' : initialData.content.type;
+        const initialTargetDate = normalizeCalendarDate(initialData.targetDate ?? '');
         setTitle(initialData.title);
         setDescription(initialDescription);
         setBodyText(initialBodyText);
         setContentType(initialContentType);
         setChecklist(initialData.content.checklist || []);
-        setTargetDate(initialData.targetDate || '');
+        setTargetDate(initialTargetDate ?? '');
+        setInvalidOriginalDate(initialData.targetDate && !initialTargetDate ? initialData.targetDate : undefined);
         setLabels(initialData.labels || []);
 
         // Build attachments — migrate legacy coverImage / content.imageUrl
@@ -210,7 +218,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           content: initialContentType === 'checklist'
             ? { type: 'checklist', checklist: initialData.content.checklist || [] }
             : { type: 'text', text: initialBodyText },
-          targetDate: initialData.targetDate || undefined,
+          targetDate: initialTargetDate ?? (initialData.targetDate || undefined),
           labels: initialData.labels || [],
           coverImage: existing.find((attachment) => attachment.isCover)?.url,
           attachments: existing.length > 0 ? existing : undefined,
@@ -224,6 +232,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         setContentType('text');
         setChecklist([]);
         setTargetDate('');
+        setInvalidOriginalDate(undefined);
         setLabels([]);
         setAttachments([]);
         setShowDates(false);
@@ -239,11 +248,26 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
       setAddMenuOpen(false);
       setRecurrenceTouched(false);
       setRecurrenceErrors({});
+      setTargetDateTouched(false);
+      setTargetDateBadInput(false);
+      setTargetDateError(undefined);
     }
   }, [isOpen, initialData]);
 
   const handleSave = () => {
     if (!title.trim()) return;
+
+    // Native date inputs expose incomplete dates as an empty value. Check
+    // badInput before treating that empty value as an intentional removal.
+    const invalidDateInput = targetDateBadInput || targetDateInputRef.current?.validity.badInput;
+    let submittedTargetDate = targetDateTouched ? undefined : initialFormRef.current?.targetDate;
+    if (targetDateTouched && targetDate) submittedTargetDate = normalizeCalendarDate(targetDate);
+    if (invalidDateInput || (targetDateTouched && !!targetDate && !submittedTargetDate)) {
+      setTargetDateBadInput(!!invalidDateInput);
+      setTargetDateError('Enter a complete, valid date or remove the due date.');
+      return;
+    }
+    setTargetDateError(undefined);
 
     let submittedRecurrence = recurrence || undefined;
     if (recurrence && recurrenceTouched) {
@@ -283,7 +307,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
       title: title.trim(),
       description: description.trim() || undefined,
       content,
-      targetDate: targetDate || undefined,
+      targetDate: submittedTargetDate,
       labels,
       coverImage: coverAttachment?.url,
       attachments: attachments.length > 0 ? attachments : undefined,
@@ -513,14 +537,21 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           />
 
           {/* Dates Section */}
-          {(showDates || !!targetDate) && (
+          {(showDates || !!targetDate || (!targetDateTouched && !!invalidOriginalDate) || targetDateBadInput) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label htmlFor="target-date" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Due date</label>
-                {targetDate && (
+                {(targetDate || (!targetDateTouched && invalidOriginalDate) || targetDateBadInput) && (
                   <button
                     type="button"
-                    onClick={() => { setTargetDate(''); setShowDates(false); }}
+                    aria-label="Remove due date"
+                    onClick={() => {
+                      setTargetDate('');
+                      setTargetDateTouched(true);
+                      setTargetDateBadInput(false);
+                      setTargetDateError(undefined);
+                      setShowDates(false);
+                    }}
                     className="text-xs text-[#A8B2B2] hover:text-red-400 transition-colors"
                   >
                     Remove
@@ -529,11 +560,28 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               </div>
               <Input
                 id="target-date"
+                ref={targetDateInputRef}
                 type="date"
+                aria-invalid={!!targetDateError}
+                aria-describedby={[
+                  !targetDateTouched && invalidOriginalDate ? 'target-date-repair' : undefined,
+                  targetDateError ? 'target-date-error' : undefined,
+                ].filter(Boolean).join(' ') || undefined}
                 value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
+                onChange={(e) => {
+                  setTargetDate(e.currentTarget.value);
+                  setTargetDateTouched(true);
+                  setTargetDateBadInput(e.currentTarget.validity.badInput);
+                  setTargetDateError(undefined);
+                }}
                 className="bg-white/5 border-white/10 text-[#F2F7F7] h-9"
               />
+              {!targetDateTouched && invalidOriginalDate && (
+                <p id="target-date-repair" role="status" className="text-xs text-amber-300 [overflow-wrap:anywhere]">
+                  The saved due date “{invalidOriginalDate}” is invalid. Choose a valid date or remove it. It will stay unchanged until you do.
+                </p>
+              )}
+              {targetDateError && <p id="target-date-error" role="alert" className="text-xs text-red-400">{targetDateError}</p>}
             </div>
           )}
 

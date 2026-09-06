@@ -178,6 +178,34 @@ describe('ActiveCardEditor', () => {
     expect(useBoardStore.getState().boards[0].columns[0].cards[0].content).toEqual({ type: 'text', text: '' });
   });
 
+  it.each(['2026-02-28T23:30:00-08:00', '2026-02-30'])('keeps the raw saved date %s during a title-only edit', async (targetDate) => {
+    const user = userEvent.setup();
+    setBoard(initialBoard({ ...initialCard(), targetDate }));
+    render(<TestApp />);
+    await user.click(screen.getByRole('button', { name: 'Original card' }));
+    await user.type(screen.getByPlaceholderText('Card title...'), ' renamed');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const saved = useBoardStore.getState().boards[0].columns[0].cards[0];
+    expect(saved.targetDate).toBe(targetDate);
+    expect(saved.content).toEqual(initialCard().content);
+    expect(saved.title).toBe('Original card renamed');
+  });
+
+  it.each(['change', 'remove'] as const)('persists an explicit date %s and preserves incoming body text', async (action) => {
+    const user = userEvent.setup();
+    const original = { ...initialCard(), targetDate: '2026-02-28T23:30:00-08:00' };
+    setBoard(initialBoard(original));
+    render(<TestApp />);
+    await user.click(screen.getByRole('button', { name: 'Original card' }));
+    if (action === 'change') fireEvent.change(screen.getByLabelText('Due date'), { target: { value: '2026-03-01' } });
+    else await user.click(screen.getByRole('button', { name: 'Remove due date' }));
+    setBoard(initialBoard({ ...original, content: { type: 'text', text: 'Incoming body' } }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const saved = useBoardStore.getState().boards[0].columns[0].cards[0];
+    expect(saved.targetDate).toBe(action === 'change' ? '2026-03-01' : undefined);
+    expect(saved.content.text).toBe('Incoming body');
+  });
+
   it.each([false, true])('keeps an implicit monthly day untouched during a title edit (remote clears recurrence: %s)', async (remoteClears) => {
     const user = userEvent.setup();
     const original = { ...initialCard(), targetDate: '2026-01-31', recurrence: { frequency: 'monthly' as const, interval: 1 } };

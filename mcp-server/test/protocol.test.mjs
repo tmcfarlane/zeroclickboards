@@ -242,3 +242,71 @@ test('MCP recurrence validation rejects malformed and incompatible values withou
   assert.deepEqual(state.row, original);
   assert.equal(state.requests.length, 0);
 });
+
+test('MCP date tool discovery describes normalization and null clearing', async (t) => {
+  const { mcp } = await connect(t);
+  const { tools } = await mcp.listTools();
+  for (const name of ['add_card', 'update_card', 'set_target_date']) {
+    const tool = tools.find((tool) => tool.name === name);
+    const schema = tool.inputSchema.properties.targetDate;
+    assert.match(schema.description, /YYYY-MM-DD/);
+    assert.match(schema.description, /without timezone conversion/);
+    if (name === 'set_target_date') {
+      assert.ok(schema.anyOf.some((branch) => branch.type === 'null'));
+      assert.ok(tool.inputSchema.required.includes('targetDate'));
+    } else {
+      assert.equal(schema.type, 'string');
+      assert.ok(!tool.inputSchema.required.includes('targetDate'));
+    }
+  }
+});
+
+test('MCP date writes normalize valid timestamps and preserve omitted dates until explicit clear', async (t) => {
+  const { mcp } = await connect(t);
+  const board = payload(await mcp.callTool({ name: 'add_card', arguments: {
+    boardId: 'board-1', columnId: 'column-a', title: 'Dated', targetDate: '2026-04-15T23:30:00-08:00',
+  } }));
+  const cardId = board.columns[0].cards.at(-1).id;
+  assert.equal(board.columns[0].cards.at(-1).targetDate, '2026-04-15');
+  payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: 'board-1', cardId, title: 'Renamed' } }));
+  let card = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: 'board-1', cardId } }));
+  assert.equal(card.targetDate, '2026-04-15');
+  payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: 'board-1', cardId, targetDate: '0099-12-31T00:30:00+14:00' } }));
+  card = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: 'board-1', cardId } }));
+  assert.equal(card.targetDate, '0099-12-31');
+  payload(await mcp.callTool({ name: 'set_target_date', arguments: { boardId: 'board-1', cardId, targetDate: null } }));
+  card = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: 'board-1', cardId } }));
+  assert.equal(card.targetDate, undefined);
+  assert.equal(card.title, 'Renamed');
+});
+
+test('every MCP date write rejects malformed dates and impossible clock values without database access', async (t) => {
+  const { mcp, state } = await connect(t);
+  const before = structuredClone(state.row);
+  for (const targetDate of ['', ' ', 'not-a-date', '2026-02-31', '2026-13-01', '2026-01-00', '2026-04-15garbage', '2026-04-15\n', '0000-01-01', '100-01-01', '2026-04-15T24:00Z', '2026-04-15T12:60Z', '2026-04-15T12:00:60Z', '2026-04-15T12:00+24:00', '2026-04-15T12:00+01:60']) {
+    for (const request of [
+      { name: 'add_card', arguments: { boardId: 'board-1', columnId: 'column-a', title: 'Invalid', targetDate } },
+      { name: 'update_card', arguments: { boardId: 'board-1', cardId: 'card-a', targetDate } },
+      { name: 'set_target_date', arguments: { boardId: 'board-1', cardId: 'card-a', targetDate } },
+    ]) {
+      const result = await mcp.callTool(request);
+      assert.equal(result.isError, true, JSON.stringify(request));
+      assert.match(result.content[0].text, /real calendar date/);
+    }
+  }
+  assert.deepEqual(state.row, before);
+  assert.equal(state.requests.length, 0);
+});
+
+test('MCP archive reports repairable invalid legacy dates without mutating the board', async (t) => {
+  const row = makeBoard();
+  Object.assign(row.data.columns[0].cards[0], { targetDate: 'not-a-date', recurrence: { frequency: 'daily', interval: 1 } });
+  const { mcp, state } = await connect(t, { row });
+  const result = await mcp.callTool({ name: 'archive_card', arguments: { boardId: row.id, cardId: 'card-a' } });
+  assert.equal(result.isError, true);
+  assert.match(result.content[0].text, /invalid target date.*clear it before archiving/);
+  assert.deepEqual(state.row, row);
+  assert.equal(state.requests.filter((request) => request.method === 'PATCH').length, 0);
+  payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: row.id, cardId: 'card-a', title: 'Still editable' } }));
+  assert.equal(state.row.data.columns[0].cards[0].targetDate, 'not-a-date');
+});

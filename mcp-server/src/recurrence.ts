@@ -1,19 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Card, RecurrenceConfig } from './types.js';
-
-// Keep date-only values in local calendar time, matching the web app.
-function parseLocalDate(value: string): Date {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
-  return match
-    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-    : new Date(value);
-}
-
-function toDateString(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
-}
+import { formatCalendarDate, parseCalendarDate } from './calendar-date.js';
 
 // Monday–Sunday active weeks match the web timeline; stored weekdays remain
 // Sunday=0. A copy's target date stays within an active week, so no extra anchor
@@ -29,7 +16,8 @@ export function calculateNextTargetDate(
   currentTargetDate: string | undefined,
   config: RecurrenceConfig,
 ): string {
-  const base = currentTargetDate ? parseLocalDate(currentTargetDate) : new Date();
+  const base = currentTargetDate === undefined ? new Date() : parseCalendarDate(currentTargetDate);
+  if (!Number.isFinite(base.getTime())) throw new Error('This recurring card has an invalid target date. Set a real calendar date or clear it before archiving.');
   base.setHours(12, 0, 0, 0);
   const interval = Number.isFinite(config.interval) ? Math.max(1, Math.floor(config.interval)) : 1;
 
@@ -56,13 +44,17 @@ export function calculateNextTargetDate(
       // Reset before adding months so Jan 31 cannot overflow past February.
       base.setDate(1);
       base.setMonth(base.getMonth() + interval);
-      const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+      // Gregorian month lengths repeat every 400 years. Use a safe equivalent
+      // year so the last day can be checked near Date's maximum finite month.
+      const lastDay = new Date(2000 + base.getFullYear() % 400, base.getMonth() + 1, 0).getDate();
       base.setDate(Math.min(targetDay, lastDay));
       break;
     }
   }
 
-  return toDateString(base);
+  const nextDate = formatCalendarDate(base);
+  if (!nextDate) throw new Error('The next recurring target date is outside the supported calendar range. Change the target date or recurrence before archiving.');
+  return nextDate;
 }
 
 /** Preserve card metadata while starting a fresh, unarchived occurrence. */
@@ -81,7 +73,7 @@ export function createRecurringCardCopy(card: Card): Card {
   // Pin the initial target's implicit monthly day before February (or another
   // short month) can change the recurrence anchor in the next archived copy.
   if (copy.recurrence?.frequency === 'monthly' && copy.recurrence.dayOfMonth === undefined && card.targetDate) {
-    const day = parseLocalDate(card.targetDate).getDate();
+    const day = parseCalendarDate(card.targetDate).getDate();
     if (Number.isFinite(day)) copy.recurrence.dayOfMonth = day;
   }
   delete copy.archivedAt;

@@ -845,20 +845,28 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
     columnId = column?.id ?? columnId;
     const card = column?.cards.find((c) => c.id === cardId);
+    if (!card) return;
     const hasRecurrence = card?.recurrence && !card.isArchived;
+    let newCard: Card | undefined;
+    try {
+      if (hasRecurrence) newCard = createRecurringCardCopy(card);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Correct the due date before archiving this recurring card.');
+      return;
+    }
 
     get().editCard(boardId, columnId, cardId, { isArchived: true, archivedAt: new Date().toISOString() });
 
     // If card has recurrence, create a new copy in the same column
-    if (hasRecurrence && card) {
-      const newCard = createRecurringCardCopy(card);
+    if (newCard) {
+      const recurringCopy = newCard;
       set((state) => ({
         boards: state.boards.map((b) =>
           b.id === boardId
             ? {
                 ...b,
                 columns: b.columns.map((c) =>
-                  c.id === columnId ? { ...c, cards: [...c.cards, newCard] } : c
+                  c.id === columnId ? { ...c, cards: [...c.cards, recurringCopy] } : c
                 ),
                 updatedAt: new Date().toISOString(),
               }
@@ -886,7 +894,16 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     const board = get().boards.find((b) => b.id === boardId);
     const column = board?.columns.find((c) => c.id === columnId);
     const recurringCards = column?.cards.filter((c) => c.recurrence && !c.isArchived) || [];
-    const newRecurringCards = recurringCards.map((c) => createRecurringCardCopy(c));
+    const newRecurringCards: Card[] = [];
+    for (const card of recurringCards) {
+      try {
+        newRecurringCards.push(createRecurringCardCopy(card));
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : 'Correct its due date before archiving.';
+        toast.error(`Cannot archive “${card.title}”: ${reason}`);
+        return;
+      }
+    }
 
     set((state) => ({
       boards: state.boards.map((b) =>

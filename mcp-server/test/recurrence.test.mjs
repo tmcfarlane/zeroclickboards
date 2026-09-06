@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { setCardArchived } from '../dist/board-data.js';
+import { setCardArchived, setTargetDate } from '../dist/board-data.js';
 import { calculateNextTargetDate, createRecurringCardCopy } from '../dist/recurrence.js';
 import { createBoardFixture, makeBoard } from './helpers/boards.mjs';
 
@@ -32,6 +32,12 @@ const dateCases = [
   ['month interval', '2026-01-31', { frequency: 'monthly', interval: 3, dayOfMonth: 31 }, '2026-04-30'],
   ['month interval across year', '2026-12-31', { frequency: 'monthly', interval: 2, dayOfMonth: 31 }, '2027-02-28'],
   ['explicit day after short month', '2026-02-28', { frequency: 'monthly', interval: 1, dayOfMonth: 31 }, '2026-03-31'],
+  ['early year daily boundary', '0099-12-31', { frequency: 'daily', interval: 1 }, '0100-01-01'],
+  ['early leap year monthly', '0004-01-31', { frequency: 'monthly', interval: 1 }, '0004-02-29'],
+  ['early nonleap century monthly', '0100-01-31', { frequency: 'monthly', interval: 1 }, '0100-02-28'],
+  ['expanded year', '10000-01-01', { frequency: 'daily', interval: 1 }, '10000-01-02'],
+  ['timestamp retains its written date', '2026-04-15T23:30:00-08:00', { frequency: 'daily', interval: 1 }, '2026-04-16'],
+  ['valid monthly date near native maximum', '275760-08-01', { frequency: 'monthly', interval: 1 }, '275760-09-01'],
 ];
 
 for (const [name, date, config, expected] of dateCases) {
@@ -210,4 +216,37 @@ test('a monthly copy without an initial target retains the current-date fallback
   assert.equal(copy.recurrence.dayOfMonth, undefined);
   assert.equal(copy.targetDate, calculateNextTargetDate(undefined, original.recurrence));
   assert.equal(original.targetDate, undefined);
+});
+
+test('invalid legacy dates cannot generate rolled-over or NaN recurring copies', async () => {
+  for (const targetDate of ['not-a-date', '', '2026-02-31', '2026-04-15garbage', '2026-04-15T25:00Z']) {
+    const card = recurringCard({ targetDate });
+    assert.throws(() => calculateNextTargetDate(targetDate, card.recurrence), /invalid target date.*clear it before archiving/);
+    assert.throws(() => createRecurringCardCopy(card), /invalid target date/);
+    const row = makeBoard();
+    row.data.columns[0].cards = [card];
+    const { client, state } = createBoardFixture({ row });
+    await assert.rejects(setCardArchived(client, row.id, card.id, true), /invalid target date/);
+    assert.deepEqual(state.row, row);
+    assert.equal(state.requests.filter((request) => request.method === 'PATCH').length, 0);
+  }
+});
+
+test('clearing an invalid legacy date allows recurring archive with the undated fallback', async () => {
+  const row = makeBoard();
+  row.data.columns[0].cards = [recurringCard({ targetDate: 'not-a-date', recurrence: { frequency: 'daily', interval: 1 } })];
+  const { client, state } = createBoardFixture({ row });
+  await setTargetDate(client, row.id, 'card-1', null);
+  await setCardArchived(client, row.id, 'card-1', true);
+  assert.equal(state.row.data.columns[0].cards.length, 2);
+  assert.equal(state.row.data.columns[0].cards[1].targetDate, calculateNextTargetDate(undefined, { frequency: 'daily', interval: 1 }));
+});
+
+test('recurrence beyond finite calendar bounds fails before archiving or copying', async () => {
+  const row = makeBoard();
+  row.data.columns[0].cards = [recurringCard({ targetDate: '275760-09-12', recurrence: { frequency: 'daily', interval: 2 } })];
+  const { client, state } = createBoardFixture({ row });
+  await assert.rejects(setCardArchived(client, row.id, 'card-1', true), /outside the supported calendar range/);
+  assert.deepEqual(state.row, row);
+  assert.equal(state.requests.filter((request) => request.method === 'PATCH').length, 0);
 });

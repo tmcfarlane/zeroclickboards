@@ -7,6 +7,7 @@ import {
   reorderColumns,
   setCoverImage,
   setRecurrence,
+  setTargetDate,
   updateCard,
   updateColumn,
 } from '../dist/board-data.js';
@@ -299,7 +300,7 @@ test('adding a recurring card clones its input and canonicalizes selected weekda
   const result = await saving;
   const card = result.columns[0].cards.at(-1);
   assert.equal(card.title, original.title);
-  assert.equal(card.targetDate, original.targetDate);
+  assert.equal(card.targetDate, '2026-09-07');
   assert.deepEqual(card.recurrence, { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3, 5] });
   assert.deepEqual(card.content, original.content);
   assert.deepEqual(card.labels, original.labels);
@@ -441,4 +442,59 @@ test('setting recurrence on a missing card fails without a write', async () => {
   const { client, state } = createBoardFixture();
   await assert.rejects(setRecurrence(client, 'board-1', 'missing-card', { frequency: 'daily', interval: 1 }), /Card missing-card not found/);
   assert.equal(writes(state).length, 0);
+});
+
+test('date writes normalize timestamps and keep omitted fields and explicit null clear distinct', async () => {
+  const { client, state } = createBoardFixture();
+  const input = { title: 'Dated', targetDate: '2026-04-15T23:30:00-08:00' };
+  await addCard(client, 'board-1', 'column-a', input);
+  const added = state.row.data.columns[0].cards.at(-1);
+  assert.equal(added.targetDate, '2026-04-15');
+  assert.equal(input.targetDate, '2026-04-15T23:30:00-08:00');
+  const patch = { targetDate: '0099-12-31T00:30:00+14:00' };
+  await updateCard(client, 'board-1', added.id, patch);
+  assert.equal(state.row.data.columns[0].cards.at(-1).targetDate, '0099-12-31');
+  assert.equal(patch.targetDate, '0099-12-31T00:30:00+14:00');
+  await updateCard(client, 'board-1', added.id, { title: 'Renamed', targetDate: undefined });
+  assert.equal(state.row.data.columns[0].cards.at(-1).targetDate, '0099-12-31');
+  await setTargetDate(client, 'board-1', added.id, '10000-01-01');
+  assert.equal(state.row.data.columns[0].cards.at(-1).targetDate, '10000-01-01');
+  await setTargetDate(client, 'board-1', added.id, null);
+  assert.equal(Object.hasOwn(state.row.data.columns[0].cards.at(-1), 'targetDate'), false);
+  assert.equal(state.row.data.columns[0].cards.at(-1).title, 'Renamed');
+});
+
+test('all direct date mutations reject invalid inputs before database access', async () => {
+  const { client, state } = createBoardFixture();
+  for (const targetDate of ['', 'not-a-date', '2026-02-31', '2026-13-01', '2026-01-00', '2026-04-15garbage', '0000-01-01', '2026-04-15T25:00Z', 42, null]) {
+    await assert.rejects(addCard(client, 'board-1', 'column-a', { title: 'Invalid', targetDate }));
+    await assert.rejects(updateCard(client, 'board-1', 'card-a', { targetDate }));
+    if (targetDate !== null) await assert.rejects(setTargetDate(client, 'board-1', 'card-a', targetDate));
+  }
+  await assert.rejects(setTargetDate(client, 'board-1', 'card-a', undefined));
+  assert.equal(state.requests.length, 0);
+});
+
+test('normalized date updates preserve concurrent card moves, additions, and unrelated fields on retry', async () => {
+  const { client, state } = createBoardFixture({
+    onRequest(request, state) {
+      if (request.method === 'PATCH' && writes(state).length === 1) {
+        const card = state.row.data.columns[0].cards.shift();
+        Object.assign(card, { title: 'Browser title', labels: ['purple'], recurrence: { frequency: 'weekly', interval: 2 } });
+        state.row.data.columns[1].cards.push(card);
+        state.row.data.columns[0].cards.push(makeCard('new-card'));
+        state.row.data.futureSetting = { keep: true };
+        state.row.updated_at = '2026-09-06T00:00:00.123456Z';
+      }
+    },
+  });
+  await setTargetDate(client, 'board-1', 'card-a', '2026-04-15T23:30:00-08:00');
+  const card = state.row.data.columns[1].cards.at(-1);
+  assert.equal(card.targetDate, '2026-04-15');
+  assert.equal(card.title, 'Browser title');
+  assert.deepEqual(card.labels, ['purple']);
+  assert.deepEqual(card.recurrence, { frequency: 'weekly', interval: 2 });
+  assert.deepEqual(state.row.data.columns[0].cards.map((card) => card.id), ['new-card']);
+  assert.deepEqual(state.row.data.futureSetting, { keep: true });
+  assert.equal(writes(state).length, 2);
 });

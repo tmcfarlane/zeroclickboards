@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { differenceInCalendarDays } from 'date-fns';
 import { useBoardStore } from '@/store/useBoardStore';
 import type { Card } from '@/types';
 import { Calendar, CheckSquare, Image as ImageIcon, FileText, Repeat } from 'lucide-react';
@@ -65,15 +66,13 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getDateStatus = (dateString?: string): 'overdue' | 'today' | 'soon' | 'later' => {
+  const getDateStatus = (dateString?: string): 'invalid' | 'overdue' | 'today' | 'soon' | 'later' => {
     if (!dateString) return 'later';
     const date = parseLocalDate(dateString);
-    const now = new Date();
-    const todayStr = now.toDateString();
-    if (date.toDateString() === todayStr) return 'today';
-    if (date < now) return 'overdue';
-    const diffMs = date.getTime() - now.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    if (!Number.isFinite(date.getTime())) return 'invalid';
+    const diffDays = differenceInCalendarDays(date, new Date());
+    if (diffDays === 0) return 'today';
+    if (diffDays < 0) return 'overdue';
     if (diffDays <= 2) return 'soon';
     return 'later';
   };
@@ -162,6 +161,19 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
           {/* Target Date */}
           {card.targetDate && (() => {
             const status = getDateStatus(card.targetDate);
+            if (status === 'invalid') {
+              return (
+                <button
+                  type="button"
+                  title="Open this card to correct or remove its due date"
+                  onClick={(event) => { event.stopPropagation(); openCardEditor(boardId, card.id); }}
+                  className="flex items-center gap-1 text-xs rounded-full px-2 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
+                >
+                  <Calendar className="w-3 h-3" />
+                  Invalid due date
+                </button>
+              );
+            }
             return (
               <div className={`flex items-center gap-1 text-xs rounded-full px-2 py-0.5 ${dateBadgeClass(status)}`}>
                 <Calendar className="w-3 h-3 text-[#A8B2B2]" />

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createRecurringCardCopy } from './recurrence.js';
 import { parseRecurrence } from './recurrence-schema.js';
+import { parseTargetDate } from './target-date-schema.js';
 import {
   type BoardData,
   type BoardRow,
@@ -336,7 +337,8 @@ export async function addCard(
   input: NewCardInput,
 ): Promise<FullBoard> {
   const recurrence = input.recurrence === undefined ? undefined : parseRecurrence(input.recurrence);
-  const draft = structuredClone({ ...input, recurrence });
+  const targetDate = input.targetDate === undefined ? undefined : parseTargetDate(input.targetDate);
+  const draft = structuredClone({ ...input, recurrence, targetDate });
   return mutateColumns(client, boardId, (columns) => {
     const column = findColumn(columns, columnId);
     const now = nowIso();
@@ -358,16 +360,19 @@ export async function addCard(
   });
 }
 
-export function updateCard(
+export async function updateCard(
   client: SupabaseClient,
   boardId: string,
   cardId: string,
   patch: Partial<Pick<Card, 'title' | 'description' | 'content' | 'targetDate' | 'labels' | 'coverImage'>>,
 ): Promise<FullBoard> {
+  const draft = { ...patch };
+  if (draft.targetDate === undefined) delete draft.targetDate;
+  else draft.targetDate = parseTargetDate(draft.targetDate);
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
-    Object.assign(card, patch, { updatedAt: nowIso() });
-    if (Object.prototype.hasOwnProperty.call(patch, 'coverImage')) applyCoverImage(card, patch.coverImage);
+    Object.assign(card, draft, { updatedAt: nowIso() });
+    if (Object.prototype.hasOwnProperty.call(draft, 'coverImage')) applyCoverImage(card, draft.coverImage);
     return columns;
   });
 }
@@ -482,15 +487,16 @@ export function setLabel(
   });
 }
 
-export function setTargetDate(
+export async function setTargetDate(
   client: SupabaseClient,
   boardId: string,
   cardId: string,
   targetDate: string | null,
 ): Promise<FullBoard> {
+  const next = targetDate === null ? undefined : parseTargetDate(targetDate);
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
-    card.targetDate = targetDate ?? undefined;
+    card.targetDate = next;
     card.updatedAt = nowIso();
     return columns;
   });

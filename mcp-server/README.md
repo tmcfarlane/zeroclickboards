@@ -60,6 +60,12 @@ Add `"--read-only"` to `args` (or set `ZEROBOARD_READONLY=1`) to expose only the
 
 Destructive tools (`delete_board`, `delete_card`, `remove_column`) carry a `destructiveHint`; reads carry `readOnlyHint`, so clients can warn or auto-approve appropriately.
 
+### Due dates
+
+`add_card`, `update_card`, and `set_target_date` accept real calendar dates such as `2026-06-03`. Valid ISO timestamps are normalized to their written date: `2026-06-03T23:30:00-08:00` becomes `2026-06-03`, without converting timezones. Impossible dates, incomplete timestamps, and arbitrary suffixes fail before database access. Use `set_target_date` with `null` to clear a date; omitting a date during an update preserves it.
+
+The browser displays dates in the local calendar. Overdue means before today; this week includes Monday through Sunday, and this month includes the current calendar month. Imported dates follow the same validation and normalization. An invalid legacy date stays visible for repair and remains unchanged during unrelated edits. Correct or remove it before archiving a recurring card; a failed recurrence calculation leaves the card or bulk archive unchanged.
+
 ### Recurring cards
 
 `add_card` accepts an optional `recurrence` object. Use `set_recurrence` to replace an existing card's complete schedule, or pass `null` to clear it. Changing recurrence preserves the target date, content, attachments, labels, and archive state. Clearing a schedule prevents future archives from making a recurring copy; previously created copies remain independent cards.
@@ -76,7 +82,7 @@ For example, call `set_recurrence` with:
 
 This repeats on Monday and Wednesday every two weeks. To stop repeating, use the same board/card IDs with `"recurrence": null`.
 
-Rules use `frequency: "daily" | "weekly" | "monthly"` and an integer `interval` from 1 to 99. Weekly rules may include unique `daysOfWeek` integers from 0 (Sunday) to 6 (Saturday); stored days are sorted. Missing or empty weekdays follow the target date's weekday. Monthly rules may include an integer `dayOfMonth` from 1 to 31; omitting it follows the target date's day. Frequency-specific fields are rejected on other rule types, and invalid rules leave the board unchanged. The browser validates the same numeric limits and keeps invalid drafts open for correction.
+Rules use `frequency: "daily" | "weekly" | "monthly"` and an integer `interval` from 1 to 99. Weekly rules may include unique `daysOfWeek` integers from 0 (Sunday) to 6 (Saturday); stored days are sorted. Missing or empty weekdays follow the target date's weekday. Monthly rules may include an integer `dayOfMonth` from 1 to 31; omitting it follows the target date's day. Frequency-specific fields are rejected on other rule types, and invalid rules leave the board unchanged. The browser validates the same numeric limits and keeps invalid drafts open for correction. JSON imports validate recurrence against the MCP rule contract before creating any cards and sort valid weekday selections.
 
 Set a target date to anchor the schedule. An undated card uses the current date when archived. Setting a rule does not create cards; archiving an active recurring card creates its next copy.
 

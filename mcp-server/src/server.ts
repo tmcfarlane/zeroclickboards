@@ -9,6 +9,7 @@ import * as db from './board-data.js';
 import { generateBoardTemplate } from './ai.js';
 import { CARD_LABELS, type CardContent, type CardLabel } from './types.js';
 import { recurrenceSchema } from './recurrence-schema.js';
+import { targetDateSchema } from './target-date-schema.js';
 
 const text = (data: unknown): CallToolResult => ({
   content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }],
@@ -187,7 +188,7 @@ export function buildServer(
         title: z.string(),
         description: z.string().optional().describe('Short description, separate from the card body text'),
         text: z.string().optional().describe('Card body text'),
-        targetDate: z.string().optional().describe('ISO date'),
+        targetDate: targetDateSchema.optional(),
         labels: z.array(labelEnum).optional(),
         recurrence: recurrenceSchema.optional(),
       },
@@ -216,7 +217,7 @@ export function buildServer(
         title: z.string().optional(),
         description: z.string().optional().describe('Short description; empty string clears it'),
         text: z.string().optional().describe('Card body text; empty string clears it'),
-        targetDate: z.string().optional(),
+        targetDate: targetDateSchema.optional(),
       },
     },
     async ({ boardId, cardId, title, description, text: body, targetDate }) =>
@@ -286,7 +287,7 @@ export function buildServer(
 
   server.registerTool(
     'set_target_date',
-    { title: 'Set target date', description: 'Set or clear a card target date (ISO string, or null to clear).', inputSchema: { boardId: z.string(), cardId: z.string(), targetDate: z.string().nullable() } },
+    { title: 'Set target date', description: 'Set a calendar due date (YYYY-MM-DD) or clear it with null. Valid ISO timestamps use their written calendar date, without timezone conversion.', inputSchema: { boardId: z.string(), cardId: z.string(), targetDate: targetDateSchema.nullable() } },
     async ({ boardId, cardId, targetDate }) => safe(() => db.setTargetDate(client, boardId, cardId, targetDate)),
   );
 

@@ -544,6 +544,26 @@ describe('signed-in board sync integration', () => {
     expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
   });
 
+  it.each(['card', 'column'] as const)('does not partially archive a %s when a recurring due date is invalid', async (scope) => {
+    const original = row();
+    Object.assign(columns(original)[0].cards[0], {
+      targetDate: '2026-02-31', recurrence: { frequency: 'daily', interval: 1 },
+    });
+    columns(original)[0].cards.push(card('other-card', 'Preserve this card too'));
+    rows.set(original.id, original);
+    await signIn();
+    const before = structuredClone(useBoardStore.getState().boards[0]);
+    expect(() => {
+      if (scope === 'card') useBoardStore.getState().archiveCard(original.id, 'column-1', 'card-1');
+      else useBoardStore.getState().archiveAllCards(original.id, 'column-1');
+    }).not.toThrow();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useBoardStore.getState().boards[0]).toEqual(before);
+    expect(rows.get(original.id)).toEqual(original);
+    expect(updateRequests()).toHaveLength(0);
+    expect(useUndoStore.getState().undoStack).toHaveLength(0);
+  });
+
   it('requires review if MCP changes a field after the card editor opened', async () => {
     const original = row();
     rows.set(original.id, original);

@@ -14,6 +14,7 @@ import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizont
 import { ShareBoardDialog } from './ShareBoardDialog';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
 import { downloadBoardJSON } from '@/lib/board-io';
+import { matchesDueDateFilter, type DueDateFilter } from '@/lib/calendar-date';
 import { BackgroundPicker } from './BackgroundPicker';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -61,7 +62,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const dragOriginRef = useRef<{ columnId: string; index: number } | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<CardLabel[]>([]);
-  const [dueDateFilter, setDueDateFilter] = useState<string | null>(null);
+  const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter | null>(null);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
@@ -172,7 +173,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
     { value: 'this-week', label: 'Due this week' },
     { value: 'this-month', label: 'Due this month' },
     { value: 'no-date', label: 'No date' },
-  ];
+  ] as const;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -402,10 +403,6 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   };
 
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfWeek = new Date(startOfToday);
-  endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay()) + 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   const visibleColumns = board.columns.filter(col => !hiddenColumnIds.includes(col.id));
   const hiddenColumns = board.columns.filter(col => hiddenColumnIds.includes(col.id));
@@ -420,24 +417,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         if (!selectedLabels.some((l) => cardLabels.includes(l))) return false;
       }
 
-      if (dueDateFilter) {
-        if (dueDateFilter === 'no-date') {
-          if (card.targetDate) return false;
-        } else if (dueDateFilter === 'overdue') {
-          if (!card.targetDate) return false;
-          if (new Date(card.targetDate) >= startOfToday) return false;
-        } else if (dueDateFilter === 'this-week') {
-          if (!card.targetDate) return false;
-          const d = new Date(card.targetDate);
-          if (d < startOfToday || d >= endOfWeek) return false;
-        } else if (dueDateFilter === 'this-month') {
-          if (!card.targetDate) return false;
-          const d = new Date(card.targetDate);
-          if (d < startOfToday || d >= endOfMonth) return false;
-        }
-      }
-
-      return true;
+      return matchesDueDateFilter(card.targetDate, dueDateFilter, now);
     }),
   }));
 
@@ -654,6 +634,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
           <Popover>
             <PopoverTrigger asChild>
               <Button
+                aria-label="Filter cards"
                 variant="ghost"
                 size="icon"
                 className={`relative h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 ${

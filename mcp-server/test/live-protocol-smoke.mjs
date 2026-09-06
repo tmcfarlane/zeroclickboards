@@ -108,7 +108,15 @@ try {
   assert.equal(moved.content.text, 'MCP body');
   passed('MCP move_card and get_card round trip');
 
-  await call('set_target_date', { boardId, cardId, targetDate: '2028-01-31' });
+  await call('set_target_date', { boardId, cardId, targetDate: '2028-01-31T23:30:00-08:00' });
+  const dated = await call('get_card', { boardId, cardId });
+  assert.equal(dated.targetDate, '2028-01-31');
+  const invalidDate = await mcp.callTool({
+    name: 'set_target_date', arguments: { boardId, cardId, targetDate: '2028-02-31' },
+  });
+  assert.equal(invalidDate.isError, true);
+  assert.deepEqual(await call('get_card', { boardId, cardId }), dated);
+  passed('MCP normalizes timestamp dates and rejects impossible dates without changing the card');
   await call('set_recurrence', { boardId, cardId, recurrence: { frequency: 'monthly', interval: 1 } });
   const scheduled = await call('get_card', { boardId, cardId });
   assert.equal(scheduled.targetDate, '2028-01-31');

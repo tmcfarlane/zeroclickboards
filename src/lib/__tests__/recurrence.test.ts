@@ -6,6 +6,7 @@ import {
   formatRecurrence,
 } from '../recurrence';
 import type { Card, RecurrenceConfig } from '@/types';
+import { parseLocalDate } from '../utils';
 
 // Mock uuid for deterministic IDs
 vi.mock('uuid', () => ({
@@ -33,6 +34,45 @@ const weeklyDateCases: [string, number, number[], string][] = [
 function localDateString(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
+
+describe('recurrence date integrity', () => {
+  it.each(['not-a-date', '2026-02-31', '2026-04-15garbage', ''])('does not project or copy an invalid saved date (%s)', (targetDate) => {
+    const card: Card = {
+      id: 'legacy', title: 'Legacy date', content: { type: 'text', text: '' }, targetDate,
+      recurrence: { frequency: 'daily', interval: 1 }, createdAt: '', updatedAt: '',
+    };
+    expect(getOccurrencesInRange(targetDate, card.recurrence, new Date(2026, 0, 1), new Date(2026, 11, 31))).toEqual([]);
+    expect(() => createRecurringCardCopy(card)).toThrow('Correct or remove the invalid due date');
+    expect(card.targetDate).toBe(targetDate);
+    expect(card.isArchived).toBeUndefined();
+  });
+
+  it('keeps early years padded through repeated copies and timeline projections', () => {
+    const rule: RecurrenceConfig = { frequency: 'daily', interval: 1 };
+    expect(calculateNextTargetDate('0099-12-31', rule)).toBe('0100-01-01');
+    expect(calculateNextTargetDate('0100-01-01', rule)).toBe('0100-01-02');
+    expect(getOccurrencesInRange('0099-12-31', rule, parseLocalDate('0099-12-31'), parseLocalDate('0100-01-02')))
+      .toEqual(['0099-12-31', '0100-01-01', '0100-01-02']);
+    expect(calculateNextTargetDate('0004-02-28', rule)).toBe('0004-02-29');
+    expect(calculateNextTargetDate('0100-01-31', { frequency: 'monthly', interval: 1 })).toBe('0100-02-28');
+  });
+
+  it('normalizes a valid timestamp before advancing the written calendar date', () => {
+    expect(calculateNextTargetDate('2026-06-03T23:30:00-08:00', { frequency: 'daily', interval: 1 })).toBe('2026-06-04');
+  });
+
+  it('rejects a next occurrence beyond native calendar bounds instead of creating an invalid copy', () => {
+    expect(() => calculateNextTargetDate('275760-09-12', { frequency: 'daily', interval: 99 }))
+      .toThrow('The next due date is outside the supported calendar');
+  });
+
+  it('keeps a valid occurrence in the final supported month even when its month end is outside native bounds', () => {
+    const rule: RecurrenceConfig = { frequency: 'monthly', interval: 1 };
+    expect(calculateNextTargetDate('275760-08-01', rule)).toBe('275760-09-01');
+    expect(getOccurrencesInRange('275760-08-01', rule, parseLocalDate('275760-09-01'), parseLocalDate('275760-09-12')))
+      .toEqual(['275760-09-01']);
+  });
+});
 
 describe('getOccurrencesInRange', () => {
   it('uses Monday–Sunday active weeks for every-two-week selected days', () => {
