@@ -6,11 +6,33 @@ import type { AppState, Attachment, Board, Card, CardContent, CardLabel, Column,
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { createRecurringCardCopy } from '@/lib/recurrence';
 import { useUndoStore } from './useUndoStore';
+import { BoardSyncCoordinator, type BoardSnapshot, type BoardSyncState } from '@/lib/board-sync';
+import { validateBoardDocument, mergeBoardDocuments, type BoardDocument } from '@/lib/board-merge';
+import type { BoardRow } from '@/types/database';
+import type { CardEditorSaveData } from '@/components/board/CardEditor';
+
+export interface CardEditorSession {
+  boardId: string;
+  cardId: string;
+  board: Board;
+  document: BoardDocument;
+  baseline?: BoardDocument;
+  card: Card;
+}
 
 interface BoardStore extends AppState {
   currentUserId: string | null;
   remoteStatus: 'idle' | 'loading' | 'ready' | 'error';
   remoteError: string | null;
+  boardSyncStates: Record<string, BoardSyncState>;
+  cardEditorSession: CardEditorSession | null;
+  openCardEditor: (boardId: string, cardId: string) => void;
+  closeCardEditor: () => void;
+  saveCardEditor: (data: CardEditorSaveData, initialForm?: CardEditorSaveData) => void;
+  retryBoardSync: (boardId: string) => void;
+  resolveBoardConflict: (boardId: string, choice: 'local' | 'remote') => void;
+  saveBoardDraftAsCopy: (boardId: string) => void;
+  discardBoardDraft: (boardId: string) => void;
 
   setCurrentUserId: (userId: string | null) => void;
   refreshFromRemote: () => Promise<void>;
@@ -67,160 +89,214 @@ const createDefaultColumns = (): Column[] => [
   { id: uuidv4(), title: 'Closed', cards: [], order: 4 },
 ];
 
-type BoardData = {
-  columns: Column[];
-};
+// Keep opaque JSONB fields so older browser versions cannot erase MCP extensions.
+const rawBoardData = new Map<string, Record<string, unknown>>();
+let sessionEpoch = 0;
+let refreshSequence = 0;
+let boardsChannel: RealtimeChannel | null = null;
+let boardSync: BoardSyncCoordinator | null = null;
+type BoardSettings = Pick<Board, 'isPublic' | 'embedEnabled'>;
+const pendingSettings = new Map<string, Partial<BoardSettings>>();
+const settingJobs = new Map<string, Promise<void>>();
+const creatingBoards = new Map<string, { snapshot: BoardSnapshot; job?: Promise<boolean> }>();
 
-function boardToData(board: Board): BoardData & { background?: string; hiddenColumnIds?: string[] } {
+function boardToDocument(board: Board): BoardDocument {
   return {
-    columns: board.columns,
-    ...(board.background ? { background: board.background } : {}),
-    ...(board.hiddenColumnIds && board.hiddenColumnIds.length > 0
-      ? { hiddenColumnIds: board.hiddenColumnIds }
-      : {}),
+    name: board.name,
+    description: board.description ?? null,
+    data: {
+      ...rawBoardData.get(board.id),
+      columns: board.columns,
+      background: board.background,
+      hiddenColumnIds: board.hiddenColumnIds?.length || rawBoardData.get(board.id)?.hiddenColumnIds !== undefined ? board.hiddenColumnIds ?? [] : undefined,
+    },
   };
 }
 
-function dataToColumns(data: Json | null | undefined): Column[] {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return createDefaultColumns();
-  const columns = (data as Record<string, unknown>).columns;
-  if (!Array.isArray(columns)) return createDefaultColumns();
-  return columns as unknown as Column[];
+function documentToBoard(board: Board, document: BoardDocument): Board {
+  const data = document.data;
+  return {
+    ...board, name: document.name, description: document.description ?? undefined,
+    columns: data.columns as Column[],
+    background: typeof data.background === 'string' ? data.background : undefined,
+    hiddenColumnIds: Array.isArray(data.hiddenColumnIds) ? data.hiddenColumnIds.filter((id): id is string => typeof id === 'string') : [],
+  };
 }
 
-function dataToBackground(data: Json | null | undefined): string | undefined {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined;
-  const bg = (data as Record<string, unknown>).background;
-  return typeof bg === 'string' ? bg : undefined;
+function rowToSnapshot(row: BoardRow): BoardSnapshot {
+  if (!row.data || typeof row.data !== 'object' || Array.isArray(row.data)) throw new Error('Board data could not be read safely');
+  const data = { ...row.data, columns: row.data.columns === undefined ? [] : row.data.columns } as Record<string, unknown>;
+  if (!Array.isArray(data.columns)) throw new Error('Board columns could not be read safely');
+  if (data.background === null) data.background = undefined;
+  if (data.hiddenColumnIds === null) data.hiddenColumnIds = undefined;
+  if (data.background !== undefined && typeof data.background !== 'string') throw new Error('Board background could not be read safely');
+  if (data.hiddenColumnIds !== undefined && (!Array.isArray(data.hiddenColumnIds) || data.hiddenColumnIds.some((id) => typeof id !== 'string'))) throw new Error('Hidden columns could not be read safely');
+  const document = { name: row.name, description: row.description ?? null, data };
+  validateBoardDocument(document);
+  return {
+    revision: row.updated_at, document,
+    board: documentToBoard({
+      id: row.id, name: row.name, columns: [], createdAt: row.created_at, updatedAt: row.updated_at,
+      userId: row.user_id, isPublic: row.is_public ?? false, embedEnabled: row.embed_enabled ?? false,
+    }, document),
+  };
 }
 
-function dataToHiddenColumnIds(data: Json | null | undefined): string[] {
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return [];
-  const ids = (data as Record<string, unknown>).hiddenColumnIds;
-  if (!Array.isArray(ids)) return [];
-  return ids.filter((v): v is string => typeof v === 'string');
+function removeLocalBoard(id: string) {
+  rawBoardData.delete(id);
+  pendingSettings.delete(id);
+  useBoardStore.setState((state) => {
+    const boardSyncStates = { ...state.boardSyncStates };
+    delete boardSyncStates[id];
+    const boards = state.boards.filter((board) => board.id !== id);
+    return { boards, boardSyncStates, activeBoardId: state.activeBoardId === id ? boards[0]?.id ?? null : state.activeBoardId };
+  });
 }
 
-const pendingBoardSync = new Map<string, ReturnType<typeof setTimeout>>();
-let boardsChannel: RealtimeChannel | null = null;
+function createSyncCoordinator(epoch: number) {
+  return new BoardSyncCoordinator({
+    read: async (id) => {
+      if (epoch !== sessionEpoch) return null;
+      const { data, error } = await supabase.from('boards').select('*').eq('id', id).maybeSingle();
+      if (error) throw error;
+      return data ? rowToSnapshot(data) : null;
+    },
+    write: async (id, revision, document) => {
+      if (epoch !== sessionEpoch) return null;
+      const { data, error } = await supabase.from('boards')
+        .update({ name: document.name, description: document.description, data: document.data as Json })
+        .eq('id', id).eq('updated_at', revision).select('*').maybeSingle();
+      if (error) throw error;
+      return data ? rowToSnapshot(data) : null;
+    },
+    local: (id) => {
+      const board = useBoardStore.getState().boards.find((candidate) => candidate.id === id);
+      return board ? boardToDocument(board) : undefined;
+    },
+    apply: (snapshot, document) => {
+      if (epoch !== sessionEpoch) return;
+      rawBoardData.set(snapshot.board.id, structuredClone(document.data));
+      const next = { ...documentToBoard(snapshot.board, document), ...pendingSettings.get(snapshot.board.id) };
+      useBoardStore.setState((state) => ({
+        boards: (state.boards.some((board) => board.id === next.id)
+          ? state.boards.map((board) => board.id === next.id ? next : board)
+          : [...state.boards, next]).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        activeBoardId: state.activeBoardId ?? next.id,
+      }));
+    },
+    remove: (id) => { if (epoch === sessionEpoch) removeLocalBoard(id); },
+    state: (id, state) => {
+      if (epoch === sessionEpoch) useBoardStore.setState((current) => ({ boardSyncStates: { ...current.boardSyncStates, [id]: state } }));
+    },
+  });
+}
 
-function ensureBoardsSubscription(userId: string) {
-  if (boardsChannel) {
-    supabase.removeChannel(boardsChannel);
-    boardsChannel = null;
-  }
-
-  boardsChannel = supabase
-    .channel(`boards-${userId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'boards',
-        filter: `user_id=eq.${userId}`,
-      },
+function ensureBoardsSubscription(userId: string, epoch: number) {
+  // RLS filters delivery. The callback also limits public-board events to the
+  // boards actually loaded by this user, while including shared editor boards.
+  boardsChannel = supabase.channel(`boards-${userId}-${epoch}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' },
       (payload: { eventType: string; new: unknown; old: unknown }) => {
+        if (epoch !== sessionEpoch) return;
         const state = useBoardStore.getState();
-        const rowToBoard = (row: unknown): Board | null => {
-          if (!row || typeof row !== 'object') return null;
-          const r = row as Record<string, unknown>;
-          if (typeof r.id !== 'string') return null;
-          if (typeof r.user_id !== 'string') return null;
-          if (typeof r.name !== 'string') return null;
-          if (typeof r.created_at !== 'string') return null;
-          if (typeof r.updated_at !== 'string') return null;
-          const description = typeof r.description === 'string' ? r.description : undefined;
-
-          return {
-            id: r.id,
-            name: r.name,
-            description,
-            columns: dataToColumns(r.data as Json | null | undefined),
-            background: dataToBackground(r.data as Json | null | undefined),
-            hiddenColumnIds: dataToHiddenColumnIds(r.data as Json | null | undefined),
-            createdAt: r.created_at,
-            updatedAt: r.updated_at,
-            userId: r.user_id,
-            isPublic: typeof r.is_public === 'boolean' ? r.is_public : false,
-            embedEnabled: typeof r.embed_enabled === 'boolean' ? r.embed_enabled : false,
-          };
-        };
-
-        if (payload.eventType === 'INSERT') {
-          const next = rowToBoard(payload.new);
-          if (!next) return;
-          // Skip if board already exists locally (optimistic create)
-          if (state.boards.some((b) => b.id === next.id)) return;
-          useBoardStore.setState({
-            boards: [...state.boards, next].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-          });
-        }
-        if (payload.eventType === 'UPDATE') {
-          const next = rowToBoard(payload.new);
-          if (!next) return;
-          useBoardStore.setState({
-            boards: state.boards.map((b) => {
-              if (b.id !== next.id) return b;
-              // Merge: keep local fields that the realtime payload may not include
-              return {
-                ...b,
-                ...next,
-                background: next.background ?? b.background,
-                hiddenColumnIds: next.hiddenColumnIds ?? b.hiddenColumnIds,
-              };
-            }),
-          });
-        }
         if (payload.eventType === 'DELETE') {
-          const oldId = (() => {
-            const old = payload.old;
-            if (!old || typeof old !== 'object') return null;
-            const r = old as Record<string, unknown>;
-            return typeof r.id === 'string' ? r.id : null;
-          })();
-          if (!oldId) return;
-          useBoardStore.setState({
-            boards: state.boards.filter((b) => b.id !== oldId),
-            activeBoardId: state.activeBoardId === oldId ? (state.boards.find((b) => b.id !== oldId)?.id ?? null) : state.activeBoardId,
-          });
+          const id = (payload.old as { id?: string })?.id;
+          if (id) boardSync?.remoteDeleted(id);
+          return;
         }
-      }
-    )
+        const row = payload.new as BoardRow;
+        if (!row?.id || (row.user_id !== userId && !state.boards.some((board) => board.id === row.id))) return;
+        try { boardSync?.observe(rowToSnapshot(row)); }
+        catch { boardSync?.failed(row.id, 'Incoming board data could not be read safely. Your draft is kept.'); }
+      })
     .subscribe();
 }
 
 function scheduleBoardSync(boardId: string) {
-  const { currentUserId } = useBoardStore.getState();
-  if (!currentUserId) return;
+  if (useBoardStore.getState().currentUserId) boardSync?.schedule(boardId);
+}
 
-  const existing = pendingBoardSync.get(boardId);
-  if (existing) clearTimeout(existing);
+function persistCreation(id: string): Promise<boolean> {
+  const pending = creatingBoards.get(id);
+  if (!pending) return Promise.resolve(false);
+  if (pending.job) return pending.job;
+  const epoch = sessionEpoch;
+  const coordinator = boardSync;
+  const snapshot = pending.snapshot;
+  const run = async () => {
+    try {
+      // A lost response may hide a successful insert. Read first on retry and
+      // never upsert an initial snapshot over a board that already exists.
+      const existing = await supabase.from('boards').select('*').eq('id', id).maybeSingle();
+      if (epoch !== sessionEpoch) return false;
+      if (existing.error) throw existing.error;
+      let row = existing.data;
+      if (!row) {
+        const result = await supabase.from('boards').insert({
+          id, user_id: snapshot.board.userId!, name: snapshot.document.name,
+          description: snapshot.document.description, data: snapshot.document.data as Json,
+        }).select('*').single();
+        if (epoch !== sessionEpoch) return false;
+        if (result.error) throw result.error;
+        row = result.data;
+      }
+      if (!row) throw new Error('The new board could not be saved');
+      coordinator?.created(rowToSnapshot(row));
+      creatingBoards.delete(id);
+      return true;
+    } catch (error) {
+      if (epoch === sessionEpoch) coordinator?.failed(id, error instanceof Error ? error.message : 'Unable to create board. Your draft is kept; retry saving.');
+      return false;
+    }
+  };
+  pending.job = run().finally(() => { pending.job = undefined; });
+  return pending.job;
+}
 
-  const timer = setTimeout(() => {
-    pendingBoardSync.delete(boardId);
-    const state = useBoardStore.getState();
-    const board = state.boards.find((b) => b.id === boardId);
-    if (!board?.userId) return;
+function registerNewBoard(board: Board) {
+  const snapshot = { board: structuredClone(board), document: structuredClone(boardToDocument(board)), revision: board.updatedAt };
+  boardSync?.register(snapshot, true);
+  creatingBoards.set(board.id, { snapshot });
+  return persistCreation(board.id);
+}
 
-    supabase
-      .from('boards')
-      .update({
-        name: board.name,
-        description: board.description ?? null,
-        data: boardToData(board) as unknown as Json,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', board.id)
-      .then(({ error }) => {
-        if (error) {
-          console.error('[boards] sync failed:', error.message);
-          toast.error('Failed to sync changes');
-        }
-      });
-  }, 400);
-
-  pendingBoardSync.set(boardId, timer);
+function updateBoardSetting(id: string, field: keyof BoardSettings, value: boolean) {
+  const state = useBoardStore.getState();
+  const userId = state.currentUserId;
+  const board = state.boards.find((candidate) => candidate.id === id);
+  if (!board || (userId && board.userId !== userId)) return;
+  useBoardStore.setState({ boards: state.boards.map((candidate) => candidate.id === id ? { ...candidate, [field]: value } : candidate) });
+  if (!userId) return;
+  const epoch = sessionEpoch;
+  const coordinator = boardSync;
+  const pending = { ...pendingSettings.get(id), [field]: value };
+  pendingSettings.set(id, pending);
+  const previous = settingJobs.get(id);
+  const creation = creatingBoards.get(id)?.job;
+  const run = async () => {
+    await previous;
+    const created = await creation;
+    if (epoch !== sessionEpoch || !useBoardStore.getState().boards.some((board) => board.id === id)) return;
+    try {
+      if (created === false) throw new Error('Save the board before updating its sharing settings');
+      const updates = field === 'isPublic' ? { is_public: value } : { embed_enabled: value };
+      const result = await supabase.from('boards').update(updates).eq('id', id).eq('user_id', userId).select('*').maybeSingle();
+      if (epoch !== sessionEpoch) return;
+      if (result.error) throw result.error;
+      if (!result.data) throw new Error('Sharing settings could not be saved');
+      if (pendingSettings.get(id) === pending) pendingSettings.delete(id);
+      coordinator?.observe(rowToSnapshot(result.data));
+    } catch {
+      if (epoch !== sessionEpoch) return;
+      if (pendingSettings.get(id) === pending) {
+        pendingSettings.delete(id);
+        void useBoardStore.getState().refreshFromRemote();
+      }
+      toast.error('Failed to update sharing settings');
+    }
+  };
+  const job = run().finally(() => { if (settingJobs.get(id) === job) settingJobs.delete(id); });
+  settingJobs.set(id, job);
 }
 
 export const useBoardStore = create<BoardStore>()((set, get) => ({
@@ -230,153 +306,187 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   currentUserId: null,
   remoteStatus: 'idle',
   remoteError: null,
+  boardSyncStates: {},
+  cardEditorSession: null,
 
   setCurrentUserId: (userId) => {
-    set({ currentUserId: userId });
+    if (get().currentUserId === userId) return;
+    sessionEpoch++;
+    refreshSequence++;
+    boardSync?.dispose();
+    boardSync = null;
+    rawBoardData.clear();
+    creatingBoards.clear();
+    pendingSettings.clear();
+    settingJobs.clear();
+    if (boardsChannel) { void supabase.removeChannel(boardsChannel); boardsChannel = null; }
+    useUndoStore.getState().clearHistory();
+    set({ currentUserId: userId, boards: [], activeBoardId: null, boardSyncStates: {}, cardEditorSession: null, remoteStatus: 'idle', remoteError: null });
     if (userId) {
-      ensureBoardsSubscription(userId);
+      boardSync = createSyncCoordinator(sessionEpoch);
+      ensureBoardsSubscription(userId, sessionEpoch);
       void get().refreshFromRemote();
-    } else {
-      if (boardsChannel) {
-        supabase.removeChannel(boardsChannel);
-        boardsChannel = null;
-      }
-      set({ boards: [], activeBoardId: null, remoteStatus: 'idle', remoteError: null });
     }
   },
 
   refreshFromRemote: async () => {
     const userId = get().currentUserId;
     if (!userId) return;
+    const epoch = sessionEpoch;
+    const sequence = ++refreshSequence;
+    const coordinator = boardSync;
+    const priorIds = get().boards.filter((board) => !coordinator?.isCreating(board.id)).map((board) => board.id);
+    const current = () => epoch === sessionEpoch && sequence === refreshSequence;
     set({ remoteStatus: 'loading', remoteError: null });
-
-    // Fetch owned boards and shared boards in parallel
-    const [ownResult, memberResult] = await Promise.all([
-      supabase
-        .from('boards')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('board_members')
-        .select('board_id')
-        .eq('user_id', userId),
-    ]);
-
-    if (ownResult.error) {
-      set({ remoteStatus: 'error', remoteError: ownResult.error.message });
-      toast.error('Failed to load boards');
-      return;
+    try {
+      const [own, members] = await Promise.all([
+        supabase.from('boards').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
+        supabase.from('board_members').select('board_id').eq('user_id', userId),
+      ]);
+      if (!current()) return;
+      if (own.error) throw own.error;
+      if (members.error) throw members.error;
+      let shared: BoardRow[] = [];
+      if (members.data?.length) {
+        const result = await supabase.from('boards').select('*').in('id', members.data.map((member) => member.board_id)).order('created_at', { ascending: true });
+        if (!current()) return;
+        if (result.error) throw result.error;
+        shared = result.data ?? [];
+      }
+      const snapshots = [...(own.data ?? []), ...shared].map(rowToSnapshot);
+      const ids = new Set(snapshots.map((snapshot) => snapshot.board.id));
+      for (const snapshot of snapshots) coordinator?.observe(snapshot);
+      for (const id of priorIds) if (!ids.has(id)) coordinator?.remoteDeleted(id);
+      set({ remoteStatus: 'ready', remoteError: null });
+    } catch (error) {
+      if (current()) {
+        set({ remoteStatus: 'error', remoteError: error instanceof Error ? error.message : 'Unable to load boards' });
+        toast.error('Failed to load boards. Your open drafts are kept.');
+      }
     }
-
-    let sharedBoards: typeof ownResult.data = [];
-    if (memberResult.data && memberResult.data.length > 0) {
-      const sharedIds = memberResult.data.map((m) => m.board_id);
-      const { data: shared } = await supabase
-        .from('boards')
-        .select('*')
-        .in('id', sharedIds)
-        .order('created_at', { ascending: true });
-      if (shared) sharedBoards = shared;
-    }
-
-    // Merge and deduplicate
-    const allRows = [...(ownResult.data || []), ...sharedBoards];
-    const seen = new Set<string>();
-    const data = allRows.filter((row) => {
-      if (seen.has(row.id)) return false;
-      seen.add(row.id);
-      return true;
-    });
-
-    const nextBoards: Board[] = data.map((row) => ({
-      id: row.id,
-      name: row.name,
-      description: row.description ?? undefined,
-      columns: dataToColumns(row.data),
-      background: dataToBackground(row.data),
-      hiddenColumnIds: dataToHiddenColumnIds(row.data),
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      userId: row.user_id,
-      isPublic: row.is_public ?? false,
-      embedEnabled: row.embed_enabled ?? false,
-    }));
-
-    set((state) => {
-      const activeBoardStillExists = state.activeBoardId && nextBoards.some((b) => b.id === state.activeBoardId);
-      return {
-        boards: nextBoards,
-        activeBoardId: activeBoardStillExists ? state.activeBoardId : nextBoards[0]?.id ?? null,
-        remoteStatus: 'ready',
-        remoteError: null,
-      };
-    });
-
   },
 
   createBoard: (name, description, columns) => {
     const userId = get().currentUserId;
     const now = new Date().toISOString();
-
-    const newBoard: Board = {
-      id: uuidv4(),
-      name,
-      description,
-      columns: columns ?? createDefaultColumns(),
-      createdAt: now,
-      updatedAt: now,
-      userId: userId ?? undefined,
+    const board: Board = {
+      id: uuidv4(), name, description, columns: columns ?? createDefaultColumns(),
+      createdAt: now, updatedAt: now, userId: userId ?? undefined,
     };
-
-    set((state) => ({
-      boards: [...state.boards, newBoard],
-      activeBoardId: newBoard.id,
-    }));
+    set((state) => ({ boards: [...state.boards, board], activeBoardId: board.id }));
+    if (userId) void registerNewBoard(board);
     toast.success('Board created');
-
-    if (userId) {
-      supabase.from('boards').upsert({
-        id: newBoard.id,
-        user_id: userId,
-        name: newBoard.name,
-        description: newBoard.description ?? null,
-        data: boardToData(newBoard) as unknown as Json,
-        created_at: newBoard.createdAt,
-        updated_at: newBoard.updatedAt,
-      }).then(({ error }) => {
-        if (error) {
-          console.error('[boards] upsert failed:', error.message);
-          toast.error('Failed to save board');
-        }
-      });
-    }
-
-    return newBoard.id;
+    return board.id;
   },
 
   deleteBoard: (boardId) => {
     const userId = get().currentUserId;
+    const board = get().boards.find((candidate) => candidate.id === boardId);
+    if (!board) return;
+    if (userId && board.userId !== userId) { toast.error('Only the board owner can delete it'); return; }
+    const epoch = sessionEpoch;
+    const coordinator = boardSync;
+    const data = boardToDocument(board).data;
+    if (get().cardEditorSession?.boardId === boardId) set({ cardEditorSession: null });
+    const pendingWrite = coordinator?.forget(boardId);
+    const creation = creatingBoards.get(boardId)?.job;
+    const settings = settingJobs.get(boardId);
+    removeLocalBoard(boardId);
+    if (!userId) { toast.success('Board deleted'); return; }
+    void (async () => {
+      try {
+        // Finish any dispatched insert/write before deleting, so it cannot
+        // complete later and restore a board the user has already removed.
+        await creation;
+        await pendingWrite;
+        await settings;
+        if (epoch !== sessionEpoch) return;
+        const result = await supabase.from('boards').delete().eq('id', boardId).eq('user_id', userId).select('id').maybeSingle();
+        if (epoch !== sessionEpoch) return;
+        if (result.error) throw result.error;
+        if (!result.data) {
+          const existing = await supabase.from('boards').select('id').eq('id', boardId).maybeSingle();
+          if (epoch !== sessionEpoch) return;
+          if (existing.error) throw existing.error;
+          if (existing.data) throw new Error('The board could not be deleted');
+        }
+        creatingBoards.delete(boardId);
+        toast.success('Board deleted');
+      } catch {
+        if (epoch !== sessionEpoch) return;
+        rawBoardData.set(boardId, data);
+        set((state) => ({ boards: [...state.boards, board], activeBoardId: state.activeBoardId ?? boardId }));
+        coordinator?.resume(boardId);
+        coordinator?.failed(boardId, 'The board could not be deleted. Your draft is restored.');
+        toast.error('Failed to delete board');
+      }
+    })();
+  },
 
-    set((state) => ({
-      boards: state.boards.filter((b) => b.id !== boardId),
-      activeBoardId:
-        state.activeBoardId === boardId
-          ? state.boards.find((b) => b.id !== boardId)?.id || null
-          : state.activeBoardId,
-    }));
-
-    toast.success('Board deleted');
-
-    if (userId) {
-      supabase.from('boards').delete().eq('id', boardId).eq('user_id', userId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('[boards] delete failed:', error.message);
-            toast.error('Failed to delete board');
-          }
-        });
+  openCardEditor: (boardId, cardId) => {
+    const board = get().boards.find((candidate) => candidate.id === boardId);
+    const card = board?.columns.flatMap((column) => column.cards).find((candidate) => candidate.id === cardId);
+    if (board && card) set({ cardEditorSession: structuredClone({ boardId, cardId, board, card, document: boardToDocument(board), baseline: boardSync?.getBaseline(boardId) }) });
+  },
+  closeCardEditor: () => { set({ cardEditorSession: null }); },
+  saveCardEditor: (data, initialForm) => {
+    const session = get().cardEditorSession;
+    if (!session) return;
+    // Submit only changes to the displayed form. Legacy body/cover migration
+    // and empty optional fields must not masquerade as deliberate user edits.
+    const updates = Object.fromEntries(Object.entries(data).filter(([key, value]) =>
+      !initialForm || JSON.stringify(value) !== JSON.stringify(initialForm[key as keyof CardEditorSaveData]))) as Partial<Card>;
+    if (!Object.keys(updates).length) { set({ cardEditorSession: null }); return; }
+    const draft = structuredClone(session.document);
+    draft.data.columns = (draft.data.columns as Column[]).map((column) => ({ ...column, cards: column.cards.map((card) =>
+      card.id === session.cardId ? { ...card, ...updates, updatedAt: new Date().toISOString() } : card) }));
+    const epoch = sessionEpoch;
+    const previousCard = get().boards.find((board) => board.id === session.boardId)?.columns.flatMap((column) => column.cards).find((card) => card.id === session.cardId);
+    const recordUndo = () => {
+      if (!previousCard || ['conflict', 'deleted', 'error'].includes(get().boardSyncStates[session.boardId]?.status ?? '')) return;
+      const previous = Object.fromEntries(Object.keys(updates).map((key) => [key, structuredClone(previousCard[key as keyof Card])])) as Partial<Card>;
+      useUndoStore.getState().pushAction({
+        description: `Edit card '${previousCard.title}'`,
+        undo: () => get().editCard(session.boardId, '', session.cardId, previous),
+        redo: () => get().editCard(session.boardId, '', session.cardId, updates),
+      });
+    };
+    if (get().currentUserId && boardSync) {
+      void boardSync.stage(session.boardId, session.document, draft, session.baseline).then(() => {
+        if (epoch !== sessionEpoch) return;
+        if (get().boards.some((board) => board.id === session.boardId)) set({ activeBoardId: session.boardId });
+        if (get().cardEditorSession === session) set({ cardEditorSession: null });
+        recordUndo();
+      }).catch(() => {
+        if (epoch === sessionEpoch) toast.error('Unable to reconcile this card. Your open draft is kept.');
+      });
+    } else {
+      const current = get().boards.find((board) => board.id === session.boardId);
+      if (!current) return;
+      const merged = mergeBoardDocuments(session.document, draft, boardToDocument(current));
+      set((state) => ({ boards: state.boards.map((board) => board.id === session.boardId ? documentToBoard(board, merged.document) : board), cardEditorSession: null }));
+      recordUndo();
     }
+  },
+
+  retryBoardSync: (id) => {
+    if (creatingBoards.has(id)) void persistCreation(id);
+    else void boardSync?.flush(id);
+  },
+  resolveBoardConflict: (id, choice) => { boardSync?.resolve(id, choice); },
+  discardBoardDraft: (id) => { boardSync?.forget(id); creatingBoards.delete(id); removeLocalBoard(id); },
+  saveBoardDraftAsCopy: (id) => {
+    const original = get().boards.find((board) => board.id === id);
+    const userId = get().currentUserId;
+    if (!original || !userId) return;
+    const epoch = sessionEpoch;
+    const now = new Date().toISOString();
+    const copy = { ...structuredClone(original), id: uuidv4(), name: `${original.name} (recovered)`, userId, isPublic: false, embedEnabled: false, createdAt: now, updatedAt: now };
+    rawBoardData.set(copy.id, structuredClone(boardToDocument(original).data));
+    set((state) => ({ boards: [...state.boards, copy], activeBoardId: copy.id }));
+    void registerNewBoard(copy).then((saved) => {
+      if (saved && epoch === sessionEpoch) get().discardBoardDraft(id);
+    });
   },
 
   renameBoard: (boardId, newName) => {
@@ -431,7 +541,13 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     useUndoStore.getState().pushAction({
       description: `Add column '${title}'`,
       undo: () => useBoardStore.getState().removeColumn(boardId, newId),
-      redo: () => useBoardStore.getState().addColumn(boardId, title),
+      redo: () => {
+        useBoardStore.setState((state) => ({ boards: state.boards.map((board) =>
+          board.id === boardId && !board.columns.some((column) => column.id === newId)
+            ? { ...board, columns: [...board.columns, { id: newId, title, cards: [], order: board.columns.length }] }
+            : board) }));
+        scheduleBoardSync(boardId);
+      },
     });
   },
 
@@ -457,9 +573,11 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
         undo: () => {
           useBoardStore.setState((state) => ({
             boards: state.boards.map((b) => {
-              if (b.id !== boardId) return b;
+              if (b.id !== boardId || b.columns.some((candidate) => candidate.id === columnId)) return b;
+              const existingCardIds = new Set(b.columns.flatMap((candidate) => candidate.cards.map((card) => card.id)));
+              const restoredColumn = { ...columnClone, cards: columnClone.cards.filter((card) => !existingCardIds.has(card.id)) };
               const cols = [...b.columns];
-              cols.splice(Math.min(columnIndex, cols.length), 0, columnClone);
+              cols.splice(Math.min(columnIndex, cols.length), 0, restoredColumn);
               return { ...b, columns: cols, updatedAt: new Date().toISOString() };
             }),
           }));
@@ -505,7 +623,8 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
         const columnMap = new Map(b.columns.map((c) => [c.id, c]));
         return {
           ...b,
-          columns: columnIds.map((id, index) => ({ ...columnMap.get(id)!, order: index })),
+          columns: [...new Set([...columnIds, ...b.columns.map((column) => column.id)])]
+            .filter((id) => columnMap.has(id)).map((id, index) => ({ ...columnMap.get(id)!, order: index })),
           updatedAt: new Date().toISOString(),
         };
       }),
@@ -560,7 +679,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
               ? {
                   ...b,
                   columns: b.columns.map((c) =>
-                    c.id === columnId ? { ...c, cards: [...c.cards, newCard] } : c
+                    c.id === columnId && !b.columns.some((column) => column.cards.some((card) => card.id === newCard.id)) ? { ...c, cards: [...c.cards, newCard] } : c
                   ),
                   updatedAt: new Date().toISOString(),
                 }
@@ -576,7 +695,8 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
   removeCard: (boardId, columnId, cardId) => {
     const board = get().boards.find((b) => b.id === boardId);
-    const column = board?.columns.find((c) => c.id === columnId);
+    const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
+    columnId = column?.id ?? columnId;
     const card = column?.cards.find((c) => c.id === cardId);
     const cardIndex = column?.cards.findIndex((c) => c.id === cardId) ?? -1;
     const cardClone = card ? structuredClone(card) : null;
@@ -607,7 +727,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
                 ? {
                     ...b,
                     columns: b.columns.map((c) => {
-                      if (c.id !== columnId) return c;
+                      if (c.id !== columnId || b.columns.some((candidate) => candidate.cards.some((card) => card.id === cardId))) return c;
                       const cards = [...c.cards];
                       cards.splice(Math.min(cardIndex, cards.length), 0, cardClone);
                       return { ...c, cards };
@@ -627,9 +747,11 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
   editCard: (boardId, columnId, cardId, updates) => {
     const board = get().boards.find((b) => b.id === boardId);
-    const column = board?.columns.find((c) => c.id === columnId);
+    const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
+    columnId = column?.id ?? columnId;
     const card = column?.cards.find((c) => c.id === cardId);
     const prevState = card ? structuredClone(card) : null;
+    const previousUpdates = card ? Object.fromEntries(Object.keys(updates).map((key) => [key, structuredClone(card[key as keyof Card])])) as Partial<Card> : {};
 
     set((state) => ({
       boards: state.boards.map((b) =>
@@ -657,7 +779,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       useUndoStore.getState().pushAction({
         description: `Edit card '${prevState.title}'`,
         undo: () => {
-          useBoardStore.getState().editCard(boardId, columnId, cardId, prevState);
+          useBoardStore.getState().editCard(boardId, columnId, cardId, previousUpdates);
         },
         redo: () => {
           useBoardStore.getState().editCard(boardId, columnId, cardId, updates);
@@ -666,40 +788,23 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     }
   },
 
-  moveCard: (boardId, sourceColumnId, targetColumnId, cardId, targetIndex) => {
+  moveCard: (boardId, _sourceColumnId, targetColumnId, cardId, targetIndex) => {
     set((state) => {
-      const board = state.boards.find((b) => b.id === boardId);
-      if (!board) return state;
-      const sourceColumn = board.columns.find((c) => c.id === sourceColumnId);
-      if (!sourceColumn) return state;
-      const card = sourceColumn.cards.find((c) => c.id === cardId);
-      if (!card) return state;
-
-      return {
-        boards: state.boards.map((b) => {
-          if (b.id !== boardId) return b;
-          return {
-            ...b,
-            columns: b.columns.map((c) => {
-              if (c.id === sourceColumnId) {
-                return { ...c, cards: c.cards.filter((x) => x.id !== cardId) };
-              }
-              if (c.id === targetColumnId) {
-                const nextCards = [...c.cards];
-                const insertIndex = targetIndex !== undefined ? targetIndex : nextCards.length;
-                nextCards.splice(insertIndex, 0, card);
-                return { ...c, cards: nextCards };
-              }
-              return c;
-            }),
-            updatedAt: new Date().toISOString(),
-          };
+      const board = state.boards.find((candidate) => candidate.id === boardId);
+      const source = board?.columns.find((column) => column.cards.some((card) => card.id === cardId));
+      const card = source?.cards.find((candidate) => candidate.id === cardId);
+      if (!board || !source || !card || !board.columns.some((column) => column.id === targetColumnId)) return state;
+      return { boards: state.boards.map((candidate) => candidate.id !== boardId ? candidate : {
+        ...candidate,
+        columns: candidate.columns.map((column) => {
+          const cards = column.cards.filter((candidate) => candidate.id !== cardId);
+          if (column.id === targetColumnId) cards.splice(targetIndex ?? cards.length, 0, card);
+          return column.id === source.id || column.id === targetColumnId ? { ...column, cards } : column;
         }),
-      };
+        updatedAt: new Date().toISOString(),
+      }) };
     });
     scheduleBoardSync(boardId);
-    // Undo for cross-column moves is handled in KanbanBoard handleDragEnd
-    // to avoid stale references from intermediate handleDragOver calls.
   },
 
   reorderCards: (boardId, columnId, cardIds) => {
@@ -712,7 +817,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
         return {
           ...b,
           columns: b.columns.map((c) =>
-            c.id === columnId ? { ...c, cards: cardIds.map((id) => cardMap.get(id)!).filter(Boolean) } : c
+            c.id === columnId ? { ...c, cards: [...new Set([...cardIds, ...c.cards.map((card) => card.id)])].filter((id) => cardMap.has(id)).map((id) => cardMap.get(id)!) } : c
           ),
           updatedAt: new Date().toISOString(),
         };
@@ -724,7 +829,8 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   archiveCard: (boardId, columnId, cardId) => {
     // Look up card BEFORE archiving to check for recurrence
     const board = get().boards.find((b) => b.id === boardId);
-    const column = board?.columns.find((c) => c.id === columnId);
+    const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
+    columnId = column?.id ?? columnId;
     const card = column?.cards.find((c) => c.id === cardId);
     const hasRecurrence = card?.recurrence && !card.isArchived;
 
@@ -812,7 +918,8 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
 
   duplicateCard: (boardId, columnId, cardId) => {
     const board = get().boards.find((b) => b.id === boardId);
-    const column = board?.columns.find((c) => c.id === columnId);
+    const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
+    columnId = column?.id ?? columnId;
     const card = column?.cards.find((c) => c.id === cardId);
     if (!card) return;
     const now = new Date().toISOString();
@@ -842,49 +949,9 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     set({ viewMode: mode });
   },
 
-  toggleBoardPublic: (boardId, isPublic) => {
-    set((state) => ({
-      boards: state.boards.map((b) =>
-        b.id === boardId ? { ...b, isPublic, updatedAt: new Date().toISOString() } : b
-      ),
-    }));
-    const userId = get().currentUserId;
-    if (userId) {
-      supabase
-        .from('boards')
-        .update({ is_public: isPublic, updated_at: new Date().toISOString() })
-        .eq('id', boardId)
-        .eq('user_id', userId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('[boards] toggle public failed:', error.message);
-            toast.error('Failed to update board visibility');
-          }
-        });
-    }
-  },
+  toggleBoardPublic: (boardId, isPublic) => { updateBoardSetting(boardId, 'isPublic', isPublic); },
 
-  toggleBoardEmbed: (boardId, enabled) => {
-    set((state) => ({
-      boards: state.boards.map((b) =>
-        b.id === boardId ? { ...b, embedEnabled: enabled, updatedAt: new Date().toISOString() } : b
-      ),
-    }));
-    const userId = get().currentUserId;
-    if (userId) {
-      supabase
-        .from('boards')
-        .update({ embed_enabled: enabled, updated_at: new Date().toISOString() })
-        .eq('id', boardId)
-        .eq('user_id', userId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('[boards] toggle embed failed:', error.message);
-            toast.error('Failed to update embed settings');
-          }
-        });
-    }
-  },
+  toggleBoardEmbed: (boardId, enabled) => { updateBoardSetting(boardId, 'embedEnabled', enabled); },
 
   getActiveBoard: () => {
     const { boards, activeBoardId } = get();

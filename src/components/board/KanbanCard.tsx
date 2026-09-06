@@ -1,17 +1,12 @@
-import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useBoardStore } from '@/store/useBoardStore';
 import type { Card } from '@/types';
-import { Button } from '@/components/ui/button';
 import { Calendar, CheckSquare, Image as ImageIcon, FileText, Repeat } from 'lucide-react';
 import { formatRecurrence } from '@/lib/recurrence';
 import { parseLocalDate } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { CardEditor, type CardEditorSaveData } from './CardEditor';
 import { CardActionsMenu } from './CardActionsMenu';
 import { LabelStrip } from './LabelPicker';
-import { useActivityLogger } from '@/hooks/useActivityLogger';
 
 interface KanbanCardProps {
   boardId: string;
@@ -20,10 +15,8 @@ interface KanbanCardProps {
 }
 
 export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
-  const { boards, removeCard, editCard } = useBoardStore();
-  const { logActivity } = useActivityLogger();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const boards = useBoardStore((state) => state.boards);
+  const openCardEditor = useBoardStore((state) => state.openCardEditor);
 
   const boardColumns = boards.find((b) => b.id === boardId)?.columns || [];
 
@@ -46,41 +39,6 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  };
-
-  const handleDelete = () => {
-    removeCard(boardId, columnId, card.id);
-    setIsDeleteDialogOpen(false);
-  };
-
-  const handleEdit = (data: CardEditorSaveData) => {
-    if (data.title !== card.title) {
-      logActivity(card.id, 'renamed', { from: card.title, to: data.title });
-    }
-
-    const oldLabels = card.labels || [];
-    const newLabels = data.labels || [];
-    const addedLabels = newLabels.filter((l) => !oldLabels.includes(l));
-    const removedLabels = oldLabels.filter((l) => !newLabels.includes(l));
-    if (addedLabels.length > 0 || removedLabels.length > 0) {
-      logActivity(card.id, 'label_changed', { added: addedLabels, removed: removedLabels });
-    }
-
-    if (data.targetDate !== card.targetDate) {
-      logActivity(card.id, 'date_changed', { from: card.targetDate || null, to: data.targetDate || null });
-    }
-
-    editCard(boardId, columnId, card.id, {
-      title: data.title,
-      description: data.description,
-      content: data.content,
-      targetDate: data.targetDate,
-      labels: data.labels,
-      coverImage: data.coverImage,
-      attachments: data.attachments,
-      recurrence: data.recurrence,
-    });
-    setIsEditDialogOpen(false);
   };
 
   const getContentIcon = () => {
@@ -148,7 +106,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setIsEditDialogOpen(true);
+              openCardEditor(boardId, card.id);
             }}
             className="h-16 sm:h-20 w-full"
           >
@@ -164,7 +122,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setIsEditDialogOpen(true);
+              openCardEditor(boardId, card.id);
             }}
             className="text-left text-sm font-medium text-[#F2F7F7] flex-1 line-clamp-2"
           >
@@ -176,7 +134,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
             columnId={columnId}
             cardId={card.id}
             columns={boardColumns}
-            onEdit={() => setIsEditDialogOpen(true)}
+            onEdit={() => openCardEditor(boardId, card.id)}
           />
         </div>
 
@@ -223,44 +181,6 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
         </div>
       </div>
 
-      {/* Edit Dialog */}
-      <CardEditor
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        onSave={handleEdit}
-        onDelete={() => { setIsEditDialogOpen(false); handleDelete(); }}
-        mode="edit"
-        cardId={card.id}
-        initialData={card}
-      />
-
-      {/* Delete Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
-          <DialogHeader>
-            <DialogTitle>Delete Card</DialogTitle>
-          </DialogHeader>
-          <p className="text-[#A8B2B2] py-4">
-            Are you sure you want to delete "{card.title}"? This action cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDelete}
-              variant="destructive"
-              className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

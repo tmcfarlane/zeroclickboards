@@ -78,6 +78,9 @@ jobs:
       - name: Provision dedicated test user
         if: steps.guard.outputs.run == 'true'
         run: npm run test:e2e:setup
+      - name: Build MCP server for browser synchronization tests
+        if: steps.guard.outputs.run == 'true'
+        run: npm ci --prefix mcp-server && npm run build --prefix mcp-server
       - name: Run Playwright e2e
         if: steps.guard.outputs.run == 'true'
         run: npm run test:e2e

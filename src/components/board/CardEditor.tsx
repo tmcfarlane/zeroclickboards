@@ -44,7 +44,7 @@ export interface CardEditorSaveData {
 interface CardEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: CardEditorSaveData) => void;
+  onSave: (data: CardEditorSaveData, initialForm?: CardEditorSaveData) => void;
   onDelete?: () => void;
   mode: 'create' | 'edit';
   cardId?: string;
@@ -133,6 +133,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   const [editingAttachmentId, setEditingAttachmentId] = useState<string | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const attachmentFileRef = useRef<HTMLInputElement>(null);
+  const initialFormRef = useRef<CardEditorSaveData | undefined>(undefined);
 
   // Section visibility
   const [showDates, setShowDates] = useState(false);
@@ -143,9 +144,11 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
+        const initialDescription = initialData.description ?? (initialData.content.type === 'text' ? initialData.content.text : undefined) ?? '';
+        const initialContentType = initialData.content.type === 'image' ? 'text' : initialData.content.type;
         setTitle(initialData.title);
-        setDescription(initialData.description || '');
-        setContentType(initialData.content.type === 'image' ? 'text' : initialData.content.type);
+        setDescription(initialDescription);
+        setContentType(initialContentType);
         setChecklist(initialData.content.checklist || []);
         setTargetDate(initialData.targetDate || '');
         setLabels(initialData.labels || []);
@@ -179,7 +182,23 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         setShowLabels(!!(initialData.labels && initialData.labels.length > 0));
         setRecurrence(initialData.recurrence || null);
         setShowRecurrence(!!initialData.recurrence);
+        // Compare submitted values with what this form displayed, including
+        // legacy image migration and the body-text description fallback. The
+        // store can then apply only fields the user actually changed.
+        initialFormRef.current = structuredClone({
+          title: initialData.title.trim(),
+          description: initialDescription.trim() || undefined,
+          content: initialContentType === 'checklist'
+            ? { type: 'checklist', checklist: initialData.content.checklist || [] }
+            : { type: 'text', text: initialDescription.trim() },
+          targetDate: initialData.targetDate || undefined,
+          labels: initialData.labels || [],
+          coverImage: existing.find((attachment) => attachment.isCover)?.url,
+          attachments: existing.length > 0 ? existing : undefined,
+          recurrence: initialData.recurrence || undefined,
+        });
       } else {
+        initialFormRef.current = undefined;
         setTitle('');
         setDescription('');
         setContentType('text');
@@ -219,7 +238,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
       coverImage: coverAttachment?.url,
       attachments: attachments.length > 0 ? attachments : undefined,
       recurrence: recurrence || undefined,
-    });
+    }, initialFormRef.current);
   };
 
   // Checklist helpers
@@ -828,7 +847,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               {/* Card Template Picker (create mode only) */}
               <CardTemplatePicker onApply={(tpl) => {
                 setTitle(tpl.card.title);
-                setDescription(tpl.card.description || '');
+                setDescription(tpl.card.description ?? (tpl.card.content.type === 'text' ? tpl.card.content.text : undefined) ?? '');
                 setContentType(tpl.card.content.type === 'image' ? 'text' : tpl.card.content.type);
                 setChecklist(tpl.card.content.checklist ? tpl.card.content.checklist.map(item => ({ ...item, id: genId(), completed: false })) : []);
                 setLabels(tpl.card.labels || []);

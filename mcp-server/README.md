@@ -78,7 +78,11 @@ Destructive tools (`delete_board`, `delete_card`, `remove_column`) carry a `dest
 
 Board columns/cards live in a single `boards.data` JSONB blob (the same source of truth the web app uses). MCP card and column mutations update only the exact `updated_at` revision they read. If another writer changes that revision first, the server reads the latest board and reapplies the operation, for up to three attempts. Persistent contention returns an error. Network and API errors are not automatically replayed because a write may already have committed. The existing `boards_set_updated_at` database trigger must be present, as provided by `supabase/schema.sql`.
 
-These guards protect **writes made by this MCP server**. The web app still saves its board snapshot on a debounce without a revision check, so a later stale web save can overwrite an MCP edit. Full two-way conflict handling remains future work. MCP mutations preserve unrelated fields in `boards.data`.
+The web app also saves against the exact database revision and merges its draft with incoming changes. Independent card fields, checklist items, attachments, additions, and card moves are reconciled. When both sides change the same value incompatibly, saving pauses for review; the user can keep their edits or use incoming edits for the conflicting fields while retaining unrelated changes. Both clients preserve unrelated fields in `boards.data`.
+
+Open card editors retain their opening snapshot, so an MCP update or move does not reset typed text. Save submits only changed form fields, including when a legacy MCP card has body text without a separate description. Shared boards receive realtime updates and refresh on window focus.
+
+Drafts and conflict decisions are kept in the current browser tab, not durable offline storage. Failed saves offer retry, and a draft whose board was deleted can be saved as a new private board. The browser warns before leaving with an open editor or unsaved board changes. These safeguards require the updated web client and MCP server; older clients can still make unguarded writes.
 
 Column reordering requires every current column ID exactly once; invalid input leaves the board unchanged. Archiving an active recurring card creates the next occurrence in the same column and resets its checklist. Archiving it again does not create another copy. Monthly dates clamp to the destination month's last day, including February in leap years.
 
@@ -102,13 +106,13 @@ npm run smoke   # exercises the data layer against real Supabase (needs E2E_EMAI
 npm run smoke:mcp # opt-in live MCP protocol checks; supply those same variables in the process environment
 ```
 
-`smoke:mcp` signs in as the dedicated E2E account without touching `~/.zeroboard`, creates a temporary test board, forces a concurrent-write conflict, exercises recurring archives and resource reads, and deletes the board in cleanup. Run it only with a configured test account. Offline regression tests run in CI.
+`smoke:mcp` signs in as the dedicated E2E account without touching `~/.zeroboard`, creates a temporary test board, forces a concurrent-write conflict, exercises recurring archives and resource reads, and deletes the board in cleanup. Run it only with a configured test account. Offline regression tests run in CI. The repository’s authenticated Playwright suite also forces browser/MCP writes to overlap against a dedicated test account and checks merged edits and explicit conflict resolution after reload. Build this MCP package before running those browser tests.
 
 ## Roadmap
 
 - ✅ Browser login via the hosted `/auth/cli` route (Google + email) — done; a future hardening is a full server-side PKCE code exchange (the current flow binds the loopback delivery with a one‑time `state` and validates the session before storing).
 - ✅ `generate_board` tool backed by the existing `/api/ai/board-template` endpoint — done.
-- ✅ Conditional card/column writes with bounded conflict retries in the MCP server — done. Web-side conflict handling is still needed.
+- ✅ Conditional card/column writes with bounded conflict retries in the MCP server — done. The web app also reconciles drafts and reviews conflicting edits.
 - A dedicated `/api/v1` layer for scoped/read‑only tokens and audit logging.
 - Realtime: a `list_changes(since)` poll tool and (where clients support it) resource‑update notifications.
 - ✅ A Claude Code **plugin** that bundles this server plus slash commands — done.

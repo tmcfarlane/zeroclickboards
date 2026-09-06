@@ -72,24 +72,15 @@ export function SharedBoardPage() {
   const [noAccess, setNoAccess] = useState(false);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [inviteBoardName, setInviteBoardName] = useState<string | null>(null);
-  const { setCurrentUserId, refreshFromRemote, setActiveBoard, remoteStatus } = useBoardStore();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const { setCurrentUserId, refreshFromRemote, setActiveBoard } = useBoardStore();
 
   // Initialize the store for editors so KanbanBoard mutations work
   useEffect(() => {
-    if (!userId) return;
+    if (!isLoaded) return;
     setCurrentUserId(userId);
-  }, [userId, setCurrentUserId]);
-
-  useEffect(() => {
-    if (!userId || remoteStatus !== 'idle') return;
-    void refreshFromRemote();
-  }, [userId, remoteStatus, refreshFromRemote]);
-
-  // Set active board once store is loaded
-  useEffect(() => {
-    if (!boardId || remoteStatus !== 'ready') return;
-    setActiveBoard(boardId);
-  }, [boardId, remoteStatus, setActiveBoard]);
+  }, [isLoaded, userId, setCurrentUserId]);
 
   // Fetch board name from invites for the sign-in screen (no auth needed)
   useEffect(() => {
@@ -108,21 +99,26 @@ export function SharedBoardPage() {
   useEffect(() => {
     if (!boardId || !isLoaded || !userId) return;
 
+    const requestedBoardId = boardId;
+    const requestedUserId = userId;
     let cancelled = false;
 
     async function fetchBoard() {
       setLoading(true);
       setNoAccess(false);
+      setLoadError(null);
+      setBoard(null);
+      setAccessLevel(null);
 
       // Resolve any pending invites for the current user
-      if (userId) {
-        await supabase.rpc('resolve_pending_invites_for_current_user');
-      }
+      const { error: inviteError } = await supabase.rpc('resolve_pending_invites_for_current_user');
+      if (cancelled) return;
+      if (inviteError) throw inviteError;
 
       const { data: row, error } = await supabase
         .from('boards')
         .select('*')
-        .eq('id', boardId!)
+        .eq('id', requestedBoardId)
         .single();
 
       if (cancelled) return;
@@ -134,64 +130,68 @@ export function SharedBoardPage() {
       }
 
       const fetchedBoard = rowToBoard(row as Record<string, unknown>);
-      setBoard(fetchedBoard);
+      let fetchedAccessLevel: AccessLevel | null = null;
 
       // Determine access level
-      if (userId && fetchedBoard.userId === userId) {
-        setAccessLevel('owner');
-        setLoading(false);
-        return;
-      }
-
-      if (userId) {
+      if (fetchedBoard.userId === requestedUserId) {
+        fetchedAccessLevel = 'owner';
+      } else {
         // Check board_members table
         const { data: memberRow } = await supabase
           .from('board_members')
           .select('role')
-          .eq('board_id', boardId!)
-          .eq('user_id', userId)
+          .eq('board_id', requestedBoardId)
+          .eq('user_id', requestedUserId)
           .single();
 
         if (cancelled) return;
 
         if (memberRow) {
           const role = memberRow.role;
-          if (role === 'editor') {
-            setAccessLevel('editor');
-          } else if (role === 'commenter') {
-            setAccessLevel('commenter');
-          } else {
-            setAccessLevel('viewer');
-          }
-          setLoading(false);
-          return;
+          fetchedAccessLevel = role === 'editor' || role === 'commenter' ? role : 'viewer';
         }
       }
 
       // No membership found — check if board is public
-      if (fetchedBoard.isPublic) {
-        setAccessLevel('public');
+      if (!fetchedAccessLevel && fetchedBoard.isPublic) fetchedAccessLevel = 'public';
+      if (!fetchedAccessLevel) {
+        setNoAccess(true);
         setLoading(false);
         return;
       }
 
-      setNoAccess(true);
+      setBoard(fetchedBoard);
+      setAccessLevel(fetchedAccessLevel);
+
+      if (fetchedAccessLevel === 'owner' || fetchedAccessLevel === 'editor') {
+        // The initial store load can finish before an invite becomes membership.
+        // Reload after access is resolved and verify this board before redirecting.
+        await refreshFromRemote();
+        if (cancelled) return;
+        const currentStore = useBoardStore.getState();
+        if (currentStore.currentUserId !== requestedUserId) return;
+        if (currentStore.remoteStatus !== 'ready' || !currentStore.getBoardsForUser().some((candidate) => candidate.id === requestedBoardId)) {
+          setLoadError('This board could not be opened for editing. Please try again.');
+          setLoading(false);
+          return;
+        }
+        setActiveBoard(requestedBoardId);
+        navigate(`/app?board=${encodeURIComponent(requestedBoardId)}`, { replace: true });
+        return;
+      }
+
       setLoading(false);
     }
 
-    void fetchBoard();
+    void fetchBoard().catch(() => {
+      if (cancelled) return;
+      setLoadError('This board could not be loaded. Please try again.');
+      setLoading(false);
+    });
     return () => { cancelled = true; };
-  }, [boardId, userId, isLoaded]);
+  }, [boardId, userId, isLoaded, loadAttempt, refreshFromRemote, setActiveBoard, navigate]);
 
   const canEdit = accessLevel === 'owner' || accessLevel === 'editor';
-
-  // Editors/owners get the full app experience — redirect to /app with the board active
-  useEffect(() => {
-    if (canEdit && boardId && remoteStatus === 'ready') {
-      setActiveBoard(boardId);
-      navigate(`/app?board=${boardId}`, { replace: true });
-    }
-  }, [canEdit, boardId, remoteStatus, setActiveBoard, navigate]);
 
   // ── Render ──
 
@@ -239,6 +239,22 @@ export function SharedBoardPage() {
     return (
       <div className="min-h-screen bg-[#0B0F0F] flex items-center justify-center">
         <div className="h-8 w-8 rounded-full border-2 border-[#78fcd6] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-[#0B0F0F] flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p role="alert" className="text-[#F2F7F7]">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+          className="inline-flex items-center justify-center h-11 px-8 gradient-cyan text-[#0B0F0F] font-bold rounded-xl hover:opacity-90 transition-opacity"
+        >
+          Try again
+        </button>
+        <Link to="/" className="text-sm text-[#A8B2B2] hover:text-[#78fcd6] transition-colors">Go Home</Link>
       </div>
     );
   }
