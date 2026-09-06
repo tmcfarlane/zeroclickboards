@@ -3,7 +3,7 @@
 // ~/.zeroboard credential store). Run: npm run build && npm run smoke
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createClient } from '@supabase/supabase-js';
+import { createNodeClient } from './node-client.js';
 import * as db from './board-data.js';
 
 function loadEnv(): void {
@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     throw new Error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / E2E_EMAIL / E2E_PASSWORD (run scripts/e2e/ensure-test-user.mjs).');
   }
 
-  const client = createClient(url, anon, {
+  const client = createNodeClient(url, anon, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   const signIn = await client.auth.signInWithPassword({ email, password });

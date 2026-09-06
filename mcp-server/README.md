@@ -6,6 +6,8 @@ An [MCP](https://modelcontextprotocol.io) server for **ZeroBoard** — manage yo
 
 ## Quick start
 
+Requires Node.js 20 or newer, matching the Supabase client's minimum version. The server supplies its own WebSocket transport, so Node 20 works without a global WebSocket implementation. CI checks Node 20 and 22.
+
 ```bash
 # Sign in once — opens your browser (Google or email); stores a refreshable
 # session under ~/.zeroboard.

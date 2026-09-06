@@ -2,7 +2,7 @@
 // Creates and removes only its own temporary board. Supply the same environment
 // as npm run smoke: VITE_SUPABASE_URL/ANON_KEY and E2E_EMAIL/PASSWORD.
 import assert from 'node:assert/strict';
-import { createClient } from '@supabase/supabase-js';
+import { createNodeClient as createClient } from '../dist/node-client.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { buildServer } from '../dist/server.js';

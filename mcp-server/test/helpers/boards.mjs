@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createClient } from '@supabase/supabase-js';
+import { createNodeClient as createClient } from '../../dist/node-client.js';
 
 export function makeCard(id, overrides = {}) {
   return {
