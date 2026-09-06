@@ -5,6 +5,7 @@ import {
   deleteBoard,
   getBoard,
   reorderColumns,
+  setCoverImage,
   updateCard,
   updateColumn,
 } from '../dist/board-data.js';
@@ -204,4 +205,75 @@ test('delete preserves server errors and does not retry', async () => {
   });
   await assert.rejects(deleteBoard(client, 'board-1'), /delete permission denied/);
   assert.equal(state.requests.length, 1);
+});
+
+function boardWithAttachments() {
+  const row = makeBoard();
+  const card = row.data.columns[0].cards[0];
+  card.coverImage = 'https://example.com/old.png';
+  card.attachments = [
+    { id: 'old', name: 'Old cover', url: card.coverImage, addedAt: '2026-01-01', isCover: true, future: { keep: true } },
+    { id: 'next', name: 'New cover', url: 'https://example.com/next.png', addedAt: '2026-01-02', isCover: false },
+    { id: 'duplicate-url', name: 'Same image', url: 'https://example.com/next.png', addedAt: '2026-01-03', isCover: true },
+  ];
+  return row;
+}
+
+test('clearing a cover retains attachments and clears every stale selection flag', async () => {
+  const row = boardWithAttachments();
+  const before = row.data.columns[0].cards[0];
+  const { client, state } = createBoardFixture({ row });
+  await setCoverImage(client, row.id, before.id, null);
+  const card = state.row.data.columns[0].cards[0];
+  assert.equal(card.coverImage, undefined);
+  assert.deepEqual(card.attachments, before.attachments.map((attachment) => ({ ...attachment, isCover: false })));
+  assert.deepEqual(card.content, before.content);
+});
+
+test('selecting an existing attachment marks exactly its first matching URL as cover', async () => {
+  const { client, state } = createBoardFixture({ row: boardWithAttachments() });
+  await setCoverImage(client, 'board-1', 'card-a', 'https://example.com/next.png');
+  const card = state.row.data.columns[0].cards[0];
+  assert.equal(card.coverImage, 'https://example.com/next.png');
+  assert.deepEqual(card.attachments.map((attachment) => attachment.isCover), [false, true, false]);
+  assert.deepEqual(card.attachments[0].future, { keep: true });
+});
+
+test('a new cover URL clears old flags without removing attachments', async () => {
+  const { client, state } = createBoardFixture({ row: boardWithAttachments() });
+  await setCoverImage(client, 'board-1', 'card-a', 'https://example.com/external.png');
+  const card = state.row.data.columns[0].cards[0];
+  assert.equal(card.coverImage, 'https://example.com/external.png');
+  assert.equal(card.attachments.length, 3);
+  assert.ok(card.attachments.every((attachment) => attachment.isCover === false));
+});
+
+test('cover patches reconcile flags and unrelated card patches leave them untouched', async () => {
+  const row = boardWithAttachments();
+  const { client, state } = createBoardFixture({ row });
+  await updateCard(client, 'board-1', 'card-a', { title: 'Unrelated update' });
+  assert.deepEqual(state.row.data.columns[0].cards[0].attachments, row.data.columns[0].cards[0].attachments);
+  await updateCard(client, 'board-1', 'card-a', { coverImage: 'https://example.com/next.png' });
+  assert.deepEqual(state.row.data.columns[0].cards[0].attachments.map((attachment) => attachment.isCover), [false, true, false]);
+  await updateCard(client, 'board-1', 'card-a', { coverImage: undefined });
+  assert.equal(state.row.data.columns[0].cards[0].coverImage, undefined);
+  assert.ok(state.row.data.columns[0].cards[0].attachments.every((attachment) => !attachment.isCover));
+});
+
+test('cover clear retries retain concurrently added attachments and clear their flags', async () => {
+  const { client, state } = createBoardFixture({
+    row: boardWithAttachments(),
+    onRequest(request, state) {
+      if (request.method === 'PATCH' && writes(state).length === 1) {
+        state.row.data.columns[0].cards[0].attachments.push({ id: 'concurrent', name: 'Concurrent', url: 'https://example.com/new.png', addedAt: '2026-09-06', isCover: true });
+        state.row.updated_at = '2026-09-06T00:00:00.123456Z';
+      }
+    },
+  });
+  await setCoverImage(client, 'board-1', 'card-a', null);
+  const card = state.row.data.columns[0].cards[0];
+  assert.equal(writes(state).length, 2);
+  assert.equal(card.attachments.length, 4);
+  assert.equal(card.attachments.at(-1).id, 'concurrent');
+  assert.ok(card.attachments.every((attachment) => attachment.isCover === false));
 });

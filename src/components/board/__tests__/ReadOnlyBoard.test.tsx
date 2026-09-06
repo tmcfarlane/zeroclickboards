@@ -79,6 +79,16 @@ describe('ReadOnlyBoard', () => {
     expect(screen.getByText('Some description text')).toBeInTheDocument();
   });
 
+  it('uses the separate description for text and checklist previews', () => {
+    const board = makeBoard();
+    board.columns[0].cards[0].description = 'Short text summary';
+    board.columns[0].cards[1].description = 'Checklist summary';
+    render(<ReadOnlyBoard board={board} />);
+    expect(screen.getByText('Short text summary')).toBeInTheDocument();
+    expect(screen.getByText('Checklist summary')).toBeInTheDocument();
+    expect(screen.queryByText('Some description text')).not.toBeInTheDocument();
+  });
+
   it('shows checklist progress', () => {
     render(<ReadOnlyBoard board={makeBoard()} />);
     expect(screen.getByText('2/3 completed')).toBeInTheDocument();

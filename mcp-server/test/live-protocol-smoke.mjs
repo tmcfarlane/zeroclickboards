@@ -104,7 +104,7 @@ try {
   if (snapshot.error) throw snapshot.error;
   const card = snapshot.data.data.columns.flatMap((column) => column.cards).find((item) => item.id === cardId);
   card.targetDate = '2028-01-31';
-  card.recurrence = { frequency: 'monthly', interval: 1, dayOfMonth: 31 };
+  card.recurrence = { frequency: 'monthly', interval: 1 };
   const seed = await database.from('boards').update({ data: snapshot.data.data }).eq('id', boardId).select('id').single();
   if (seed.error) throw seed.error;
   await call('archive_card', { boardId, cardId });
@@ -112,11 +112,16 @@ try {
   const remaining = await call('list_cards', { boardId });
   assert.equal(remaining.length, 1);
   assert.equal(remaining[0].targetDate, '2028-02-29');
+  assert.equal(remaining[0].recurrence.dayOfMonth, 31);
   assert.notEqual(remaining[0].id, cardId);
-  passed('Recurring archive creates one February copy, including repeated archive calls');
+  await call('archive_card', { boardId, cardId: remaining[0].id });
+  const march = await call('list_cards', { boardId });
+  assert.equal(march.length, 1);
+  assert.equal(march[0].targetDate, '2028-03-31');
+  passed('Recurring archives create one next copy and preserve the original monthly day after February');
 
   const resource = await mcp.readResource({ uri: `zeroboard://board/${boardId}` });
-  assert.equal(JSON.parse(resource.contents[0].text).columns.flatMap((column) => column.cards).length, 2);
+  assert.equal(JSON.parse(resource.contents[0].text).columns.flatMap((column) => column.cards).length, 3);
   passed('MCP resource reflects persisted changes');
 } finally {
   try {

@@ -160,7 +160,7 @@ test.describe('Browser and MCP board synchronization', () => {
           await expect(cardTitle(page, choice.expectedTitle)).toBeVisible();
           await expect(cardTitle(page, 'MCP task kept through conflict review')).toBeVisible();
           await expect(page.getByText('Description added in the browser', { exact: true })).toBeVisible();
-          expect((await mcp.call<Card>('get_card', { boardId: board.id, cardId: card.id })).content.text).toBe('Description added in the browser');
+          expect((await mcp.call<Card>('get_card', { boardId: board.id, cardId: card.id })).content.text).toBe('Original body from MCP');
         } finally {
           await gate.dispose();
         }

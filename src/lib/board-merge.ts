@@ -15,6 +15,7 @@ type Resolution = 'local' | 'remote';
 type Value = Record<string, unknown>;
 type Entity = Value & { id: string };
 type CardEntry = { columnId: string; card: Entity };
+type MergeKind = 'cardEntry' | 'card' | 'attachments' | 'attachment';
 type Snapshot = {
   columns: Map<string, Entity>;
   cards: Map<string, CardEntry>;
@@ -218,18 +219,23 @@ function mergeOrder(base: string[], local: string[], remote: string[], alive: st
   return [...groupOrder(null), ...core.flatMap((id) => [id, ...groupOrder(id)])];
 }
 
-function mergeKeyedList(base: Entity[], local: Entity[], remote: Entity[], path: string, context: MergeContext): Entity[] {
+function mergeKeyedList(base: Entity[], local: Entity[], remote: Entity[], path: string, context: MergeContext, itemKind?: MergeKind): Entity[] {
   const maps = [base, local, remote].map((list) => new Map(list.map((entry) => [entry.id, entry])));
   const merged = new Map<string, Entity>();
   for (const id of unique(...[base, local, remote].map((list) => list.map((entry) => entry.id)))) {
-    const value = mergeValue(maps[0].get(id), maps[1].get(id), maps[2].get(id), `${path}[${id}]`, context);
+    const value = mergeValue(maps[0].get(id), maps[1].get(id), maps[2].get(id), `${path}[${id}]`, context, itemKind);
     if (value !== undefined) merged.set(id, value as Entity);
   }
   return mergeOrder(base.map((entry) => entry.id), local.map((entry) => entry.id), remote.map((entry) => entry.id),
     [...merged.keys()], `${path}.order`, context).map((id) => merged.get(id)!);
 }
 
-function mergeValue(base: unknown, local: unknown, remote: unknown, path: string, context: MergeContext): unknown {
+function childMergeKind(kind: MergeKind | undefined, key: string): MergeKind | undefined {
+  if (kind === 'cardEntry' && key === 'card') return 'card';
+  if (kind === 'card' && key === 'attachments') return 'attachments';
+}
+
+function mergeValue(base: unknown, local: unknown, remote: unknown, path: string, context: MergeContext, kind?: MergeKind): unknown {
   if (equal(local, remote)) return copy(local);
   if (equal(base, local)) return copy(remote);
   if (equal(base, remote)) return copy(local);
@@ -243,13 +249,21 @@ function mergeValue(base: unknown, local: unknown, remote: unknown, path: string
       return copy(context.conflict(path, local, remote));
     }
     const keys = new Set([...Object.keys(before), ...Object.keys(local), ...Object.keys(remote)]);
-    return Object.fromEntries([...keys].map((key) => [key, mergeValue(field(before, key), field(local, key), field(remote, key), `${path}.${key}`, context)])
-      .filter(([, value]) => value !== undefined));
+    return Object.fromEntries([...keys].map((key) => {
+      const b = field(before, key), l = field(local, key), r = field(remote, key);
+      if (kind === 'attachment' && key === 'isCover') {
+        // This is a representation hint, not another independent cover choice.
+        // Keep an available hint here; final canonical cover alignment decides
+        // its value after coverImage and attachment order have been reconciled.
+        return [key, copy(equal(b, l) ? r : l)];
+      }
+      return [key, mergeValue(b, l, r, `${path}.${key}`, context, childMergeKind(kind, key))];
+    }).filter(([, value]) => value !== undefined));
   }
   if (Array.isArray(local) && Array.isArray(remote) && (base === undefined || Array.isArray(base))) {
     const lists = [base ?? [], local, remote] as unknown[][];
     if (lists.flat().every((entry) => isObject(entry) && typeof entry.id === 'string')) {
-      return mergeKeyedList(entities(lists[0], path), entities(local, path), entities(remote, path), path, context);
+      return mergeKeyedList(entities(lists[0], path), entities(local, path), entities(remote, path), path, context, kind === 'attachments' ? 'attachment' : undefined);
     }
     if (/(?:^|\.)(labels|hiddenColumnIds)$/.test(path) && lists.flat().every((entry) => typeof entry === 'string')) {
       const [b, l, r] = lists as string[][];
@@ -272,6 +286,23 @@ function wasReordered(id: string, base: Snapshot, side: Snapshot): boolean {
   if (!before || !after || before.columnId !== after.columnId) return !!before && !!after;
   const b = base.cardOrder.get(before.columnId) ?? [], s = side.cardOrder.get(after.columnId) ?? [];
   return b.some((other) => s.includes(other) && (b.indexOf(other) < b.indexOf(id)) !== (s.indexOf(other) < s.indexOf(id)));
+}
+
+/** coverImage is canonical; attachment flags are its derived mirror. Merging
+ * independent flag changes can otherwise retain multiple selected attachments. */
+function alignAttachmentCover(card: Entity): void {
+  if (!Array.isArray(card.attachments)) return;
+  const cover = typeof card.coverImage === 'string' && card.coverImage ? card.coverImage : undefined;
+  let matched = false;
+  card.attachments = card.attachments.map((attachment: unknown) => {
+    if (!isObject(attachment)) return attachment;
+    const selected = !matched && cover !== undefined && attachment.url === cover;
+    if (selected) matched = true;
+    // Missing and false both mean unselected. Preserve either representation
+    // so an already coherent card does not acquire an artificial local edit.
+    if (selected ? attachment.isCover === true : attachment.isCover === false || attachment.isCover === undefined) return attachment;
+    return { ...attachment, isCover: selected };
+  });
 }
 
 function latestTimestamp(...values: unknown[]): unknown {
@@ -327,7 +358,7 @@ export function mergeBoardDocuments(base: BoardDocument, local: BoardDocument, r
       (!equal(comparableCard(bc), comparableCard(lc ?? rc)) || wasReordered(id, b, lc ? l : r))) {
       merged = context.conflict(`data.cards[${id}]`, comparableCard(lc), comparableCard(rc));
     } else {
-      merged = mergeValue(comparableCard(bc), comparableCard(lc), comparableCard(rc), `data.cards[${id}]`, context);
+      merged = mergeValue(comparableCard(bc), comparableCard(lc), comparableCard(rc), `data.cards[${id}]`, context, 'cardEntry');
     }
     if (merged !== undefined) {
       const entry = copy(merged) as CardEntry;
@@ -341,6 +372,7 @@ export function mergeBoardDocuments(base: BoardDocument, local: BoardDocument, r
       }
       const timestamp = latestTimestamp(bc?.card.updatedAt, lc?.card.updatedAt, rc?.card.updatedAt);
       if (timestamp !== undefined) entry.card.updatedAt = timestamp;
+      alignAttachmentCover(entry.card);
       cards.set(id, entry);
     }
   }

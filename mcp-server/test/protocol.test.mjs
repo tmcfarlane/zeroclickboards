@@ -3,7 +3,7 @@ import test from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { buildServer } from '../dist/server.js';
-import { createBoardFixture, jsonResponse } from './helpers/boards.mjs';
+import { createBoardFixture, jsonResponse, makeBoard } from './helpers/boards.mjs';
 
 async function connect(t, options = {}) {
   const fixture = createBoardFixture(options);
@@ -94,4 +94,42 @@ test('permission failures reach the agent as errors without retrying the write',
   assert.match(result.content[0].text, /permission denied/);
   assert.equal(state.requests.filter((request) => request.method === 'PATCH').length, 1);
   assert.equal(state.row.data.columns[0].cards[0].labels, undefined);
+});
+
+test('MCP preserves independent description and body updates, including empty text', async (t) => {
+  const { mcp } = await connect(t);
+  const board = payload(await mcp.callTool({ name: 'add_card', arguments: {
+    boardId: 'board-1', columnId: 'column-a', title: 'Distinct fields', description: 'Summary', text: 'Detailed body',
+  } }));
+  const cardId = board.columns[0].cards.at(-1).id;
+  payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: 'board-1', cardId, text: 'Updated body' } }));
+  let card = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: 'board-1', cardId } }));
+  assert.equal(card.description, 'Summary');
+  assert.equal(card.content.text, 'Updated body');
+  payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: 'board-1', cardId, description: '' } }));
+  card = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: 'board-1', cardId } }));
+  assert.equal(card.description, '');
+  assert.equal(card.content.text, 'Updated body');
+  payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: 'board-1', cardId, text: '' } }));
+  card = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: 'board-1', cardId } }));
+  assert.equal(card.description, '');
+  assert.equal(card.content.text, '');
+});
+
+test('MCP cover tools return consistent attachment selections without deleting images', async (t) => {
+  const row = makeBoard();
+  const card = row.data.columns[0].cards[0];
+  card.coverImage = 'https://example.com/old.png';
+  card.attachments = [
+    { id: 'old', name: 'Old', url: card.coverImage, addedAt: '2026-01-01', isCover: true },
+    { id: 'next', name: 'Next', url: 'https://example.com/next.png', addedAt: '2026-01-02' },
+  ];
+  const { mcp } = await connect(t, { row });
+  payload(await mcp.callTool({ name: 'set_cover_image', arguments: { boardId: row.id, cardId: card.id, coverImage: 'https://example.com/next.png' } }));
+  let saved = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: row.id, cardId: card.id } }));
+  assert.deepEqual(saved.attachments.map((attachment) => attachment.isCover), [false, true]);
+  payload(await mcp.callTool({ name: 'set_cover_image', arguments: { boardId: row.id, cardId: card.id, coverImage: null } }));
+  saved = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: row.id, cardId: card.id } }));
+  assert.equal(saved.coverImage, undefined);
+  assert.deepEqual(saved.attachments.map((attachment) => attachment.isCover), [false, false]);
 });

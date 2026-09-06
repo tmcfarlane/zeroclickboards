@@ -58,7 +58,7 @@ interface BoardStore extends AppState {
       title: string,
       content: CardContent | undefined,
       targetDate: string | undefined,
-      options: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[]; recurrence?: RecurrenceConfig }
+      options: { description?: string; labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[]; recurrence?: RecurrenceConfig }
     ): string;
   };
   removeCard: (boardId: string, columnId: string, cardId: string) => void;
@@ -436,6 +436,18 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     // and empty optional fields must not masquerade as deliberate user edits.
     const updates = Object.fromEntries(Object.entries(data).filter(([key, value]) =>
       !initialForm || JSON.stringify(value) !== JSON.stringify(initialForm[key as keyof CardEditorSaveData]))) as Partial<Card>;
+    const legacyImageUrl = session.card.content.type === 'image' ? session.card.content.imageUrl : undefined;
+    if (legacyImageUrl) {
+      // Removing the displayed legacy attachment also removes its original
+      // content URL, even when the normalized text body was left untouched.
+      const removedLegacyImage = Object.prototype.hasOwnProperty.call(updates, 'attachments') &&
+        initialForm?.attachments?.some((attachment) => attachment.url === legacyImageUrl) &&
+        !data.attachments?.some((attachment) => attachment.url === legacyImageUrl);
+      if (removedLegacyImage && !updates.content) updates.content = data.content;
+      // Replacing image content must carry its displayed attachment into
+      // storage unless the user removed it. Otherwise its only URL is lost.
+      if (updates.content && updates.content.type !== 'image') updates.attachments = data.attachments;
+    }
     if (!Object.keys(updates).length) { set({ cardEditorSession: null }); return; }
     const draft = structuredClone(session.document);
     draft.data.columns = (draft.data.columns as Column[]).map((column) => ({ ...column, cards: column.cards.map((card) =>
@@ -638,12 +650,13 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     title,
     content,
     targetDate,
-    options?: { labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[]; recurrence?: RecurrenceConfig }
+    options?: { description?: string; labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[]; recurrence?: RecurrenceConfig }
   ) => {
     const now = new Date().toISOString();
     const newCard: Card = {
       id: uuidv4(),
       title,
+      description: options?.description,
       content: content || { type: 'text', text: '' },
       targetDate,
       labels: options?.labels ?? [],

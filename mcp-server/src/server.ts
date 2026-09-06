@@ -184,7 +184,7 @@ export function buildServer(
         boardId: z.string(),
         columnId: z.string(),
         title: z.string(),
-        description: z.string().optional(),
+        description: z.string().optional().describe('Short description, separate from the card body text'),
         text: z.string().optional().describe('Card body text'),
         targetDate: z.string().optional().describe('ISO date'),
         labels: z.array(labelEnum).optional(),
@@ -206,13 +206,13 @@ export function buildServer(
     'update_card',
     {
       title: 'Update card',
-      description: 'Update fields of a card.',
+      description: 'Update fields of a card. Description and body text are separate; omitted fields are preserved.',
       inputSchema: {
         boardId: z.string(),
         cardId: z.string(),
         title: z.string().optional(),
-        description: z.string().optional(),
-        text: z.string().optional(),
+        description: z.string().optional().describe('Short description; empty string clears it'),
+        text: z.string().optional().describe('Card body text; empty string clears it'),
         targetDate: z.string().optional(),
       },
     },
@@ -289,7 +289,7 @@ export function buildServer(
 
   server.registerTool(
     'set_cover_image',
-    { title: 'Set cover image', description: 'Set or clear a card cover image URL (or null to clear).', inputSchema: { boardId: z.string(), cardId: z.string(), coverImage: z.string().nullable() } },
+    { title: 'Set cover image', description: 'Set or clear a card cover image URL (or null to clear). Attachment cover flags follow the selected URL; clearing keeps the attachments.', inputSchema: { boardId: z.string(), cardId: z.string(), coverImage: z.string().nullable() } },
     async ({ boardId, cardId, coverImage }) => safe(() => db.setCoverImage(client, boardId, cardId, coverImage)),
   );
 

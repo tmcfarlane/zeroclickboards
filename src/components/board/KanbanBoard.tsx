@@ -392,6 +392,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   const handleMobileAddCard = (data: CardEditorSaveData) => {
     if (!activeColumn) return;
     addCard(board.id, activeColumn.id, data.title, data.content, data.targetDate, {
+      description: data.description,
       labels: data.labels,
       coverImage: data.coverImage,
       attachments: data.attachments,

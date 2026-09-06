@@ -313,6 +313,19 @@ export interface NewCardInput {
   coverImage?: string;
 }
 
+/** coverImage is the selected URL; attachment flags mirror that selection. */
+function applyCoverImage(card: Card, coverImage: string | undefined): void {
+  card.coverImage = coverImage;
+  let selected = false;
+  if (card.attachments) {
+    card.attachments = card.attachments.map((attachment) => {
+      const isCover = !selected && !!coverImage && attachment.url === coverImage;
+      if (isCover) selected = true;
+      return { ...attachment, isCover };
+    });
+  }
+}
+
 export function addCard(
   client: SupabaseClient,
   boardId: string,
@@ -348,6 +361,7 @@ export function updateCard(
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
     Object.assign(card, patch, { updatedAt: nowIso() });
+    if (Object.prototype.hasOwnProperty.call(patch, 'coverImage')) applyCoverImage(card, patch.coverImage);
     return columns;
   });
 }
@@ -484,7 +498,7 @@ export function setCoverImage(
 ): Promise<FullBoard> {
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
-    card.coverImage = coverImage ?? undefined;
+    applyCoverImage(card, coverImage ?? undefined);
     card.updatedAt = nowIso();
     return columns;
   });

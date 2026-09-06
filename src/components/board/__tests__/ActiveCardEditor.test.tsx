@@ -74,7 +74,7 @@ describe('ActiveCardEditor', () => {
     render(<TestApp />);
     await user.click(screen.getByRole('button', { name: 'Original card' }));
     const title = screen.getByPlaceholderText('Card title...');
-    expect(screen.getByPlaceholderText('Add a more detailed description...')).toHaveValue('Body supplied by MCP');
+    expect(screen.getByLabelText('Body text')).toHaveValue('Body supplied by MCP');
     await user.clear(title);
     await user.type(title, 'My typed title');
 
@@ -88,7 +88,7 @@ describe('ActiveCardEditor', () => {
 
     expect(screen.getByRole('dialog', { name: 'Edit Card' })).toBeInTheDocument();
     expect(title).toHaveValue('My typed title');
-    expect(screen.getByPlaceholderText('Add a more detailed description...')).toHaveValue('Body supplied by MCP');
+    expect(screen.getByLabelText('Body text')).toHaveValue('Body supplied by MCP');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const board = useBoardStore.getState().boards[0];
@@ -155,13 +155,47 @@ describe('ActiveCardEditor', () => {
     expect(logActivity).not.toHaveBeenCalled();
   });
 
-  it('can deliberately clear a body loaded through the MCP text fallback', async () => {
+  it('retains the legacy image as an attachment when the user starts a text body', async () => {
+    const user = userEvent.setup();
+    const imageUrl = 'https://example.com/legacy-body.png';
+    setBoard(initialBoard({ ...initialCard(), content: { type: 'image', imageUrl } }));
+    render(<TestApp />);
+    await user.click(screen.getByRole('button', { name: 'Original card' }));
+    await user.type(screen.getByLabelText('Body text'), 'New written body');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const saved = useBoardStore.getState().boards[0].columns[0].cards[0];
+    expect(saved.content).toEqual({ type: 'text', text: 'New written body' });
+    expect(saved.attachments).toEqual(expect.arrayContaining([expect.objectContaining({ url: imageUrl, isCover: false })]));
+    expect(saved.coverImage).toBeUndefined();
+  });
+
+  it('can deliberately clear MCP body text without creating a description', async () => {
     const user = userEvent.setup();
     render(<TestApp />);
     await user.click(screen.getByRole('button', { name: 'Original card' }));
-    await user.clear(screen.getByPlaceholderText('Add a more detailed description...'));
+    await user.clear(screen.getByLabelText('Body text'));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(useBoardStore.getState().boards[0].columns[0].cards[0].content).toEqual({ type: 'text', text: '' });
+  });
+
+  it.each(['Description', 'Body text'] as const)('saves an edited %s independently from an incoming change to the other field', async (field) => {
+    const user = userEvent.setup();
+    const card = { ...initialCard(), description: 'Original summary' };
+    setBoard(initialBoard(card));
+    render(<TestApp />);
+    await user.click(screen.getByRole('button', { name: 'Original card' }));
+    expect(screen.getByLabelText('Description')).toHaveValue('Original summary');
+    expect(screen.getByLabelText('Body text')).toHaveValue('Body supplied by MCP');
+    await user.clear(screen.getByLabelText(field));
+    await user.type(screen.getByLabelText(field), 'My independent edit');
+    const remote = field === 'Description'
+      ? { ...card, content: { type: 'text' as const, text: 'Incoming body' } }
+      : { ...card, description: 'Incoming summary' };
+    setBoard(initialBoard(remote));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const saved = useBoardStore.getState().boards[0].columns[0].cards[0];
+    expect(saved.description).toBe(field === 'Description' ? 'My independent edit' : 'Incoming summary');
+    expect(saved.content.text).toBe(field === 'Body text' ? 'My independent edit' : 'Incoming body');
   });
 
   it('opens the persistent editor from the timeline and keeps it open if the timeline unmounts', async () => {
@@ -182,12 +216,12 @@ describe('ActiveCardEditor', () => {
 });
 
 describe('CardEditor normalized form baseline', () => {
-  it('passes the displayed body fallback and legacy attachment migration as the unchanged initial form', async () => {
+  it('passes the separate body text and legacy attachment migration as the unchanged initial form', async () => {
     const user = userEvent.setup();
     const save = vi.fn();
     const card = { ...initialCard(), coverImage: 'https://example.com/cover.png' };
     render(<CardEditor isOpen mode="edit" cardId={card.id} initialData={card} onClose={() => {}} onSave={save} />);
-    expect(screen.getByPlaceholderText('Add a more detailed description...')).toHaveValue('Body supplied by MCP');
+    expect(screen.getByLabelText('Body text')).toHaveValue('Body supplied by MCP');
     fireEvent.change(screen.getByPlaceholderText('Card title...'), { target: { value: 'Changed title' } });
     await user.click(screen.getByRole('button', { name: 'Save' }));
     const [submitted, baseline] = save.mock.calls[0];

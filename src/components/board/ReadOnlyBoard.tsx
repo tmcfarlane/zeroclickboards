@@ -16,6 +16,7 @@ const LABEL_COLORS: Record<CardLabel, string> = {
 
 function ReadOnlyCard({ card }: { card: Card }) {
   if (card.isArchived) return null;
+  const description = card.description?.trim() || (card.content?.type === 'text' ? card.content.text?.trim() : undefined);
 
   return (
     <div className="bg-[#1a1f1f] border border-white/5 rounded-lg p-3 space-y-2">
@@ -42,8 +43,8 @@ function ReadOnlyCard({ card }: { card: Card }) {
       <p className="text-sm font-medium text-[#F2F7F7] line-clamp-2">{card.title}</p>
 
       {/* Description */}
-      {card.content?.text && (
-        <p className="text-xs text-[#A8B2B2] line-clamp-2">{card.content.text}</p>
+      {description && (
+        <p className="text-xs text-[#A8B2B2] line-clamp-2">{description}</p>
       )}
 
       {/* Target Date */}

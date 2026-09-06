@@ -124,6 +124,7 @@ function CardTemplatePicker({ onApply }: { onApply: (tpl: CardTemplate) => void 
 export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, initialData }: CardEditorProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [bodyText, setBodyText] = useState('');
   const [contentType, setContentType] = useState<CardContent['type']>('text');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [targetDate, setTargetDate] = useState('');
@@ -133,6 +134,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   const [editingAttachmentId, setEditingAttachmentId] = useState<string | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const attachmentFileRef = useRef<HTMLInputElement>(null);
+  const pendingAttachmentEditRef = useRef<string | null>(null);
   const initialFormRef = useRef<CardEditorSaveData | undefined>(undefined);
 
   // Section visibility
@@ -144,17 +146,19 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        const initialDescription = initialData.description ?? (initialData.content.type === 'text' ? initialData.content.text : undefined) ?? '';
+        const initialDescription = initialData.description ?? '';
+        const initialBodyText = initialData.content.text ?? '';
         const initialContentType = initialData.content.type === 'image' ? 'text' : initialData.content.type;
         setTitle(initialData.title);
         setDescription(initialDescription);
+        setBodyText(initialBodyText);
         setContentType(initialContentType);
         setChecklist(initialData.content.checklist || []);
         setTargetDate(initialData.targetDate || '');
         setLabels(initialData.labels || []);
 
         // Build attachments — migrate legacy coverImage / content.imageUrl
-        const existing: Attachment[] = initialData.attachments ? [...initialData.attachments] : [];
+        let existing: Attachment[] = initialData.attachments ? [...initialData.attachments] : [];
 
         if (initialData.coverImage && !existing.some(a => a.url === initialData.coverImage)) {
           existing.unshift({
@@ -173,9 +177,18 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
             name: 'Image',
             url: initialData.content.imageUrl,
             addedAt: new Date().toISOString(),
-            isCover: existing.length === 0,
+            isCover: false,
           });
         }
+
+        // The stored cover URL is authoritative. Old clients may leave stale
+        // flags, or the same URL may appear on more than one attachment.
+        let coverMatched = false;
+        existing = existing.map((attachment) => {
+          const isCover = !coverMatched && !!initialData.coverImage && attachment.url === initialData.coverImage;
+          if (isCover) coverMatched = true;
+          return { ...attachment, isCover };
+        });
 
         setAttachments(existing);
         setShowDates(!!initialData.targetDate);
@@ -183,14 +196,14 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         setRecurrence(initialData.recurrence || null);
         setShowRecurrence(!!initialData.recurrence);
         // Compare submitted values with what this form displayed, including
-        // legacy image migration and the body-text description fallback. The
+        // legacy image migration and distinct description/body fields. The
         // store can then apply only fields the user actually changed.
         initialFormRef.current = structuredClone({
           title: initialData.title.trim(),
           description: initialDescription.trim() || undefined,
           content: initialContentType === 'checklist'
             ? { type: 'checklist', checklist: initialData.content.checklist || [] }
-            : { type: 'text', text: initialDescription.trim() },
+            : { type: 'text', text: initialBodyText },
           targetDate: initialData.targetDate || undefined,
           labels: initialData.labels || [],
           coverImage: existing.find((attachment) => attachment.isCover)?.url,
@@ -201,6 +214,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         initialFormRef.current = undefined;
         setTitle('');
         setDescription('');
+        setBodyText('');
         setContentType('text');
         setChecklist([]);
         setTargetDate('');
@@ -213,6 +227,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
       }
       setNewChecklistItem('');
       setEditingAttachmentId(null);
+      pendingAttachmentEditRef.current = null;
       setAddMenuOpen(false);
     }
   }, [isOpen, initialData]);
@@ -224,7 +239,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
     if (contentType === 'checklist') {
       content = { type: 'checklist', checklist };
     } else {
-      content = { type: 'text', text: description.trim() };
+      content = { type: 'text', text: bodyText };
     }
 
     const coverAttachment = attachments.find(a => a.isCover);
@@ -284,9 +299,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         name: file.name,
         url: reader.result as string,
         addedAt: new Date().toISOString(),
-        isCover: attachments.length === 0,
       };
-      setAttachments(prev => [...prev, newAttachment]);
+      setAttachments(prev => [...prev, { ...newAttachment, isCover: prev.length === 0 }]);
     };
     reader.readAsDataURL(file);
     // Reset input so the same file can be re-selected
@@ -294,13 +308,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   };
 
   const removeAttachment = (id: string) => {
-    setAttachments(prev => {
-      const filtered = prev.filter(a => a.id !== id);
-      if (filtered.length > 0 && !filtered.some(a => a.isCover)) {
-        return [{ ...filtered[0], isCover: true }, ...filtered.slice(1)];
-      }
-      return filtered;
-    });
+    setAttachments(prev => prev.filter(a => a.id !== id));
   };
 
   const toggleCover = (id: string) => {
@@ -447,6 +455,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           {/* Hidden file input for attachments */}
           <input
             type="file"
+            aria-label="Add image attachment"
             ref={attachmentFileRef}
             accept="image/*"
             onChange={handleAttachmentUpload}
@@ -610,7 +619,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <AlignLeft className="w-4 h-4 text-[#A8B2B2]" />
-              <span className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Description</span>
+              <label htmlFor="card-description" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Description</label>
             </div>
             <Textarea
               id="card-description"
@@ -622,6 +631,23 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               rows={4}
             />
           </div>
+
+          {contentType === 'text' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <AlignLeft className="w-4 h-4 text-[#A8B2B2]" />
+                <label htmlFor="card-body-text" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Body text</label>
+              </div>
+              <Textarea
+                id="card-body-text"
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+                placeholder="Add body text..."
+                className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 min-h-[100px] resize-y"
+                rows={4}
+              />
+            </div>
+          )}
 
           {/* Checklist Section */}
           {contentType === 'checklist' && (
@@ -717,6 +743,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                       {editingAttachmentId === attachment.id ? (
                         <Input
                           autoFocus
+                          aria-label="Attachment name"
                           defaultValue={attachment.name}
                           onBlur={(e) => renameAttachment(attachment.id, e.target.value)}
                           onKeyDown={(e) => {
@@ -746,14 +773,25 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
+                          aria-label={`Actions for ${attachment.name}`}
                           className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-white/10 text-[#A8B2B2] transition-opacity flex-shrink-0"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-[#111515] border-white/10" align="end">
+                      <DropdownMenuContent
+                        className="bg-[#111515] border-white/10"
+                        align="end"
+                        onCloseAutoFocus={(event) => {
+                          const editId = pendingAttachmentEditRef.current;
+                          if (!editId) return;
+                          event.preventDefault();
+                          pendingAttachmentEditRef.current = null;
+                          setEditingAttachmentId(editId);
+                        }}
+                      >
                         <DropdownMenuItem
-                          onClick={() => setEditingAttachmentId(attachment.id)}
+                          onSelect={() => { pendingAttachmentEditRef.current = attachment.id; }}
                           className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
                         >
                           Edit
@@ -795,6 +833,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
             />
             <button
               type="button"
+              aria-label="Remove card cover"
               onClick={() => toggleCover(coverAttachment.id)}
               className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors text-xs"
             >
@@ -847,7 +886,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               {/* Card Template Picker (create mode only) */}
               <CardTemplatePicker onApply={(tpl) => {
                 setTitle(tpl.card.title);
-                setDescription(tpl.card.description ?? (tpl.card.content.type === 'text' ? tpl.card.content.text : undefined) ?? '');
+                setDescription(tpl.card.description ?? '');
+                setBodyText(tpl.card.content.text ?? '');
                 setContentType(tpl.card.content.type === 'image' ? 'text' : tpl.card.content.type);
                 setChecklist(tpl.card.content.checklist ? tpl.card.content.checklist.map(item => ({ ...item, id: genId(), completed: false })) : []);
                 setLabels(tpl.card.labels || []);

@@ -7,7 +7,7 @@ type TestCard = {
   updatedAt: string;
   description?: string;
   content?: { type: string; text?: string; checklist?: { id: string; text: string; completed: boolean }[] };
-  attachments?: { id: string; name: string; url: string }[];
+  attachments?: { id: string; name: string; url: string; isCover?: boolean; [key: string]: unknown }[];
   labels?: string[];
   [key: string]: unknown;
 };
@@ -178,6 +178,129 @@ describe('mergeBoardDocuments', () => {
     expect(byId(merged.document, 'card-0')?.title).toBe('Local title');
     expect(byId(merged.document, 'card-3999')?.description).toBe('Remote description');
     expect(allCards(merged.document)).toHaveLength(4001);
+  });
+
+  it.each(['local', 'remote'] as const)('merges an attachment rename with a %s cover selection despite normalized false flags', (selectingSide) => {
+    const base = board();
+    base.data.columns[0].cards[0].attachments = [{ id: 'image', name: 'Original', url: '/image', metadata: { base: true } }];
+    const local = clone(base), remote = clone(base);
+    const selecting = selectingSide === 'local' ? local : remote;
+    const renaming = selectingSide === 'local' ? remote : local;
+    Object.assign(renaming.data.columns[0].cards[0].attachments![0], {
+      name: 'Browser rename', isCover: false, metadata: { base: true, rename: 'preserved' },
+    });
+    selecting.data.columns[0].cards[0].coverImage = '/image';
+    Object.assign(selecting.data.columns[0].cards[0].attachments![0], {
+      isCover: true, metadata: { base: true, selection: 'preserved' },
+    });
+    const originalInputs = [base, local, remote].map(clone);
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote);
+    expect(conflicts).toEqual([]);
+    expect(byId(document, 'a')!.coverImage).toBe('/image');
+    expect(byId(document, 'a')!.attachments).toEqual([{
+      id: 'image', name: 'Browser rename', url: '/image', isCover: true,
+      metadata: { base: true, rename: 'preserved', selection: 'preserved' },
+    }]);
+    expect([base, local, remote]).toEqual(originalInputs);
+  });
+
+  it('retains genuine conflicts in unrelated metadata named isCover', () => {
+    const base = board();
+    base.data.metadata = { attachments: [{ id: 'other', isCover: 'base' }] };
+    base.data.columns[0].cards[0].attachments = [{ id: 'image', name: 'Image', url: '/image', metadata: { isCover: 'base' } }];
+    const local = clone(base), remote = clone(base);
+    local.data.metadata = { attachments: [{ id: 'other', isCover: 'local' }] };
+    remote.data.metadata = { attachments: [{ id: 'other', isCover: 'remote' }] };
+    local.data.columns[0].cards[0].attachments![0].metadata = { isCover: 'local' };
+    remote.data.columns[0].cards[0].attachments![0].metadata = { isCover: 'remote' };
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote, 'remote');
+    expect(conflicts.map((conflict) => conflict.path).sort()).toEqual([
+      'data.cards[a].card.attachments[image].metadata.isCover', 'data.metadata.attachments[other].isCover',
+    ]);
+    expect(byId(document, 'a')!.attachments![0].metadata).toEqual({ isCover: 'remote' });
+    expect(document.data.metadata).toEqual({ attachments: [{ id: 'other', isCover: 'remote' }] });
+  });
+
+  it.each(['local', 'remote'] as const)('aligns attachment cover flags with the %s conflict choice', (choice) => {
+    const base = board();
+    Object.assign(base.data.columns[0].cards[0], {
+      coverImage: '/a',
+      attachments: [
+        { id: 'a', name: 'A', url: '/a', isCover: true },
+        { id: 'b', name: 'B', url: '/b', isCover: false, metadata: { preserved: true } },
+        { id: 'c', name: 'C', url: '/c', isCover: false },
+      ],
+    });
+    const local = clone(base), remote = clone(base);
+    local.data.columns[0].cards[0].coverImage = '/b';
+    local.data.columns[0].cards[0].attachments!.forEach((attachment) => { attachment.isCover = attachment.id === 'b'; });
+    remote.data.columns[0].cards[0].coverImage = '/c';
+    remote.data.columns[0].cards[0].attachments!.forEach((attachment) => { attachment.isCover = attachment.id === 'c'; });
+    remote.data.columns[0].cards[0].attachments![0].name = 'Remote rename';
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote, choice);
+    const mergedCard = byId(document, 'a')!;
+    expect(conflicts.map((conflict) => conflict.path)).toContain('data.cards[a].card.coverImage');
+    expect(mergedCard.coverImage).toBe(choice === 'local' ? '/b' : '/c');
+    expect(mergedCard.attachments!.filter((attachment) => attachment.isCover).map((attachment) => attachment.id)).toEqual([choice === 'local' ? 'b' : 'c']);
+    expect(mergedCard.attachments![0].name).toBe('Remote rename');
+    expect(mergedCard.attachments![1].metadata).toEqual({ preserved: true });
+  });
+
+  it('keeps an MCP cover clear while preserving an independent attachment rename and addition', () => {
+    const base = board();
+    Object.assign(base.data.columns[0].cards[0], { coverImage: '/a', attachments: [{ id: 'a', name: 'A', url: '/a', isCover: true }] });
+    const local = clone(base), remote = clone(base);
+    local.data.columns[0].cards[0].attachments![0].name = 'Renamed';
+    local.data.columns[0].cards[0].attachments!.push({ id: 'b', name: 'New attachment', url: '/b', metadata: { author: 'local' } });
+    delete remote.data.columns[0].cards[0].coverImage;
+    remote.data.columns[0].cards[0].attachments![0].isCover = false;
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote);
+    const mergedCard = byId(document, 'a')!;
+    expect(conflicts).toEqual([]);
+    expect(mergedCard.coverImage).toBeUndefined();
+    expect(mergedCard.attachments).toEqual([
+      { id: 'a', name: 'Renamed', url: '/a', isCover: false },
+      { id: 'b', name: 'New attachment', url: '/b', metadata: { author: 'local' } },
+    ]);
+  });
+
+  it('clears stale true attachment flags when the canonical cover is absent', () => {
+    const base = board();
+    base.data.columns[0].cards[0].attachments = [{ id: 'a', name: 'A', url: '/a', isCover: true }];
+    const { document } = mergeBoardDocuments(base, base, base);
+    expect(byId(document, 'a')!.attachments![0].isCover).toBe(false);
+  });
+
+  it('marks only the first matching attachment when duplicate URLs share the canonical cover', () => {
+    const base = board();
+    Object.assign(base.data.columns[0].cards[0], {
+      coverImage: '/same',
+      attachments: [
+        { id: 'first', name: 'First', url: '/same', metadata: { order: 1 } },
+        { id: 'second', name: 'Second', url: '/same', isCover: true, metadata: { order: 2 } },
+      ],
+    });
+    const { document, conflicts } = mergeBoardDocuments(base, base, base);
+    expect(conflicts).toEqual([]);
+    expect(byId(document, 'a')!.attachments).toEqual([
+      { id: 'first', name: 'First', url: '/same', isCover: true, metadata: { order: 1 } },
+      { id: 'second', name: 'Second', url: '/same', isCover: false, metadata: { order: 2 } },
+    ]);
+  });
+
+  it('does not add missing false flags or otherwise change an already coherent cover selection', () => {
+    const base = board();
+    Object.assign(base.data.columns[0].cards[0], {
+      coverImage: '/a',
+      attachments: [
+        { id: 'a', name: 'A', url: '/a', isCover: true },
+        { id: 'b', name: 'B', url: '/b' },
+        { id: 'c', name: 'C', url: '/c', isCover: false },
+      ],
+    });
+    const { document } = mergeBoardDocuments(base, base, base);
+    expect(document).toEqual(base);
+    expect(documentsEqual(document, base)).toBe(true);
   });
 
   it('merges attachments by id and preserves unrelated additions during resolution', () => {

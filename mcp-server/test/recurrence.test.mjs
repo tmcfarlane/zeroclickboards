@@ -12,6 +12,20 @@ const dateCases = [
   ['weekly interval', '2026-04-15', { frequency: 'weekly', interval: 2 }, '2026-04-29'],
   ['next selected weekday', '2026-04-15', { frequency: 'weekly', interval: 1, daysOfWeek: [1, 5] }, '2026-04-17'],
   ['same selected weekday next week', '2026-04-15', { frequency: 'weekly', interval: 1, daysOfWeek: [3] }, '2026-04-22'],
+  ['selected weekday every two weeks', '2026-04-06', { frequency: 'weekly', interval: 2, daysOfWeek: [1] }, '2026-04-20'],
+  ['remaining selected day in active week', '2026-04-06', { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3, 5] }, '2026-04-08'],
+  ['skip inactive week after Friday', '2026-04-10', { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3, 5] }, '2026-04-20'],
+  ['Sunday ends active week', '2026-04-12', { frequency: 'weekly', interval: 2, daysOfWeek: [0, 1] }, '2026-04-20'],
+  ['Sunday within active week', '2026-04-06', { frequency: 'weekly', interval: 2, daysOfWeek: [0, 1] }, '2026-04-12'],
+  ['three-week cycle', '2026-04-10', { frequency: 'weekly', interval: 3, daysOfWeek: [1, 5] }, '2026-04-27'],
+  ['off-selected initial day with remaining day', '2026-04-07', { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3] }, '2026-04-08'],
+  ['off-selected initial day after all selected days', '2026-04-09', { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3] }, '2026-04-20'],
+  ['off-selected Sunday initial day', '2026-04-05', { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3] }, '2026-04-13'],
+  ['selected days across year', '2026-12-31', { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3] }, '2027-01-11'],
+  ['selected day on spring DST boundary', '2026-03-06', { frequency: 'weekly', interval: 2, daysOfWeek: [0, 5] }, '2026-03-08'],
+  ['selected day after spring DST boundary', '2026-03-08', { frequency: 'weekly', interval: 2, daysOfWeek: [0, 5] }, '2026-03-20'],
+  ['selected day on fall DST boundary', '2026-10-30', { frequency: 'weekly', interval: 2, daysOfWeek: [0, 5] }, '2026-11-01'],
+  ['selected day after fall DST boundary', '2026-11-01', { frequency: 'weekly', interval: 2, daysOfWeek: [0, 5] }, '2026-11-13'],
   ['January month end', '2026-01-31', { frequency: 'monthly', interval: 1 }, '2026-02-28'],
   ['explicit month end', '2026-01-31', { frequency: 'monthly', interval: 1, dayOfMonth: 31 }, '2026-02-28'],
   ['leap year month end', '2028-01-31', { frequency: 'monthly', interval: 1, dayOfMonth: 31 }, '2028-02-29'],
@@ -149,4 +163,51 @@ test('an archive retry respects a recurring copy already created by another writ
   assert.equal(board.columns[0].cards.length, 2);
   assert.equal(board.columns[0].cards[1].id, 'concurrent-copy');
   assert.equal(state.requests.filter(request => request.method === 'PATCH').length, 2);
+});
+
+
+test('successive archives keep selected weekdays in their original every-two-week cycle', async () => {
+  const original = recurringCard({ targetDate: '2026-04-07', recurrence: { frequency: 'weekly', interval: 2, daysOfWeek: [3, 1] } });
+  const client = boardClient([original]);
+  const expected = ['2026-04-07', '2026-04-08', '2026-04-20', '2026-04-22', '2026-05-04', '2026-05-06'];
+  let current = original;
+  for (let index = 1; index < expected.length; index++) {
+    const board = await setCardArchived(client, 'board-1', current.id, true);
+    const active = board.columns[0].cards.filter(card => !card.isArchived);
+    assert.equal(active.length, 1);
+    current = active[0];
+    assert.equal(current.targetDate, expected[index]);
+    assert.deepEqual(current.recurrence.daysOfWeek, [3, 1]);
+    assert.deepEqual(board.columns[0].cards.map(card => card.targetDate), expected.slice(0, index + 1));
+  }
+});
+
+
+for (const [targetDate, interval, expected] of [
+  ['2026-01-31', 1, ['2026-01-31', '2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31']],
+  ['2028-01-31', 1, ['2028-01-31', '2028-02-29', '2028-03-31', '2028-04-30', '2028-05-31']],
+  ['2026-01-30', 1, ['2026-01-30', '2026-02-28', '2026-03-30', '2026-04-30', '2026-05-30']],
+  ['2026-01-31', 3, ['2026-01-31', '2026-04-30', '2026-07-31', '2026-10-31', '2027-01-31']],
+]) {
+  test(`monthly archive chain retains implicit day from ${targetDate} at interval ${interval}`, async () => {
+    const original = recurringCard({ targetDate, recurrence: { frequency: 'monthly', interval } });
+    const client = boardClient([original]);
+    let current = original;
+    for (let index = 1; index < expected.length; index++) {
+      const board = await setCardArchived(client, 'board-1', current.id, true);
+      current = board.columns[0].cards.find(card => !card.isArchived);
+      assert.equal(current.targetDate, expected[index]);
+      assert.equal(current.recurrence.dayOfMonth, Number(targetDate.slice(8, 10)));
+      assert.deepEqual(board.columns[0].cards.map(card => card.targetDate), expected.slice(0, index + 1));
+    }
+    assert.deepEqual(original.recurrence, { frequency: 'monthly', interval });
+  });
+}
+
+test('a monthly copy without an initial target retains the current-date fallback', () => {
+  const original = recurringCard({ targetDate: undefined, recurrence: { frequency: 'monthly', interval: 1 } });
+  const copy = createRecurringCardCopy(original);
+  assert.equal(copy.recurrence.dayOfMonth, undefined);
+  assert.equal(copy.targetDate, calculateNextTargetDate(undefined, original.recurrence));
+  assert.equal(original.targetDate, undefined);
 });

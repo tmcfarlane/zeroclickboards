@@ -80,11 +80,15 @@ Board columns/cards live in a single `boards.data` JSONB blob (the same source o
 
 The web app also saves against the exact database revision and merges its draft with incoming changes. Independent card fields, checklist items, attachments, additions, and card moves are reconciled. When both sides change the same value incompatibly, saving pauses for review; the user can keep their edits or use incoming edits for the conflicting fields while retaining unrelated changes. Both clients preserve unrelated fields in `boards.data`.
 
-Open card editors retain their opening snapshot, so an MCP update or move does not reset typed text. Save submits only changed form fields, including when a legacy MCP card has body text without a separate description. Shared boards receive realtime updates and refresh on window focus.
+Open card editors retain their opening snapshot, so an MCP update or move does not reset typed text. Save submits only changed form fields. Description and Body text are independent fields in the browser and MCP; editing or clearing one preserves the other. Converting legacy image content to text keeps the image as an attachment unless it is explicitly removed. Shared boards receive realtime updates and refresh on window focus.
 
 Drafts and conflict decisions are kept in the current browser tab, not durable offline storage. Failed saves offer retry, and a draft whose board was deleted can be saved as a new private board. The browser warns before leaving with an open editor or unsaved board changes. These safeguards require the updated web client and MCP server; older clients can still make unguarded writes.
 
-Column reordering requires every current column ID exactly once; invalid input leaves the board unchanged. Archiving an active recurring card creates the next occurrence in the same column and resets its checklist. Archiving it again does not create another copy. Monthly dates clamp to the destination month's last day, including February in leap years.
+Column reordering requires every current column ID exactly once; invalid input leaves the board unchanged. Archiving an active recurring card creates the next occurrence in the same column and resets its checklist. Archiving it again does not create another copy.
+
+Weekly schedules with selected weekdays use Monday–Sunday active weeks, matching the timeline. For example, every two weeks on Monday and Wednesday runs the remaining selected days in the active week, then skips a week. An explicitly assigned initial target date remains the first occurrence even if it is not a selected weekday. Monthly dates clamp to the destination month's last day and preserve the original day for future copies: January 31 → February 28/29 → March 31. The timeline and archived copies follow the same schedule, including distant timeline ranges.
+
+`set_cover_image` keeps attachment cover flags consistent with the selected URL. Clearing the cover keeps the attachments, and later attachment edits do not automatically restore a cleared cover. When duplicate attachments share a cover URL, only the first is selected.
 
 ## Configuration
 

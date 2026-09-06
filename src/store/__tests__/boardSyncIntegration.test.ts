@@ -537,6 +537,78 @@ describe('signed-in board sync integration', () => {
     expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
   });
 
+  it.each([false, true])('preserves legacy image conversion and concurrent attachments (explicit removal: %s)', async (removeLegacyImage) => {
+    const original = row();
+    const imageUrl = 'https://example.com/legacy-body.png';
+    columns(original)[0].cards[0].content = { type: 'image', imageUrl };
+    rows.set(original.id, original);
+    await signIn();
+    useBoardStore.getState().openCardEditor(original.id, 'card-1');
+    const migration = { id: 'legacy-migration', name: 'Image', url: imageUrl, addedAt: FIRST_REVISION, isCover: false };
+    const initialForm = {
+      title: 'Original card', content: { type: 'text' as const, text: '' }, labels: [], attachments: [migration],
+    };
+    const remote = structuredClone(original);
+    const remoteAttachment = { id: 'remote-image', name: 'Remote addition', url: 'https://example.com/remote.png', addedAt: SECOND_REVISION, isCover: true };
+    columns(remote)[0].cards[0].attachments = [remoteAttachment];
+    columns(remote)[0].cards[0].coverImage = remoteAttachment.url;
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+
+    useBoardStore.getState().saveCardEditor({
+      ...initialForm, content: { type: 'text', text: 'New text body' },
+      attachments: removeLegacyImage ? undefined : [migration],
+    }, initialForm);
+    await vi.advanceTimersByTimeAsync(400);
+    const saved = columns(rows.get(original.id)!)[0].cards[0];
+    expect(saved.content).toEqual({ type: 'text', text: 'New text body' });
+    expect(saved.attachments).toContainEqual(remoteAttachment);
+    expect(saved.attachments?.some((attachment) => attachment.url === imageUrl)).toBe(!removeLegacyImage);
+    expect(saved.coverImage).toBe(remoteAttachment.url);
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+  });
+
+  it.each(['remove image', 'edit title', 'no change'] as const)('handles a legacy image without a body edit: %s', async (action) => {
+    const original = row();
+    const imageUrl = 'https://example.com/legacy-body.png';
+    Object.assign(columns(original)[0].cards[0], {
+      description: 'Original summary', content: { type: 'image', imageUrl },
+    });
+    rows.set(original.id, original);
+    await signIn();
+    useBoardStore.getState().openCardEditor(original.id, 'card-1');
+    const migration = { id: 'legacy-migration', name: 'Image', url: imageUrl, addedAt: FIRST_REVISION, isCover: false };
+    const initialForm = {
+      title: 'Original card', description: 'Original summary',
+      content: { type: 'text' as const, text: '' }, labels: [], attachments: [migration],
+    };
+    const remote = structuredClone(original);
+    const remoteAttachment = { id: 'remote-image', name: 'Remote addition', url: 'https://example.com/remote.png', addedAt: SECOND_REVISION, isCover: true };
+    Object.assign(columns(remote)[0].cards[0], {
+      description: 'Remote summary', attachments: [remoteAttachment], coverImage: remoteAttachment.url,
+    });
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+
+    useBoardStore.getState().saveCardEditor({
+      ...initialForm,
+      title: action === 'edit title' ? 'Edited title' : initialForm.title,
+      attachments: action === 'remove image' ? undefined : initialForm.attachments,
+    }, initialForm);
+    await vi.advanceTimersByTimeAsync(400);
+
+    const saved = columns(rows.get(original.id)!)[0].cards[0];
+    expect(saved.content).toEqual(action === 'remove image' ? { type: 'text', text: '' } : { type: 'image', imageUrl });
+    expect(saved.title).toBe(action === 'edit title' ? 'Edited title' : 'Original card');
+    expect(saved.description).toBe('Remote summary');
+    expect(saved.attachments).toEqual([remoteAttachment]);
+    expect(saved.coverImage).toBe(remoteAttachment.url);
+    expect(updateRequests()).toHaveLength(action === 'no change' ? 0 : 1);
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+  });
+
   it('recovers a submitted editor draft after remote board deletion as a new private board', async () => {
     const original = row();
     rows.set(original.id, original);

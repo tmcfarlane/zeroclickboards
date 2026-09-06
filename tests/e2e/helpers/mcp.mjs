@@ -37,15 +37,36 @@ export async function connectTestMcp() {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
   await mcp.connect(clientTransport);
+  const createdBoardIds = new Set();
 
   const call = async (name, args) => {
     const result = await mcp.callTool({ name, arguments: args }, undefined, { timeout: 15_000 });
     if (result.isError) throw new Error(`MCP ${name} failed: ${result.content[0]?.text ?? 'unknown error'}`);
-    return JSON.parse(result.content[0].text);
+    const payload = JSON.parse(result.content[0].text);
+    if (name === 'create_board' && typeof payload.id === 'string') createdBoardIds.add(payload.id);
+    return payload;
   };
 
   return {
     call,
+    async seedCardAttachments(boardId, cardId, attachments, coverImage) {
+      // The MCP surface has no attachment-upload tool. Seed only a board that
+      // this exact helper instance just created through the real MCP protocol.
+      if (!createdBoardIds.has(boardId)) throw new Error('Attachment fixtures require a board created by this MCP session');
+      const { data: row, error: readError } = await database.from('boards')
+        .select('data,updated_at').eq('id', boardId).eq('user_id', data.user.id).single();
+      if (readError || !row) throw new Error('Could not read the owned attachment fixture board');
+      const document = structuredClone(row.data);
+      const card = document.columns?.flatMap((column) => column.cards).find((candidate) => candidate.id === cardId);
+      if (!card) throw new Error('Attachment fixture card does not belong to the created board');
+      card.attachments = structuredClone(attachments);
+      card.coverImage = coverImage ?? undefined;
+      const { data: saved, error: writeError } = await database.from('boards')
+        .update({ data: document })
+        .eq('id', boardId).eq('user_id', data.user.id).eq('updated_at', row.updated_at)
+        .select('id').maybeSingle();
+      if (writeError || !saved) throw new Error('Could not seed the owned attachment fixture board');
+    },
     async deleteBoardAndVerify(boardId) {
       await call('delete_board', { boardId });
       // A list read distinguishes a deleted board from an unrelated get error.
@@ -53,6 +74,7 @@ export async function connectTestMcp() {
       if (boards.some((board) => board.id === boardId)) throw new Error('Temporary E2E board cleanup failed');
       const missing = await mcp.callTool({ name: 'get_board', arguments: { boardId } }, undefined, { timeout: 15_000 });
       if (!missing.isError) throw new Error('Deleted E2E board can still be read');
+      createdBoardIds.delete(boardId);
     },
     async close() {
       await mcp.close();

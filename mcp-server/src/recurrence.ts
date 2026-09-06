@@ -15,6 +15,15 @@ function toDateString(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+// Monday–Sunday active weeks match the web timeline; stored weekdays remain
+// Sunday=0. A copy's target date stays within an active week, so no extra anchor
+// field is needed to preserve multiweek cycles across successive archives.
+function selectedWeekdayOffsets(config: RecurrenceConfig): number[] {
+  return [...new Set((config.daysOfWeek ?? [])
+    .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+    .map((day) => (day + 6) % 7))].sort((a, b) => a - b);
+}
+
 /** Mirrors the web app's next-occurrence convention for recurring cards. */
 export function calculateNextTargetDate(
   currentTargetDate: string | undefined,
@@ -22,28 +31,24 @@ export function calculateNextTargetDate(
 ): string {
   const base = currentTargetDate ? parseLocalDate(currentTargetDate) : new Date();
   base.setHours(12, 0, 0, 0);
-  const interval = config.interval || 1;
+  const interval = Number.isFinite(config.interval) ? Math.max(1, Math.floor(config.interval)) : 1;
 
   switch (config.frequency) {
     case 'daily':
       base.setDate(base.getDate() + interval);
       break;
     case 'weekly': {
-      // The app selects the next matching weekday when explicit days are set.
-      // A valid weekday must match within seven days; keep this search bounded.
-      let next: Date | undefined;
-      if (config.daysOfWeek?.length) {
-        for (let offset = 1; offset <= 7; offset++) {
-          const candidate = new Date(base);
-          candidate.setDate(candidate.getDate() + offset);
-          if (config.daysOfWeek.includes(candidate.getDay())) {
-            next = candidate;
-            break;
-          }
-        }
+      const selectedDays = selectedWeekdayOffsets(config);
+      if (selectedDays.length) {
+        const currentDay = (base.getDay() + 6) % 7;
+        const laterDay = selectedDays.find((day) => day > currentDay);
+        const offset = laterDay === undefined
+          ? 7 * interval - currentDay + selectedDays[0]
+          : laterDay - currentDay;
+        base.setDate(base.getDate() + offset);
+      } else {
+        base.setDate(base.getDate() + 7 * interval);
       }
-      if (next) base.setTime(next.getTime());
-      else base.setDate(base.getDate() + 7 * interval);
       break;
     }
     case 'monthly': {
@@ -73,6 +78,12 @@ export function createRecurringCardCopy(card: Card): Card {
     createdAt: now,
     updatedAt: now,
   };
+  // Pin the initial target's implicit monthly day before February (or another
+  // short month) can change the recurrence anchor in the next archived copy.
+  if (copy.recurrence?.frequency === 'monthly' && copy.recurrence.dayOfMonth === undefined && card.targetDate) {
+    const day = parseLocalDate(card.targetDate).getDate();
+    if (Number.isFinite(day)) copy.recurrence.dayOfMonth = day;
+  }
   delete copy.archivedAt;
   if (copy.content.type === 'checklist' && copy.content.checklist) {
     for (const item of copy.content.checklist) item.completed = false;
