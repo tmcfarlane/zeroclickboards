@@ -146,11 +146,15 @@ describe('calculateNextTargetDate', () => {
     expect(result).toBe('2026-05-15');
   });
 
-  it('monthly from Jan 31 advances (JS Date overflow from setMonth)', () => {
-    // Note: setMonth(1) on Jan 31 overflows to Mar 3, so the result is March 31.
-    // This captures current behavior for regression detection.
-    const result = calculateNextTargetDate('2026-01-31', { frequency: 'monthly', interval: 1, dayOfMonth: 31 });
-    expect(result).toBe('2026-03-31');
+  it.each([
+    ['2026-01-31', 1, undefined, '2026-02-28'],
+    ['2026-01-31', 1, 31, '2026-02-28'],
+    ['2028-01-31', 1, 31, '2028-02-29'],
+    ['2026-01-31', 3, 31, '2026-04-30'],
+    ['2026-12-31', 2, 31, '2027-02-28'],
+    ['2026-02-28', 1, 31, '2026-03-31'],
+  ])('clamps monthly %s + %s month(s) to the intended month', (date, interval, dayOfMonth, expected) => {
+    expect(calculateNextTargetDate(date, { frequency: 'monthly', interval, dayOfMonth })).toBe(expected);
   });
 
   it('advances monthly by interval > 1', () => {

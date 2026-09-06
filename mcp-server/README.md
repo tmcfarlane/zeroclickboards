@@ -74,7 +74,11 @@ Destructive tools (`delete_board`, `delete_card`, `remove_column`) carry a `dest
 
 ## Concurrency
 
-Board columns/cards live in a single `boards.data` JSONB blob (the same source of truth the web app uses). Writes are read‑modify‑write and **last‑write‑wins** — a simultaneous edit in the web UI (which syncs on a debounce) and via MCP can clobber each other. The server always reads the freshest row immediately before writing to keep the window small. Scoped tokens and conditional updates are planned for v2.
+Board columns/cards live in a single `boards.data` JSONB blob (the same source of truth the web app uses). MCP card and column mutations update only the exact `updated_at` revision they read. If another writer changes that revision first, the server reads the latest board and reapplies the operation, for up to three attempts. Persistent contention returns an error. Network and API errors are not automatically replayed because a write may already have committed. The existing `boards_set_updated_at` database trigger must be present, as provided by `supabase/schema.sql`.
+
+These guards protect **writes made by this MCP server**. The web app still saves its board snapshot on a debounce without a revision check, so a later stale web save can overwrite an MCP edit. Full two-way conflict handling remains future work. MCP mutations preserve unrelated fields in `boards.data`.
+
+Column reordering requires every current column ID exactly once; invalid input leaves the board unchanged. Archiving an active recurring card creates the next occurrence in the same column and resets its checklist. Archiving it again does not create another copy. Monthly dates clamp to the destination month's last day, including February in leap years.
 
 ## Configuration
 
@@ -91,14 +95,19 @@ Board columns/cards live in a single `boards.data` JSONB blob (the same source o
 ```bash
 npm install
 npm run build
+npm test        # offline data-layer + MCP protocol regressions; no account needed
 npm run smoke   # exercises the data layer against real Supabase (needs E2E_EMAIL/PASSWORD + VITE_SUPABASE_* in ../.env.local)
+npm run smoke:mcp # opt-in live MCP protocol checks; supply those same variables in the process environment
 ```
+
+`smoke:mcp` signs in as the dedicated E2E account without touching `~/.zeroboard`, creates a temporary test board, forces a concurrent-write conflict, exercises recurring archives and resource reads, and deletes the board in cleanup. Run it only with a configured test account. Offline regression tests run in CI.
 
 ## Roadmap
 
 - ✅ Browser login via the hosted `/auth/cli` route (Google + email) — done; a future hardening is a full server-side PKCE code exchange (the current flow binds the loopback delivery with a one‑time `state` and validates the session before storing).
 - ✅ `generate_board` tool backed by the existing `/api/ai/board-template` endpoint — done.
-- A dedicated `/api/v1` layer for scoped/read‑only tokens, audit logging, and conditional updates.
+- ✅ Conditional card/column writes with bounded conflict retries in the MCP server — done. Web-side conflict handling is still needed.
+- A dedicated `/api/v1` layer for scoped/read‑only tokens and audit logging.
 - Realtime: a `list_changes(since)` poll tool and (where clients support it) resource‑update notifications.
 - ✅ A Claude Code **plugin** that bundles this server plus slash commands — done.
 

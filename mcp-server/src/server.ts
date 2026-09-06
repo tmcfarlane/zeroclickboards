@@ -28,8 +28,14 @@ const labelEnum = z.enum(CARD_LABELS as [string, ...string[]]);
 const textToContent = (t?: string): CardContent | undefined =>
   t === undefined ? undefined : { type: 'text', text: t };
 
-function buildServer(client: SupabaseClient, user: User): McpServer {
+/** Build the complete protocol surface; injecting clients also permits offline MCP tests. */
+export function buildServer(
+  client: SupabaseClient,
+  user: User,
+  { readOnly = READ_ONLY }: { readOnly?: boolean } = {},
+): McpServer {
   const server = new McpServer({ name: 'zeroboard-mcp', version: '0.1.0' });
+  registerResources(server, client, user);
   const RO = { readOnlyHint: true } as const;
   const DESTRUCTIVE = { destructiveHint: true } as const;
 
@@ -106,7 +112,7 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
     async ({ query, includeArchived }) => safe(() => db.search(client, query, includeArchived ?? false)),
   );
 
-  if (READ_ONLY) return server;
+  if (readOnly) return server;
 
   // ----- Write tools ----------------------------------------------------
   server.registerTool(
@@ -229,7 +235,7 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
 
   server.registerTool(
     'archive_card',
-    { title: 'Archive card', description: 'Archive a card.', inputSchema: { boardId: z.string(), cardId: z.string() } },
+    { title: 'Archive card', description: 'Archive a card. A recurring card creates its next scheduled copy, as in the web app; archiving an already archived card does not create another copy.', inputSchema: { boardId: z.string(), cardId: z.string() } },
     async ({ boardId, cardId }) => safe(() => db.setCardArchived(client, boardId, cardId, true)),
   );
 
@@ -336,7 +342,6 @@ export async function runServer(): Promise<void> {
   }
 
   const server = buildServer(client, user);
-  registerResources(server, client, user);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

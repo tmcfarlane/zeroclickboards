@@ -29,6 +29,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "smoke": "node dist/smoke.js",
+    "smoke:mcp": "npm run build && node test/live-protocol-smoke.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },

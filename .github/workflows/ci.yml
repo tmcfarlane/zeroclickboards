@@ -94,7 +94,7 @@ jobs:
     # created per-run (supabase branches) instead of the main project.
 
   mcp-server:
-    name: MCP Server Build
+    name: MCP Server Build & Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -107,6 +107,6 @@ jobs:
           cache: npm
           cache-dependency-path: mcp-server/package-lock.json
       - run: npm ci
-      - run: npm run build
+      - run: npm test
       # The data-layer smoke test (npm run smoke) needs Supabase + E2E creds and
       # writes to a live project, so it is run locally/manually, not in CI.

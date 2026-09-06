@@ -107,6 +107,8 @@ export function calculateNextTargetDate(
 
     case 'monthly': {
       const targetDay = config.dayOfMonth || base.getDate();
+      // Reset before adding months so Jan 31 cannot overflow past February.
+      base.setDate(1);
       base.setMonth(base.getMonth() + interval);
       // Clamp to last day of month if needed
       const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();

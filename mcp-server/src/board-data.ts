@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createRecurringCardCopy } from './recurrence.js';
 import {
   type BoardData,
   type BoardRow,
@@ -46,14 +47,11 @@ export function decodeData(data: unknown): BoardData {
   return { columns, background, hiddenColumnIds };
 }
 
-/** Re-encode columns into the JSONB shape, preserving background/hiddenColumnIds. */
-function encodeData(columns: Column[], base: BoardData): BoardData {
+/** Change only columns; other JSONB fields may be owned by newer web clients. */
+function encodeData(columns: Column[], base: unknown): BoardData {
   return {
+    ...(asRecord(base) ?? {}),
     columns,
-    ...(base.background ? { background: base.background } : {}),
-    ...(base.hiddenColumnIds && base.hiddenColumnIds.length > 0
-      ? { hiddenColumnIds: base.hiddenColumnIds }
-      : {}),
   };
 }
 
@@ -94,34 +92,47 @@ const notFound = (what: string, id: string): never => {
 };
 
 async function getRow(client: SupabaseClient, boardId: string): Promise<BoardRow> {
-  const { data, error } = await client.from('boards').select(SELECT_COLS).eq('id', boardId).single();
-  if (error || !data) return notFound('Board', boardId);
+  const { data, error } = await client.from('boards').select(SELECT_COLS).eq('id', boardId).maybeSingle();
+  if (error) throw new BoardError(error.message);
+  if (!data) return notFound('Board', boardId);
   return data as unknown as BoardRow;
 }
 
 /**
- * Read-modify-write the columns of a board's JSONB. Reads the freshest row
- * immediately before writing to narrow the last-write-wins window (the web app
- * also overwrites the whole columns array on a debounce — concurrent edits are
- * last-write-wins; see README "Concurrency").
+ * Update only the version we read, then reapply the operation to fresh data on
+ * a version conflict. The database trigger advances updated_at on every write.
+ * Web clients still write without a version check and can overwrite a later MCP
+ * change with stale state; this guard protects writes made by this server.
  */
 async function mutateColumns(
   client: SupabaseClient,
   boardId: string,
   mutator: (columns: Column[]) => Column[],
 ): Promise<FullBoard> {
-  const row = await getRow(client, boardId);
-  const base = decodeData(row.data);
-  const nextColumns = mutator(structuredClone(base.columns));
-  const nextData = encodeData(nextColumns, base);
-  const { data, error } = await client
-    .from('boards')
-    .update({ data: nextData, updated_at: nowIso() })
-    .eq('id', boardId)
-    .select(SELECT_COLS)
-    .single();
-  if (error || !data) throw new BoardError(error?.message ?? 'Update failed');
-  return rowToFullBoard(data as unknown as BoardRow);
+  let previousVersion: string | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const row = await getRow(client, boardId);
+    // RLS can reject an update by returning zero rows without an error. If the
+    // row's version did not change, another write did not cause the rejection.
+    if (row.updated_at === previousVersion) {
+      throw new BoardError(`Board ${boardId} could not be updated. Check your edit access.`);
+    }
+    const base = decodeData(row.data);
+    const nextColumns = mutator(structuredClone(base.columns));
+    const nextData = encodeData(nextColumns, row.data);
+    const { data, error } = await client
+      .from('boards')
+      .update({ data: nextData, updated_at: nowIso() })
+      .eq('id', boardId)
+      .eq('updated_at', row.updated_at)
+      .select(SELECT_COLS)
+      .maybeSingle();
+    // Never replay a write after an ambiguous network failure or API error.
+    if (error) throw new BoardError(error.message);
+    if (data) return rowToFullBoard(data as unknown as BoardRow);
+    previousVersion = row.updated_at;
+  }
+  throw new BoardError(`Board ${boardId} changed during all 3 update attempts. Please try again.`);
 }
 
 function findColumn(columns: Column[], columnId: string): Column {
@@ -235,9 +246,10 @@ export async function updateBoardMeta(
 }
 
 export async function deleteBoard(client: SupabaseClient, boardId: string): Promise<{ id: string }> {
-  const { error } = await client.from('boards').delete().eq('id', boardId);
+  const { data, error } = await client.from('boards').delete().eq('id', boardId).select('id').maybeSingle();
   if (error) throw new BoardError(error.message);
-  return { id: boardId };
+  if (!data) throw new BoardError(`Board ${boardId} was not deleted. It may not exist or you may not have delete access.`);
+  return { id: data.id };
 }
 
 // ---------------------------------------------------------------------------
@@ -277,7 +289,11 @@ export function reorderColumns(
 ): Promise<FullBoard> {
   return mutateColumns(client, boardId, (columns) => {
     const map = new Map(columns.map((c) => [c.id, c]));
-    if (orderedColumnIds.some((id) => !map.has(id)) || orderedColumnIds.length !== columns.length) {
+    if (
+      orderedColumnIds.length !== columns.length ||
+      new Set(orderedColumnIds).size !== columns.length ||
+      orderedColumnIds.some((id) => !map.has(id))
+    ) {
       throw new BoardError('orderedColumnIds must list every existing column id exactly once');
     }
     return orderedColumnIds.map((id, index) => ({ ...map.get(id)!, order: index }));
@@ -369,10 +385,14 @@ export function setCardArchived(
   archived: boolean,
 ): Promise<FullBoard> {
   return mutateColumns(client, boardId, (columns) => {
-    const { card } = locateCard(columns, cardId);
+    const { column, card } = locateCard(columns, cardId);
+    const recurringCopy = archived && !card.isArchived && card.recurrence
+      ? createRecurringCardCopy(card)
+      : undefined;
     card.isArchived = archived;
     card.archivedAt = archived ? nowIso() : undefined;
     card.updatedAt = nowIso();
+    if (recurringCopy) column.cards.push(recurringCopy);
     return columns;
   });
 }
