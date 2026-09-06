@@ -37,6 +37,24 @@ beforeEach(() => {
 });
 
 describe('BoardSyncNotice', () => {
+  it('describes complete recurrence choices using readable schedules', async () => {
+    const user = userEvent.setup();
+    store.boardSyncStates[boardId] = {
+      status: 'conflict',
+      conflicts: [
+        { path: 'data.cards[task-1].card.recurrence', local: { frequency: 'daily', interval: 2 }, remote: { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3] } },
+        { path: 'data.cards[task-2].card.recurrence', local: { frequency: 'monthly', interval: 1 }, remote: { frequency: 'monthly', interval: 1, dayOfMonth: 31 } },
+      ],
+    };
+    render(<BoardSyncNotice boardId={boardId} />);
+    await user.click(screen.getByRole('button', { name: 'Review changes' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Card: My task title · Recurrence' })).toBeInTheDocument();
+    for (const label of ['Every 2 days', 'Every 2 weeks (Mon, Wed)', 'Monthly on the target date’s day', 'Monthly on the 31st']) {
+      expect(within(dialog).getByText(label, { exact: true })).toBeInTheDocument();
+    }
+  });
+
   it('only shows unsaved state for the requested board', () => {
     store.boardSyncStates['another-board'] = { status: 'error' };
     const { container, rerender } = render(<BoardSyncNotice boardId={boardId} />);

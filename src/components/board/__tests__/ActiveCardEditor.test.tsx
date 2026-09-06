@@ -178,6 +178,22 @@ describe('ActiveCardEditor', () => {
     expect(useBoardStore.getState().boards[0].columns[0].cards[0].content).toEqual({ type: 'text', text: '' });
   });
 
+  it.each([false, true])('keeps an implicit monthly day untouched during a title edit (remote clears recurrence: %s)', async (remoteClears) => {
+    const user = userEvent.setup();
+    const original = { ...initialCard(), targetDate: '2026-01-31', recurrence: { frequency: 'monthly' as const, interval: 1 } };
+    setBoard(initialBoard(original));
+    render(<TestApp />);
+    await user.click(screen.getByRole('button', { name: 'Original card' }));
+    expect(screen.getByRole('spinbutton', { name: 'Day of month' })).toHaveValue(null);
+    await user.type(screen.getByPlaceholderText('Card title...'), ' renamed');
+    if (remoteClears) setBoard(initialBoard({ ...original, recurrence: undefined }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const saved = useBoardStore.getState().boards[0].columns[0].cards[0];
+    expect(saved.title).toBe('Original card renamed');
+    expect(saved.targetDate).toBe('2026-01-31');
+    expect(saved.recurrence).toEqual(remoteClears ? undefined : { frequency: 'monthly', interval: 1 });
+  });
+
   it.each(['Description', 'Body text'] as const)('saves an edited %s independently from an incoming change to the other field', async (field) => {
     const user = userEvent.setup();
     const card = { ...initialCard(), description: 'Original summary' };

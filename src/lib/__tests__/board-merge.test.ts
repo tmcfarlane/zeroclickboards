@@ -9,6 +9,7 @@ type TestCard = {
   content?: { type: string; text?: string; checklist?: { id: string; text: string; completed: boolean }[] };
   attachments?: { id: string; name: string; url: string; isCover?: boolean; [key: string]: unknown }[];
   labels?: string[];
+  recurrence?: { frequency: string; interval: number; daysOfWeek?: number[]; dayOfMonth?: number; [key: string]: unknown };
   [key: string]: unknown;
 };
 type TestColumn = { id: string; title: string; order: number; cards: TestCard[]; [key: string]: unknown };
@@ -54,6 +55,59 @@ describe('documentsEqual', () => {
 });
 
 describe('mergeBoardDocuments', () => {
+  it.each([
+    { choice: 'local', selectedDays: undefined },
+    { choice: 'remote', selectedDays: undefined },
+    { choice: 'local', selectedDays: [1] },
+    { choice: 'remote', selectedDays: [1] },
+  ] as const)('reviews incompatible recurrence changes as a complete schedule (%j)', ({ choice, selectedDays }) => {
+    const base = board();
+    base.data.columns[0].cards[0].recurrence = { frequency: 'weekly', interval: 1, ...(selectedDays ? { daysOfWeek: [...selectedDays] } : {}) };
+    const local = clone(base), remote = clone(base);
+    local.data.columns[0].cards[0].recurrence = { frequency: 'daily', interval: 2 };
+    local.data.columns[0].cards[0].title = 'Browser title';
+    remote.data.columns[0].cards[0].recurrence = { frequency: 'weekly', interval: 1, daysOfWeek: [3] };
+    remote.data.columns[0].cards[0].description = 'MCP summary';
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote, choice);
+    expect(conflicts.map((conflict) => conflict.path)).toEqual(['data.cards[a].card.recurrence']);
+    expect(byId(document, 'a')).toMatchObject({ title: 'Browser title', description: 'MCP summary' });
+    expect(byId(document, 'a')!.recurrence).toEqual((choice === 'local' ? local : remote).data.columns[0].cards[0].recurrence);
+  });
+
+  it('merges independent edits within the same recurrence frequency', () => {
+    const base = board();
+    base.data.columns[0].cards[0].recurrence = { frequency: 'weekly', interval: 1, daysOfWeek: [1], metadata: { retained: true } };
+    const local = clone(base), remote = clone(base);
+    local.data.columns[0].cards[0].recurrence!.interval = 2;
+    remote.data.columns[0].cards[0].recurrence!.daysOfWeek = [1, 3];
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote);
+    expect(conflicts).toEqual([]);
+    expect(byId(document, 'a')!.recurrence).toEqual({ frequency: 'weekly', interval: 2, daysOfWeek: [1, 3], metadata: { retained: true } });
+  });
+
+  it('accepts a one-sided recurrence frequency change with an unrelated card edit', () => {
+    const base = board();
+    base.data.columns[0].cards[0].recurrence = { frequency: 'weekly', interval: 1, daysOfWeek: [1] };
+    const local = clone(base), remote = clone(base);
+    local.data.columns[0].cards[0].recurrence = { frequency: 'monthly', interval: 1, dayOfMonth: 31 };
+    remote.data.columns[0].cards[0].description = 'Independent summary';
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote);
+    expect(conflicts).toEqual([]);
+    expect(byId(document, 'a')).toMatchObject({ description: 'Independent summary', recurrence: { frequency: 'monthly', interval: 1, dayOfMonth: 31 } });
+    expect(byId(document, 'a')!.recurrence).not.toHaveProperty('daysOfWeek');
+  });
+
+  it('does not treat arbitrary metadata named recurrence as a card schedule', () => {
+    const base = board();
+    base.data.integration = { recurrence: { frequency: 'base', interval: 1 } };
+    const local = clone(base), remote = clone(base);
+    local.data.integration = { recurrence: { frequency: 'custom', interval: 1 } };
+    remote.data.integration = { recurrence: { frequency: 'base', interval: 2 } };
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote);
+    expect(conflicts).toEqual([]);
+    expect(document.data.integration).toEqual({ recurrence: { frequency: 'custom', interval: 2 } });
+  });
+
   it('combines independent board, card, and unknown raw fields', () => {
     const base = board(), local = clone(base), remote = clone(base);
     base.data.integration = { vendor: 'source', options: { a: true, b: false } };

@@ -65,6 +65,100 @@ describe('CardEditor text fields', () => {
   });
 });
 
+describe('CardEditor recurrence', () => {
+  it.each(['', '0', '100', '1.5'])('keeps an invalid interval draft open (%s) and saves after correction', async (value) => {
+    const user = userEvent.setup();
+    const initial = card({ recurrence: { frequency: 'weekly', interval: 1, daysOfWeek: [1, 3] } });
+    const save = open(initial);
+    await user.type(screen.getByPlaceholderText('Card title...'), ' draft');
+    const interval = screen.getByRole('spinbutton', { name: 'Repeat every' });
+    fireEvent.change(interval, { target: { value } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a whole number from 1 to 99.');
+    expect(interval).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByPlaceholderText('Card title...')).toHaveValue(`${initial.title} draft`);
+    await user.clear(interval);
+    await user.type(interval, '2');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0]).toMatchObject({
+      title: `${initial.title} draft`, description: initial.description, content: initial.content,
+      recurrence: { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3] },
+    });
+  });
+
+  it.each(['-1', '0', '32', '1.5'])('rejects an invalid monthly day (%s) without submitting', async (value) => {
+    const user = userEvent.setup();
+    const save = open(card({ recurrence: { frequency: 'monthly', interval: 1, dayOfMonth: 31 } }));
+    const day = screen.getByRole('spinbutton', { name: 'Day of month' });
+    fireEvent.change(day, { target: { value } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a whole number from 1 to 31, or leave this blank.');
+    expect(day).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it.each([[1, 1], [99, 31]])('accepts boundary interval %s and monthly day %s', async (interval, dayOfMonth) => {
+    const user = userEvent.setup();
+    const save = open(card({ recurrence: { frequency: 'monthly', interval: 2, dayOfMonth: 15 } }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Repeat every' }), { target: { value: String(interval) } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Day of month' }), { target: { value: String(dayOfMonth) } });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].recurrence).toEqual({ frequency: 'monthly', interval, dayOfMonth });
+  });
+
+  it('clears the optional monthly day without clearing the schedule or other card fields', async () => {
+    const user = userEvent.setup();
+    const initial = card({ targetDate: '2026-01-31', recurrence: { frequency: 'monthly', interval: 1, dayOfMonth: 31 } });
+    const save = open(initial);
+    expect(screen.getByLabelText('Due date')).toHaveValue(initial.targetDate);
+    await user.clear(screen.getByRole('spinbutton', { name: 'Day of month' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0]).toMatchObject({ description: initial.description, content: initial.content, targetDate: initial.targetDate });
+    expect(save.mock.calls[0][0].recurrence).toEqual({ frequency: 'monthly', interval: 1 });
+  });
+
+  it('drops inactive schedule fields when switching frequency', async () => {
+    const user = userEvent.setup();
+    const save = open(card({ recurrence: { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3] } }));
+    expect(screen.getByRole('button', { name: 'Monday' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Tuesday' })).toHaveAttribute('aria-pressed', 'false');
+    await user.click(screen.getByRole('button', { name: 'monthly' }));
+    await user.type(screen.getByRole('spinbutton', { name: 'Day of month' }), '31');
+    await user.click(screen.getByRole('button', { name: 'daily' }));
+    await user.click(screen.getByRole('button', { name: 'weekly' }));
+    expect(screen.getByRole('button', { name: 'weekly' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Monday' })).toHaveAttribute('aria-pressed', 'false');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].recurrence).toEqual({ frequency: 'weekly', interval: 2 });
+  });
+
+  it('sorts and deduplicates weekdays only after a deliberate schedule edit', async () => {
+    const user = userEvent.setup();
+    const recurrence = { frequency: 'weekly' as const, interval: 1, daysOfWeek: [5, 1, 1] };
+    const save = open(card({ recurrence }));
+    await user.type(screen.getByPlaceholderText('Card title...'), ' renamed');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].recurrence).toEqual(recurrence);
+    expect(save.mock.calls[0][1].recurrence).toEqual(recurrence);
+    await user.click(screen.getByRole('button', { name: 'Wednesday' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[1][0].recurrence).toEqual({ frequency: 'weekly', interval: 1, daysOfWeek: [1, 3, 5] });
+    expect(recurrence.daysOfWeek).toEqual([5, 1, 1]);
+  });
+
+  it('removes recurrence without changing the due date or text fields', async () => {
+    const user = userEvent.setup();
+    const initial = card({ targetDate: '2026-01-31', recurrence: { frequency: 'monthly', interval: 1 } });
+    const save = open(initial);
+    await user.click(screen.getByRole('button', { name: 'Remove recurrence' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].recurrence).toBeUndefined();
+    expect(save.mock.calls[0][0]).toMatchObject({ description: initial.description, content: initial.content, targetDate: initial.targetDate });
+  });
+});
+
 describe('CardEditor cover selection', () => {
   it('uses the canonical cover URL and selects only the first matching attachment while retaining metadata', async () => {
     const user = userEvent.setup();

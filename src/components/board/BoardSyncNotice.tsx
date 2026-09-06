@@ -12,7 +12,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { BoardSyncState } from '@/lib/board-sync';
-import type { Board } from '@/types';
+import type { Board, RecurrenceConfig } from '@/types';
+import { formatRecurrence } from '@/lib/recurrence';
 import { useBoardStore } from '@/store/useBoardStore';
 
 interface BoardSyncNoticeProps {
@@ -23,11 +24,21 @@ const noticeClassName = 'flex w-full flex-wrap items-center gap-3 border-b borde
 const secondaryButtonClassName = 'border-white/15 bg-transparent text-[#F2F7F7] hover:bg-white/10 hover:text-[#F2F7F7]';
 const primaryButtonClassName = 'gradient-cyan text-[#0B0F0F] hover:opacity-90';
 
-function readableValue(value: unknown): string {
+function readableValue(value: unknown, path: string): string {
   if (value === undefined) return 'Removed';
   if (value === null) return 'None';
   if (value === '') return '(Empty text)';
   if (typeof value === 'string') return value;
+  if (/^data\.cards\[[^\]]+\]\.card\.recurrence$/.test(path) && typeof value === 'object' && !Array.isArray(value)) {
+    const rule = value as Partial<RecurrenceConfig>;
+    const knownFields = Object.keys(value).every((key) => ['frequency', 'interval', 'daysOfWeek', 'dayOfMonth'].includes(key));
+    if (knownFields && ['daily', 'weekly', 'monthly'].includes(rule.frequency ?? '') && Number.isInteger(rule.interval) && rule.interval! > 0 &&
+      (rule.daysOfWeek === undefined || (rule.frequency === 'weekly' && Array.isArray(rule.daysOfWeek) && rule.daysOfWeek.every((day) => Number.isInteger(day) && day >= 0 && day <= 6))) &&
+      (rule.dayOfMonth === undefined || (rule.frequency === 'monthly' && Number.isInteger(rule.dayOfMonth) && rule.dayOfMonth >= 1 && rule.dayOfMonth <= 31))) {
+      const label = formatRecurrence(rule as RecurrenceConfig);
+      return rule.frequency === 'monthly' && rule.dayOfMonth === undefined ? `${label} on the target date’s day` : label;
+    }
+  }
   return JSON.stringify(value, null, 2) ?? String(value);
 }
 
@@ -101,13 +112,13 @@ function ConflictNotice({ boardId, state }: BoardSyncNoticeProps & { state: Boar
                 <div className="min-w-0">
                   <dt className="mb-1 text-sm text-[#78fcd6]">My edits</dt>
                   <dd className="max-h-48 overflow-auto rounded-md bg-white/5 p-3">
-                    <pre className="whitespace-pre-wrap font-sans text-sm [overflow-wrap:anywhere]">{readableValue(conflict.local)}</pre>
+                    <pre className="whitespace-pre-wrap font-sans text-sm [overflow-wrap:anywhere]">{readableValue(conflict.local, conflict.path)}</pre>
                   </dd>
                 </div>
                 <div className="min-w-0">
                   <dt className="mb-1 text-sm text-[#A8B2B2]">Incoming edits</dt>
                   <dd className="max-h-48 overflow-auto rounded-md bg-white/5 p-3">
-                    <pre className="whitespace-pre-wrap font-sans text-sm [overflow-wrap:anywhere]">{readableValue(conflict.remote)}</pre>
+                    <pre className="whitespace-pre-wrap font-sans text-sm [overflow-wrap:anywhere]">{readableValue(conflict.remote, conflict.path)}</pre>
                   </dd>
                 </div>
               </dl>

@@ -516,6 +516,34 @@ describe('signed-in board sync integration', () => {
     expect(columns(rows.get(original.id)!)[1].cards[0]).toMatchObject({ title: 'Original card', content: { text: 'Updated MCP body' }, labels: ['blue'] });
   });
 
+  it.each(['local', 'remote'] as const)('resolves competing recurrence frequencies to the complete %s schedule', async (choice) => {
+    const original = row();
+    const originalRecurrence = { frequency: 'weekly' as const, interval: 1 };
+    columns(original)[0].cards[0].recurrence = originalRecurrence;
+    rows.set(original.id, original);
+    await signIn();
+    useBoardStore.getState().openCardEditor(original.id, 'card-1');
+    const remote = structuredClone(original);
+    const remoteRecurrence = { frequency: 'weekly' as const, interval: 1, daysOfWeek: [3] };
+    Object.assign(columns(remote)[0].cards[0], { recurrence: remoteRecurrence, description: 'MCP summary' });
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+    const localRecurrence = { frequency: 'daily' as const, interval: 2 };
+    const initialForm = { title: 'Original card', content: { type: 'text' as const, text: '' }, recurrence: originalRecurrence, labels: [] };
+    useBoardStore.getState().saveCardEditor({ ...initialForm, title: 'Browser title', recurrence: localRecurrence }, initialForm);
+    await vi.advanceTimersByTimeAsync(800);
+    expect(updateRequests()).toHaveLength(0);
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('conflict');
+    useBoardStore.getState().resolveBoardConflict(original.id, choice);
+    await settle();
+    const saved = columns(rows.get(original.id)!)[0].cards[0];
+    expect(saved.recurrence).toEqual(choice === 'local' ? localRecurrence : remoteRecurrence);
+    expect(saved.title).toBe('Browser title');
+    expect(saved.description).toBe('MCP summary');
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+  });
+
   it('requires review if MCP changes a field after the card editor opened', async () => {
     const original = row();
     rows.set(original.id, original);

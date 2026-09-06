@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createRecurringCardCopy } from './recurrence.js';
+import { parseRecurrence } from './recurrence-schema.js';
 import {
   type BoardData,
   type BoardRow,
@@ -11,6 +12,7 @@ import {
   type Column,
   type FullBoard,
   type BoardTemplate,
+  type RecurrenceConfig,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -311,6 +313,7 @@ export interface NewCardInput {
   targetDate?: string;
   labels?: CardLabel[];
   coverImage?: string;
+  recurrence?: RecurrenceConfig;
 }
 
 /** coverImage is the selected URL; attachment flags mirror that selection. */
@@ -326,23 +329,26 @@ function applyCoverImage(card: Card, coverImage: string | undefined): void {
   }
 }
 
-export function addCard(
+export async function addCard(
   client: SupabaseClient,
   boardId: string,
   columnId: string,
   input: NewCardInput,
 ): Promise<FullBoard> {
+  const recurrence = input.recurrence === undefined ? undefined : parseRecurrence(input.recurrence);
+  const draft = structuredClone({ ...input, recurrence });
   return mutateColumns(client, boardId, (columns) => {
     const column = findColumn(columns, columnId);
     const now = nowIso();
     const card: Card = {
       id: newId(),
-      title: input.title,
-      description: input.description,
-      content: input.content ?? { type: 'text', text: '' },
-      targetDate: input.targetDate,
-      labels: input.labels ?? [],
-      coverImage: input.coverImage,
+      title: draft.title,
+      description: draft.description,
+      content: draft.content ?? { type: 'text', text: '' },
+      targetDate: draft.targetDate,
+      labels: draft.labels ?? [],
+      coverImage: draft.coverImage,
+      recurrence: draft.recurrence,
       isArchived: false,
       createdAt: now,
       updatedAt: now,
@@ -499,6 +505,21 @@ export function setCoverImage(
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
     applyCoverImage(card, coverImage ?? undefined);
+    card.updatedAt = nowIso();
+    return columns;
+  });
+}
+
+export async function setRecurrence(
+  client: SupabaseClient,
+  boardId: string,
+  cardId: string,
+  recurrence: RecurrenceConfig | null,
+): Promise<FullBoard> {
+  const next = recurrence === null ? undefined : parseRecurrence(recurrence);
+  return mutateColumns(client, boardId, (columns) => {
+    const { card } = locateCard(columns, cardId);
+    card.recurrence = structuredClone(next);
     card.updatedAt = nowIso();
     return columns;
   });

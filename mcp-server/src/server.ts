@@ -8,6 +8,7 @@ import { getAuthedClient, NotAuthenticatedError } from './supabase.js';
 import * as db from './board-data.js';
 import { generateBoardTemplate } from './ai.js';
 import { CARD_LABELS, type CardContent, type CardLabel } from './types.js';
+import { recurrenceSchema } from './recurrence-schema.js';
 
 const text = (data: unknown): CallToolResult => ({
   content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }],
@@ -188,9 +189,10 @@ export function buildServer(
         text: z.string().optional().describe('Card body text'),
         targetDate: z.string().optional().describe('ISO date'),
         labels: z.array(labelEnum).optional(),
+        recurrence: recurrenceSchema.optional(),
       },
     },
-    async ({ boardId, columnId, title, description, text: body, targetDate, labels }) =>
+    async ({ boardId, columnId, title, description, text: body, targetDate, labels, recurrence }) =>
       safe(() =>
         db.addCard(client, boardId, columnId, {
           title,
@@ -198,6 +200,7 @@ export function buildServer(
           content: textToContent(body),
           targetDate,
           labels: labels as CardLabel[] | undefined,
+          recurrence,
         }),
       ),
   );
@@ -285,6 +288,16 @@ export function buildServer(
     'set_target_date',
     { title: 'Set target date', description: 'Set or clear a card target date (ISO string, or null to clear).', inputSchema: { boardId: z.string(), cardId: z.string(), targetDate: z.string().nullable() } },
     async ({ boardId, cardId, targetDate }) => safe(() => db.setTargetDate(client, boardId, cardId, targetDate)),
+  );
+
+  server.registerTool(
+    'set_recurrence',
+    {
+      title: 'Set recurrence',
+      description: 'Replace or clear a card recurrence (null clears it), preserving its target date and other fields. Archiving a recurring card creates its next scheduled copy; configuring recurrence does not create copies.',
+      inputSchema: { boardId: z.string(), cardId: z.string(), recurrence: recurrenceSchema.nullable() },
+    },
+    async ({ boardId, cardId, recurrence }) => safe(() => db.setRecurrence(client, boardId, cardId, recurrence)),
   );
 
   server.registerTool(

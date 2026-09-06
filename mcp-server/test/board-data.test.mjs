@@ -6,6 +6,7 @@ import {
   getBoard,
   reorderColumns,
   setCoverImage,
+  setRecurrence,
   updateCard,
   updateColumn,
 } from '../dist/board-data.js';
@@ -276,4 +277,168 @@ test('cover clear retries retain concurrently added attachments and clear their 
   assert.equal(card.attachments.length, 4);
   assert.equal(card.attachments.at(-1).id, 'concurrent');
   assert.ok(card.attachments.every((attachment) => attachment.isCover === false));
+});
+
+test('adding a recurring card clones its input and canonicalizes selected weekdays', async () => {
+  const { client, state } = createBoardFixture();
+  const input = {
+    title: 'Weekly planning',
+    targetDate: '2026-09-07T12:00:00.000Z',
+    recurrence: { frequency: 'weekly', interval: 2, daysOfWeek: [5, 1, 3] },
+    content: { type: 'checklist', checklist: [{ id: 'item', text: 'Plan', completed: false }] },
+    labels: ['blue'],
+  };
+  const original = structuredClone(input);
+  const saving = addCard(client, 'board-1', 'column-a', input);
+  assert.deepEqual(input, original, 'canonicalization must not sort the caller array');
+  input.title = 'Changed after submitting';
+  input.recurrence.daysOfWeek.push(0);
+  input.recurrence.interval = 99;
+  input.content.checklist[0].text = 'Changed';
+  input.labels.push('red');
+  const result = await saving;
+  const card = result.columns[0].cards.at(-1);
+  assert.equal(card.title, original.title);
+  assert.equal(card.targetDate, original.targetDate);
+  assert.deepEqual(card.recurrence, { frequency: 'weekly', interval: 2, daysOfWeek: [1, 3, 5] });
+  assert.deepEqual(card.content, original.content);
+  assert.deepEqual(card.labels, original.labels);
+  assert.deepEqual(state.row.data.columns[0].cards.at(-1).recurrence, card.recurrence);
+});
+
+test('setting, replacing and clearing recurrence preserve every unrelated field and target date', async () => {
+  const row = boardWithAttachments();
+  const before = row.data.columns[0].cards[0];
+  Object.assign(before, {
+    targetDate: '2026-01-31T12:00:00.000Z',
+    labels: ['purple'],
+    future: { enabled: true },
+    isArchived: true,
+    archivedAt: '2026-02-01T12:00:00.000Z',
+  });
+  const { client, state } = createBoardFixture({ row });
+  for (const recurrence of [
+    { frequency: 'weekly', interval: 2, daysOfWeek: [0, 6] },
+    { frequency: 'monthly', interval: 3, dayOfMonth: 31 },
+    { frequency: 'daily', interval: 99 },
+    null,
+  ]) {
+    await setRecurrence(client, row.id, before.id, recurrence);
+    const card = state.row.data.columns[0].cards[0];
+    const { recurrence: saved, updatedAt, ...unrelated } = card;
+    const { updatedAt: priorUpdatedAt, ...expected } = before;
+    assert.deepEqual(saved, recurrence ?? undefined);
+    assert.deepEqual(unrelated, expected);
+    assert.equal(typeof updatedAt, 'string');
+    assert.deepEqual(state.row.data.columns.map((column) => column.cards.length), [1, 1], 'configuration does not create recurring copies');
+  }
+  assert.equal(Object.hasOwn(state.row.data.columns[0].cards[0], 'recurrence'), false);
+});
+
+test('recurrence setter clones its input before asynchronous reads and preserves empty or missing selections', async () => {
+  const { client, state } = createBoardFixture();
+  const recurrence = { frequency: 'weekly', interval: 2, daysOfWeek: [6, 0] };
+  const saving = setRecurrence(client, 'board-1', 'card-a', recurrence);
+  assert.deepEqual(recurrence.daysOfWeek, [6, 0]);
+  recurrence.daysOfWeek.push(4);
+  recurrence.interval = 10;
+  await saving;
+  assert.deepEqual(state.row.data.columns[0].cards[0].recurrence, { frequency: 'weekly', interval: 2, daysOfWeek: [0, 6] });
+  for (const config of [
+    { frequency: 'weekly', interval: 1 },
+    { frequency: 'weekly', interval: 1, daysOfWeek: [] },
+    { frequency: 'monthly', interval: 1 },
+  ]) {
+    await setRecurrence(client, 'board-1', 'card-a', config);
+    assert.deepEqual(state.row.data.columns[0].cards[0].recurrence, config);
+    assert.equal(state.row.data.columns[0].cards[0].targetDate, undefined);
+  }
+});
+
+test('invalid recurrence is rejected before database access for both direct mutation APIs', async () => {
+  const invalid = [
+    {}, { frequency: 'yearly', interval: 1 }, { frequency: 'daily' },
+    ...[0, -1, 100, 1.5, Infinity, NaN, '1', null].map((interval) => ({ frequency: 'daily', interval })),
+    { frequency: 'daily', interval: 1, daysOfWeek: [] },
+    { frequency: 'daily', interval: 1, dayOfMonth: 1 },
+    { frequency: 'weekly', interval: 1, dayOfMonth: 1 },
+    ...[[1, 1], [-1], [7], [1.5], ['1'], null].map((daysOfWeek) => ({ frequency: 'weekly', interval: 1, daysOfWeek })),
+    { frequency: 'monthly', interval: 1, daysOfWeek: [] },
+    ...[0, 32, 1.5, '1', null].map((dayOfMonth) => ({ frequency: 'monthly', interval: 1, dayOfMonth })),
+    { frequency: 'daily', interval: 1, unexpected: true },
+    [], 'daily',
+  ];
+  const row = makeBoard();
+  const { client, state } = createBoardFixture({ row });
+  for (const recurrence of invalid) {
+    await assert.rejects(addCard(client, row.id, 'column-a', { title: 'Invalid', recurrence }));
+    await assert.rejects(setRecurrence(client, row.id, 'card-a', recurrence));
+  }
+  await assert.rejects(addCard(client, row.id, 'column-a', { title: 'Invalid', recurrence: null }));
+  await assert.rejects(setRecurrence(client, row.id, 'card-a', undefined));
+  assert.deepEqual(state.row, row);
+  assert.equal(state.requests.length, 0);
+});
+
+test('recurrence changes follow a concurrently moved card and preserve fresh fields and additions on retry', async () => {
+  const { client, state } = createBoardFixture({
+    onRequest(request, state) {
+      if (request.method === 'PATCH' && writes(state).length === 1) {
+        const card = state.row.data.columns[0].cards.shift();
+        Object.assign(card, { title: 'Concurrent title', targetDate: '2026-10-01', labels: ['green'], future: { retained: true } });
+        state.row.data.columns[1].cards.push(card);
+        state.row.data.columns[0].cards.push(makeCard('concurrent-card'));
+        state.row.data.futureSettings = { retained: true };
+        state.row.updated_at = '2026-09-06T00:00:00.123456Z';
+      }
+    },
+  });
+  const recurrence = { frequency: 'monthly', interval: 2, dayOfMonth: 15 };
+  await setRecurrence(client, 'board-1', 'card-a', recurrence);
+  const card = state.row.data.columns[1].cards.find((card) => card.id === 'card-a');
+  assert.deepEqual(card.recurrence, recurrence);
+  assert.equal(card.title, 'Concurrent title');
+  assert.equal(card.targetDate, '2026-10-01');
+  assert.deepEqual(card.labels, ['green']);
+  assert.deepEqual(card.future, { retained: true });
+  assert.deepEqual(state.row.data.columns[0].cards.map((card) => card.id), ['concurrent-card']);
+  assert.deepEqual(state.row.data.futureSettings, { retained: true });
+  assert.equal(writes(state).length, 2);
+});
+
+test('recurring additions survive concurrent additions once each', async () => {
+  const { client, state } = createBoardFixture();
+  await Promise.all([
+    addCard(client, 'board-1', 'column-a', { title: 'Daily', recurrence: { frequency: 'daily', interval: 1 } }),
+    addCard(client, 'board-1', 'column-a', { title: 'Monthly', recurrence: { frequency: 'monthly', interval: 1 } }),
+  ]);
+  const cards = state.row.data.columns[0].cards;
+  assert.equal(cards.length, 3);
+  assert.equal(new Set(cards.map((card) => card.id)).size, 3);
+  assert.deepEqual(cards.find((card) => card.title === 'Daily').recurrence, { frequency: 'daily', interval: 1 });
+  assert.deepEqual(cards.find((card) => card.title === 'Monthly').recurrence, { frequency: 'monthly', interval: 1 });
+  assert.equal(writes(state).length, 3);
+});
+
+test('recurrence clear preserves concurrent card fields on retry', async () => {
+  const row = makeBoard();
+  row.data.columns[0].cards[0].recurrence = { frequency: 'daily', interval: 1 };
+  const { client, state } = createBoardFixture({ row,
+    onRequest(request, state) {
+      if (request.method === 'PATCH' && writes(state).length === 1) {
+        state.row.data.columns[0].cards[0].description = 'Keep the browser edit';
+        state.row.updated_at = '2026-09-06T00:00:00.123456Z';
+      }
+    },
+  });
+  await setRecurrence(client, 'board-1', 'card-a', null);
+  assert.equal(state.row.data.columns[0].cards[0].recurrence, undefined);
+  assert.equal(state.row.data.columns[0].cards[0].description, 'Keep the browser edit');
+  assert.equal(writes(state).length, 2);
+});
+
+test('setting recurrence on a missing card fails without a write', async () => {
+  const { client, state } = createBoardFixture();
+  await assert.rejects(setRecurrence(client, 'board-1', 'missing-card', { frequency: 'daily', interval: 1 }), /Card missing-card not found/);
+  assert.equal(writes(state).length, 0);
 });

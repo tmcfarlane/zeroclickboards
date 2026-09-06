@@ -15,7 +15,7 @@ type Resolution = 'local' | 'remote';
 type Value = Record<string, unknown>;
 type Entity = Value & { id: string };
 type CardEntry = { columnId: string; card: Entity };
-type MergeKind = 'cardEntry' | 'card' | 'attachments' | 'attachment';
+type MergeKind = 'cardEntry' | 'card' | 'attachments' | 'attachment' | 'recurrence';
 type Snapshot = {
   columns: Map<string, Entity>;
   cards: Map<string, CardEntry>;
@@ -233,6 +233,7 @@ function mergeKeyedList(base: Entity[], local: Entity[], remote: Entity[], path:
 function childMergeKind(kind: MergeKind | undefined, key: string): MergeKind | undefined {
   if (kind === 'cardEntry' && key === 'card') return 'card';
   if (kind === 'card' && key === 'attachments') return 'attachments';
+  if (kind === 'card' && key === 'recurrence') return 'recurrence';
 }
 
 function mergeValue(base: unknown, local: unknown, remote: unknown, path: string, context: MergeContext, kind?: MergeKind): unknown {
@@ -246,6 +247,11 @@ function mergeValue(base: unknown, local: unknown, remote: unknown, path: string
     // variant as a whole. Resolving only its hidden body field would retain the
     // new type and make the explicitly selected old-variant edit invisible.
     if (path.endsWith('.card.content') && local.type !== remote.type) {
+      return copy(context.conflict(path, local, remote));
+    }
+    // A frequency switch and an edit to the old schedule cannot be combined
+    // field by field: selecting weekdays must also retain their weekly rule.
+    if (kind === 'recurrence' && local.frequency !== remote.frequency) {
       return copy(context.conflict(path, local, remote));
     }
     const keys = new Set([...Object.keys(before), ...Object.keys(local), ...Object.keys(remote)]);

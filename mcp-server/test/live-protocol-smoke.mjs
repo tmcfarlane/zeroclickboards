@@ -58,8 +58,12 @@ try {
   const secondColumnId = board.columns[1].id;
   passed('MCP create_board writes a dedicated test board');
 
-  const added = await call('add_card', { boardId, columnId, title: 'Preserve concurrent changes', text: 'MCP body' });
+  const added = await call('add_card', {
+    boardId, columnId, title: 'Preserve concurrent changes', text: 'MCP body',
+    recurrence: { frequency: 'daily', interval: 3 },
+  });
   const cardId = added.columns[0].cards[0].id;
+  assert.deepEqual(added.columns[0].cards[0].recurrence, { frequency: 'daily', interval: 3 });
   const duplicate = board.columns.map((column) => column.id);
   duplicate[1] = duplicate[0];
   const rejected = await mcp.callTool({ name: 'reorder_columns', arguments: { boardId, orderedColumnIds: duplicate } });
@@ -67,6 +71,12 @@ try {
   const intact = await call('get_board', { boardId });
   assert.deepEqual(intact.columns, added.columns);
   passed('Duplicate reorder rejected without changing live board data');
+
+  await call('set_recurrence', { boardId, cardId, recurrence: null });
+  const unscheduled = await call('get_card', { boardId, cardId });
+  assert.equal(unscheduled.recurrence, undefined);
+  assert.equal(unscheduled.content.text, 'MCP body');
+  passed('MCP creates a recurring card and clears its schedule without changing the body');
 
   let release;
   const ready = new Promise((resolve) => { release = resolve; });
@@ -98,15 +108,12 @@ try {
   assert.equal(moved.content.text, 'MCP body');
   passed('MCP move_card and get_card round trip');
 
-  // Recurrence exists in the UI but has no MCP setter yet. Seed only this test
-  // card, then exercise the real archive tool and its persisted output.
-  const snapshot = await database.from('boards').select('data').eq('id', boardId).single();
-  if (snapshot.error) throw snapshot.error;
-  const card = snapshot.data.data.columns.flatMap((column) => column.cards).find((item) => item.id === cardId);
-  card.targetDate = '2028-01-31';
-  card.recurrence = { frequency: 'monthly', interval: 1 };
-  const seed = await database.from('boards').update({ data: snapshot.data.data }).eq('id', boardId).select('id').single();
-  if (seed.error) throw seed.error;
+  await call('set_target_date', { boardId, cardId, targetDate: '2028-01-31' });
+  await call('set_recurrence', { boardId, cardId, recurrence: { frequency: 'monthly', interval: 1 } });
+  const scheduled = await call('get_card', { boardId, cardId });
+  assert.equal(scheduled.targetDate, '2028-01-31');
+  assert.equal(scheduled.content.text, 'MCP body');
+  assert.deepEqual([...scheduled.labels].sort(), ['blue', 'red']);
   await call('archive_card', { boardId, cardId });
   await call('archive_card', { boardId, cardId });
   const remaining = await call('list_cards', { boardId });

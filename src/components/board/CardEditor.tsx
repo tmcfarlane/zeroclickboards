@@ -142,6 +142,10 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   const [showLabels, setShowLabels] = useState(false);
   const [showRecurrence, setShowRecurrence] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | null>(null);
+  const [recurrenceIntervalInput, setRecurrenceIntervalInput] = useState('1');
+  const [recurrenceMonthDayInput, setRecurrenceMonthDayInput] = useState('');
+  const [recurrenceTouched, setRecurrenceTouched] = useState(false);
+  const [recurrenceErrors, setRecurrenceErrors] = useState<{ interval?: string; dayOfMonth?: string }>({});
 
   useEffect(() => {
     if (isOpen) {
@@ -194,6 +198,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         setShowDates(!!initialData.targetDate);
         setShowLabels(!!(initialData.labels && initialData.labels.length > 0));
         setRecurrence(initialData.recurrence || null);
+        setRecurrenceIntervalInput(String(initialData.recurrence?.interval ?? 1));
+        setRecurrenceMonthDayInput(initialData.recurrence?.dayOfMonth === undefined ? '' : String(initialData.recurrence.dayOfMonth));
         setShowRecurrence(!!initialData.recurrence);
         // Compare submitted values with what this form displayed, including
         // legacy image migration and distinct description/body fields. The
@@ -223,17 +229,46 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         setShowDates(false);
         setShowLabels(false);
         setRecurrence(null);
+        setRecurrenceIntervalInput('1');
+        setRecurrenceMonthDayInput('');
         setShowRecurrence(false);
       }
       setNewChecklistItem('');
       setEditingAttachmentId(null);
       pendingAttachmentEditRef.current = null;
       setAddMenuOpen(false);
+      setRecurrenceTouched(false);
+      setRecurrenceErrors({});
     }
   }, [isOpen, initialData]);
 
   const handleSave = () => {
     if (!title.trim()) return;
+
+    let submittedRecurrence = recurrence || undefined;
+    if (recurrence && recurrenceTouched) {
+      const interval = Number(recurrenceIntervalInput);
+      const dayOfMonth = recurrenceMonthDayInput.trim() ? Number(recurrenceMonthDayInput) : undefined;
+      const errors: typeof recurrenceErrors = {};
+      if (!Number.isInteger(interval) || interval < 1 || interval > 99) {
+        errors.interval = 'Enter a whole number from 1 to 99.';
+      }
+      if (recurrence.frequency === 'monthly' && dayOfMonth !== undefined &&
+        (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31)) {
+        errors.dayOfMonth = 'Enter a whole number from 1 to 31, or leave this blank.';
+      }
+      setRecurrenceErrors(errors);
+      if (Object.keys(errors).length) return;
+
+      submittedRecurrence = { ...recurrence, interval };
+      delete submittedRecurrence.daysOfWeek;
+      delete submittedRecurrence.dayOfMonth;
+      if (recurrence.frequency === 'weekly') {
+        const days = [...new Set((recurrence.daysOfWeek ?? []).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))].sort((a, b) => a - b);
+        if (days.length) submittedRecurrence.daysOfWeek = days;
+      }
+      if (recurrence.frequency === 'monthly' && dayOfMonth !== undefined) submittedRecurrence.dayOfMonth = dayOfMonth;
+    }
 
     let content: CardContent;
     if (contentType === 'checklist') {
@@ -252,8 +287,21 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
       labels,
       coverImage: coverAttachment?.url,
       attachments: attachments.length > 0 ? attachments : undefined,
-      recurrence: recurrence || undefined,
+      recurrence: submittedRecurrence,
     }, initialFormRef.current);
+  };
+
+  const changeRecurrenceFrequency = (frequency: RecurrenceConfig['frequency']) => {
+    const next = { ...recurrence, frequency, interval: recurrence?.interval ?? 1 };
+    if (!recurrence) setRecurrenceIntervalInput('1');
+    if (frequency !== 'weekly' || recurrence?.frequency !== 'weekly') delete next.daysOfWeek;
+    if (frequency !== 'monthly' || recurrence?.frequency !== 'monthly') {
+      delete next.dayOfMonth;
+      setRecurrenceMonthDayInput('');
+    }
+    setRecurrence(next);
+    setRecurrenceTouched(true);
+    setRecurrenceErrors({});
   };
 
   // Checklist helpers
@@ -441,6 +489,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                 if (recurrence) {
                   setRecurrence(null);
                   setShowRecurrence(false);
+                  setRecurrenceTouched(true);
+                  setRecurrenceErrors({});
                 } else {
                   setShowRecurrence(!showRecurrence);
                 }
@@ -466,7 +516,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           {(showDates || !!targetDate) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Due Date</span>
+                <label htmlFor="target-date" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Due date</label>
                 {targetDate && (
                   <button
                     type="button"
@@ -495,7 +545,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                 {recurrence && (
                   <button
                     type="button"
-                    onClick={() => { setRecurrence(null); setShowRecurrence(false); }}
+                    aria-label="Remove recurrence"
+                    onClick={() => { setRecurrence(null); setShowRecurrence(false); setRecurrenceTouched(true); setRecurrenceErrors({}); }}
                     className="text-xs text-[#A8B2B2] hover:text-red-400 transition-colors"
                   >
                     Remove
@@ -509,7 +560,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   <button
                     key={freq}
                     type="button"
-                    onClick={() => setRecurrence({ frequency: freq, interval: recurrence?.interval || 1, ...(freq === 'weekly' && recurrence?.daysOfWeek ? { daysOfWeek: recurrence.daysOfWeek } : {}), ...(freq === 'monthly' && recurrence?.dayOfMonth ? { dayOfMonth: recurrence.dayOfMonth } : {}) })}
+                    onClick={() => changeRecurrenceFrequency(freq)}
+                    aria-pressed={recurrence?.frequency === freq}
                     className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors capitalize ${
                       recurrence?.frequency === freq
                         ? 'border-[#78fcd6]/40 bg-[#78fcd6]/10 text-[#78fcd6]'
@@ -527,10 +579,18 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   <span className="text-xs text-[#A8B2B2]">Every</span>
                   <Input
                     type="number"
+                    aria-label="Repeat every"
+                    aria-invalid={!!recurrenceErrors.interval}
+                    aria-describedby={recurrenceErrors.interval ? 'recurrence-interval-error' : undefined}
                     min={1}
                     max={99}
-                    value={recurrence.interval}
-                    onChange={(e) => setRecurrence({ ...recurrence, interval: Math.max(1, parseInt(e.target.value) || 1) })}
+                    step={1}
+                    value={recurrenceIntervalInput}
+                    onChange={(e) => {
+                      setRecurrenceIntervalInput(e.target.value);
+                      setRecurrenceTouched(true);
+                      setRecurrenceErrors((errors) => ({ ...errors, interval: undefined }));
+                    }}
                     className="w-16 h-8 bg-white/5 border-white/10 text-[#F2F7F7] text-center text-xs"
                   />
                   <span className="text-xs text-[#A8B2B2]">
@@ -538,20 +598,24 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   </span>
                 </div>
               )}
+              {recurrenceErrors.interval && <p id="recurrence-interval-error" role="alert" className="text-xs text-red-400">{recurrenceErrors.interval}</p>}
 
               {/* Weekly: day of week picker */}
               {recurrence?.frequency === 'weekly' && (
                 <div className="flex gap-1">
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => {
+                  {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => {
                     const selected = recurrence.daysOfWeek?.includes(idx) ?? false;
                     return (
                       <button
                         key={idx}
                         type="button"
+                        aria-label={day}
+                        aria-pressed={selected}
                         onClick={() => {
                           const current = recurrence.daysOfWeek || [];
                           const next = selected ? current.filter((d) => d !== idx) : [...current, idx];
                           setRecurrence({ ...recurrence, daysOfWeek: next.length > 0 ? next : undefined });
+                          setRecurrenceTouched(true);
                         }}
                         className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
                           selected
@@ -559,7 +623,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                             : 'bg-white/5 text-[#A8B2B2] border border-white/10 hover:bg-white/10'
                         }`}
                       >
-                        {day}
+                        {day[0]}
                       </button>
                     );
                   })}
@@ -572,15 +636,24 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   <span className="text-xs text-[#A8B2B2]">On day</span>
                   <Input
                     type="number"
+                    aria-label="Day of month"
+                    aria-invalid={!!recurrenceErrors.dayOfMonth}
+                    aria-describedby={recurrenceErrors.dayOfMonth ? 'recurrence-month-day-error recurrence-month-day-hint' : 'recurrence-month-day-hint'}
                     min={1}
                     max={31}
-                    value={recurrence.dayOfMonth || ''}
-                    onChange={(e) => setRecurrence({ ...recurrence, dayOfMonth: parseInt(e.target.value) || undefined })}
-                    placeholder="Any"
+                    step={1}
+                    value={recurrenceMonthDayInput}
+                    onChange={(e) => {
+                      setRecurrenceMonthDayInput(e.target.value);
+                      setRecurrenceTouched(true);
+                      setRecurrenceErrors((errors) => ({ ...errors, dayOfMonth: undefined }));
+                    }}
                     className="w-16 h-8 bg-white/5 border-white/10 text-[#F2F7F7] text-center text-xs"
                   />
                 </div>
               )}
+              {recurrence?.frequency === 'monthly' && <p id="recurrence-month-day-hint" className="text-xs text-[#A8B2B2]">Leave blank to use the due date’s day, or today’s day if no date is set.</p>}
+              {recurrenceErrors.dayOfMonth && <p id="recurrence-month-day-error" role="alert" className="text-xs text-red-400">{recurrenceErrors.dayOfMonth}</p>}
             </div>
           )}
 
