@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Board } from '@/types';
 import type { BoardSyncState } from '@/lib/board-sync';
 import { BoardSyncNotice } from '../BoardSyncNotice';
 
 const store = vi.hoisted(() => ({
+  boards: [] as Board[],
   boardSyncStates: {} as Record<string, BoardSyncState>,
   retryBoardSync: vi.fn(),
   resolveBoardConflict: vi.fn(),
@@ -23,12 +25,13 @@ function setConflict() {
     status: 'conflict',
     conflicts: [
       { path: 'name', local: 'My board name', remote: 'Incoming board name' },
-      { path: 'columns.todo.cards.task-1.title', local: 'My task title', remote: 'Incoming task title' },
+      { path: 'data.cards[task-1].card.title', local: 'My task title', remote: 'Incoming task title' },
     ],
   };
 }
 
 beforeEach(() => {
+  store.boards = [{ id: boardId, name: 'Example', createdAt: '', updatedAt: '', columns: [{ id: 'todo', title: 'To Do', order: 0, cards: [{ id: 'task-1', title: 'My task title', content: { type: 'text', text: '' }, createdAt: '', updatedAt: '' }] }] }];
   store.boardSyncStates = {};
   vi.clearAllMocks();
 });
@@ -89,8 +92,8 @@ describe('BoardSyncNotice', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Review board changes' });
     expect(dialog).toHaveAccessibleDescription('Choose which edits to use for the conflicting fields below. Changes to other fields are kept.');
-    expect(within(dialog).getByRole('heading', { name: 'name' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('heading', { name: 'columns.todo.cards.task-1.title' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: 'Board name' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: 'Card: My task title · Title' })).toBeInTheDocument();
     for (const value of ['My board name', 'Incoming board name', 'My task title', 'Incoming task title']) {
       expect(within(dialog).getByText(value, { exact: true })).toBeInTheDocument();
     }

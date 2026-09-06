@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { BoardSyncState } from '@/lib/board-sync';
+import type { Board } from '@/types';
 import { useBoardStore } from '@/store/useBoardStore';
 
 interface BoardSyncNoticeProps {
@@ -30,8 +31,45 @@ function readableValue(value: unknown): string {
   return JSON.stringify(value, null, 2) ?? String(value);
 }
 
+function conflictLabel(path: string, board: Board | undefined): string {
+  const names: Record<string, string> = {
+    name: 'Name', description: 'Description', 'data.background': 'Board background',
+    'data.hiddenColumnIds': 'Hidden columns', 'data.columns.order': 'Column order',
+    title: 'Title', content: 'Content', 'content.text': 'Body text', labels: 'Labels',
+    targetDate: 'Due date', coverImage: 'Cover image', attachments: 'Attachments',
+    recurrence: 'Recurrence', isArchived: 'Archived status', archivedAt: 'Archive date',
+    columnId: 'Column', 'cards.order': 'Card order',
+    completed: 'Completed', text: 'Text', frequency: 'Frequency', interval: 'Interval',
+  };
+  const cardMatch = /^data\.cards\[([^\]]+)\](?:\.card)?(?:\.(.*))?$/.exec(path);
+  const columnMatch = /^data\.columns\[([^\]]+)\](?:\.(.*))?$/.exec(path);
+  const humanize = (field: string) => names[field] ?? field
+    .replace(/\[[^\]]+\]/g, ' item').replace(/\./g, ' · ').replace(/([a-z])([A-Z])/g, '$1 $2');
+  if (cardMatch) {
+    const card = board?.columns.flatMap((column) => column.cards).find((card) => card.id === cardMatch[1]);
+    const checklist = /^content\.checklist\[([^\]]+)\](?:\.(.*))?$/.exec(cardMatch[2] ?? '');
+    const attachment = /^attachments\[([^\]]+)\](?:\.(.*))?$/.exec(cardMatch[2] ?? '');
+    let field = cardMatch[2] === 'description' ? 'Description' : humanize(cardMatch[2] ?? '');
+    if (checklist) {
+      const item = card?.content.checklist?.find((item) => item.id === checklist[1]);
+      field = [item ? `Checklist: ${item.text}` : 'Checklist item', humanize(checklist[2] ?? '')].filter(Boolean).join(' · ');
+    } else if (attachment) {
+      const item = card?.attachments?.find((item) => item.id === attachment[1]);
+      field = [item ? `Attachment: ${item.name}` : 'Attachment', humanize(attachment[2] ?? '')].filter(Boolean).join(' · ');
+    }
+    return [card ? `Card: ${card.title}` : 'Card', field].filter(Boolean).join(' · ');
+  }
+  if (columnMatch) {
+    const column = board?.columns.find((column) => column.id === columnMatch[1]);
+    return [column ? `Column: ${column.title}` : 'Column', humanize(columnMatch[2] ?? '')].filter(Boolean).join(' · ');
+  }
+  if (path === 'name' || path === 'description') return `Board ${path}`;
+  return names[path] ?? humanize(path.replace(/^data\./, ''));
+}
+
 function ConflictNotice({ boardId, state }: BoardSyncNoticeProps & { state: BoardSyncState }) {
   const resolveBoardConflict = useBoardStore((store) => store.resolveBoardConflict);
+  const board = useBoardStore((store) => store.boards.find((board) => board.id === boardId));
   const descriptionId = useId();
 
   return (
@@ -58,7 +96,7 @@ function ConflictNotice({ boardId, state }: BoardSyncNoticeProps & { state: Boar
         <div className="min-w-0 space-y-4">
           {state.conflicts?.map((conflict, index) => (
             <section key={`${conflict.path}-${index}`} className="min-w-0 rounded-lg border border-white/10 p-3">
-              <h3 className="mb-3 text-sm font-medium [overflow-wrap:anywhere]">{conflict.path}</h3>
+              <h3 className="mb-3 text-sm font-medium [overflow-wrap:anywhere]">{conflictLabel(conflict.path, board)}</h3>
               <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
                 <div className="min-w-0">
                   <dt className="mb-1 text-sm text-[#78fcd6]">My edits</dt>
