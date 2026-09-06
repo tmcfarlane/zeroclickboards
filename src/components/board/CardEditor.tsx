@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { LabelPicker } from './LabelPicker';
 import { CardActivityFeed } from './CardActivityFeed';
 import { getAllCardTemplates, deleteUserCardTemplate, type CardTemplate } from '@/lib/templates';
+import { normalizeCalendarDate } from '@/lib/calendar-date';
 
 export interface CardEditorSaveData {
   title: string;
@@ -44,7 +45,7 @@ export interface CardEditorSaveData {
 interface CardEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: CardEditorSaveData) => void;
+  onSave: (data: CardEditorSaveData, initialForm?: CardEditorSaveData) => void;
   onDelete?: () => void;
   mode: 'create' | 'edit';
   cardId?: string;
@@ -124,34 +125,52 @@ function CardTemplatePicker({ onApply }: { onApply: (tpl: CardTemplate) => void 
 export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, initialData }: CardEditorProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [bodyText, setBodyText] = useState('');
   const [contentType, setContentType] = useState<CardContent['type']>('text');
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [targetDate, setTargetDate] = useState('');
+  const [targetDateTouched, setTargetDateTouched] = useState(false);
+  const [targetDateBadInput, setTargetDateBadInput] = useState(false);
+  const [targetDateError, setTargetDateError] = useState<string | undefined>(undefined);
+  const [invalidOriginalDate, setInvalidOriginalDate] = useState<string | undefined>(undefined);
+  const targetDateInputRef = useRef<HTMLInputElement>(null);
   const [labels, setLabels] = useState<CardLabel[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [editingAttachmentId, setEditingAttachmentId] = useState<string | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const attachmentFileRef = useRef<HTMLInputElement>(null);
+  const pendingAttachmentEditRef = useRef<string | null>(null);
+  const initialFormRef = useRef<CardEditorSaveData | undefined>(undefined);
 
   // Section visibility
   const [showDates, setShowDates] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
   const [showRecurrence, setShowRecurrence] = useState(false);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | null>(null);
+  const [recurrenceIntervalInput, setRecurrenceIntervalInput] = useState('1');
+  const [recurrenceMonthDayInput, setRecurrenceMonthDayInput] = useState('');
+  const [recurrenceTouched, setRecurrenceTouched] = useState(false);
+  const [recurrenceErrors, setRecurrenceErrors] = useState<{ interval?: string; dayOfMonth?: string }>({});
 
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
+        const initialDescription = initialData.description ?? '';
+        const initialBodyText = initialData.content.text ?? '';
+        const initialContentType = initialData.content.type === 'image' ? 'text' : initialData.content.type;
+        const initialTargetDate = normalizeCalendarDate(initialData.targetDate ?? '');
         setTitle(initialData.title);
-        setDescription(initialData.description || '');
-        setContentType(initialData.content.type === 'image' ? 'text' : initialData.content.type);
+        setDescription(initialDescription);
+        setBodyText(initialBodyText);
+        setContentType(initialContentType);
         setChecklist(initialData.content.checklist || []);
-        setTargetDate(initialData.targetDate || '');
+        setTargetDate(initialTargetDate ?? '');
+        setInvalidOriginalDate(initialData.targetDate && !initialTargetDate ? initialData.targetDate : undefined);
         setLabels(initialData.labels || []);
 
         // Build attachments — migrate legacy coverImage / content.imageUrl
-        const existing: Attachment[] = initialData.attachments ? [...initialData.attachments] : [];
+        let existing: Attachment[] = initialData.attachments ? [...initialData.attachments] : [];
 
         if (initialData.coverImage && !existing.some(a => a.url === initialData.coverImage)) {
           existing.unshift({
@@ -170,42 +189,116 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
             name: 'Image',
             url: initialData.content.imageUrl,
             addedAt: new Date().toISOString(),
-            isCover: existing.length === 0,
+            isCover: false,
           });
         }
+
+        // The stored cover URL is authoritative. Old clients may leave stale
+        // flags, or the same URL may appear on more than one attachment.
+        let coverMatched = false;
+        existing = existing.map((attachment) => {
+          const isCover = !coverMatched && !!initialData.coverImage && attachment.url === initialData.coverImage;
+          if (isCover) coverMatched = true;
+          return { ...attachment, isCover };
+        });
 
         setAttachments(existing);
         setShowDates(!!initialData.targetDate);
         setShowLabels(!!(initialData.labels && initialData.labels.length > 0));
         setRecurrence(initialData.recurrence || null);
+        setRecurrenceIntervalInput(String(initialData.recurrence?.interval ?? 1));
+        setRecurrenceMonthDayInput(initialData.recurrence?.dayOfMonth === undefined ? '' : String(initialData.recurrence.dayOfMonth));
         setShowRecurrence(!!initialData.recurrence);
+        // Compare submitted values with what this form displayed, including
+        // legacy image migration and distinct description/body fields. The
+        // store can then apply only fields the user actually changed.
+        initialFormRef.current = structuredClone({
+          title: initialData.title.trim(),
+          description: initialDescription.trim() || undefined,
+          content: initialContentType === 'checklist'
+            ? { type: 'checklist', checklist: initialData.content.checklist || [] }
+            : { type: 'text', text: initialBodyText },
+          targetDate: initialTargetDate ?? (initialData.targetDate || undefined),
+          labels: initialData.labels || [],
+          coverImage: existing.find((attachment) => attachment.isCover)?.url,
+          attachments: existing.length > 0 ? existing : undefined,
+          recurrence: initialData.recurrence || undefined,
+        });
       } else {
+        initialFormRef.current = undefined;
         setTitle('');
         setDescription('');
+        setBodyText('');
         setContentType('text');
         setChecklist([]);
         setTargetDate('');
+        setInvalidOriginalDate(undefined);
         setLabels([]);
         setAttachments([]);
         setShowDates(false);
         setShowLabels(false);
         setRecurrence(null);
+        setRecurrenceIntervalInput('1');
+        setRecurrenceMonthDayInput('');
         setShowRecurrence(false);
       }
       setNewChecklistItem('');
       setEditingAttachmentId(null);
+      pendingAttachmentEditRef.current = null;
       setAddMenuOpen(false);
+      setRecurrenceTouched(false);
+      setRecurrenceErrors({});
+      setTargetDateTouched(false);
+      setTargetDateBadInput(false);
+      setTargetDateError(undefined);
     }
   }, [isOpen, initialData]);
 
   const handleSave = () => {
     if (!title.trim()) return;
 
+    // Native date inputs expose incomplete dates as an empty value. Check
+    // badInput before treating that empty value as an intentional removal.
+    const invalidDateInput = targetDateBadInput || targetDateInputRef.current?.validity.badInput;
+    let submittedTargetDate = targetDateTouched ? undefined : initialFormRef.current?.targetDate;
+    if (targetDateTouched && targetDate) submittedTargetDate = normalizeCalendarDate(targetDate);
+    if (invalidDateInput || (targetDateTouched && !!targetDate && !submittedTargetDate)) {
+      setTargetDateBadInput(!!invalidDateInput);
+      setTargetDateError('Enter a complete, valid date or remove the due date.');
+      return;
+    }
+    setTargetDateError(undefined);
+
+    let submittedRecurrence = recurrence || undefined;
+    if (recurrence && recurrenceTouched) {
+      const interval = Number(recurrenceIntervalInput);
+      const dayOfMonth = recurrenceMonthDayInput.trim() ? Number(recurrenceMonthDayInput) : undefined;
+      const errors: typeof recurrenceErrors = {};
+      if (!Number.isInteger(interval) || interval < 1 || interval > 99) {
+        errors.interval = 'Enter a whole number from 1 to 99.';
+      }
+      if (recurrence.frequency === 'monthly' && dayOfMonth !== undefined &&
+        (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 31)) {
+        errors.dayOfMonth = 'Enter a whole number from 1 to 31, or leave this blank.';
+      }
+      setRecurrenceErrors(errors);
+      if (Object.keys(errors).length) return;
+
+      submittedRecurrence = { ...recurrence, interval };
+      delete submittedRecurrence.daysOfWeek;
+      delete submittedRecurrence.dayOfMonth;
+      if (recurrence.frequency === 'weekly') {
+        const days = [...new Set((recurrence.daysOfWeek ?? []).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))].sort((a, b) => a - b);
+        if (days.length) submittedRecurrence.daysOfWeek = days;
+      }
+      if (recurrence.frequency === 'monthly' && dayOfMonth !== undefined) submittedRecurrence.dayOfMonth = dayOfMonth;
+    }
+
     let content: CardContent;
     if (contentType === 'checklist') {
       content = { type: 'checklist', checklist };
     } else {
-      content = { type: 'text', text: description.trim() };
+      content = { type: 'text', text: bodyText };
     }
 
     const coverAttachment = attachments.find(a => a.isCover);
@@ -214,12 +307,25 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
       title: title.trim(),
       description: description.trim() || undefined,
       content,
-      targetDate: targetDate || undefined,
+      targetDate: submittedTargetDate,
       labels,
       coverImage: coverAttachment?.url,
       attachments: attachments.length > 0 ? attachments : undefined,
-      recurrence: recurrence || undefined,
-    });
+      recurrence: submittedRecurrence,
+    }, initialFormRef.current);
+  };
+
+  const changeRecurrenceFrequency = (frequency: RecurrenceConfig['frequency']) => {
+    const next = { ...recurrence, frequency, interval: recurrence?.interval ?? 1 };
+    if (!recurrence) setRecurrenceIntervalInput('1');
+    if (frequency !== 'weekly' || recurrence?.frequency !== 'weekly') delete next.daysOfWeek;
+    if (frequency !== 'monthly' || recurrence?.frequency !== 'monthly') {
+      delete next.dayOfMonth;
+      setRecurrenceMonthDayInput('');
+    }
+    setRecurrence(next);
+    setRecurrenceTouched(true);
+    setRecurrenceErrors({});
   };
 
   // Checklist helpers
@@ -265,9 +371,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         name: file.name,
         url: reader.result as string,
         addedAt: new Date().toISOString(),
-        isCover: attachments.length === 0,
       };
-      setAttachments(prev => [...prev, newAttachment]);
+      setAttachments(prev => [...prev, { ...newAttachment, isCover: prev.length === 0 }]);
     };
     reader.readAsDataURL(file);
     // Reset input so the same file can be re-selected
@@ -275,13 +380,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   };
 
   const removeAttachment = (id: string) => {
-    setAttachments(prev => {
-      const filtered = prev.filter(a => a.id !== id);
-      if (filtered.length > 0 && !filtered.some(a => a.isCover)) {
-        return [{ ...filtered[0], isCover: true }, ...filtered.slice(1)];
-      }
-      return filtered;
-    });
+    setAttachments(prev => prev.filter(a => a.id !== id));
   };
 
   const toggleCover = (id: string) => {
@@ -414,6 +513,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                 if (recurrence) {
                   setRecurrence(null);
                   setShowRecurrence(false);
+                  setRecurrenceTouched(true);
+                  setRecurrenceErrors({});
                 } else {
                   setShowRecurrence(!showRecurrence);
                 }
@@ -428,6 +529,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           {/* Hidden file input for attachments */}
           <input
             type="file"
+            aria-label="Add image attachment"
             ref={attachmentFileRef}
             accept="image/*"
             onChange={handleAttachmentUpload}
@@ -435,14 +537,21 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           />
 
           {/* Dates Section */}
-          {(showDates || !!targetDate) && (
+          {(showDates || !!targetDate || (!targetDateTouched && !!invalidOriginalDate) || targetDateBadInput) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Due Date</span>
-                {targetDate && (
+                <label htmlFor="target-date" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Due date</label>
+                {(targetDate || (!targetDateTouched && invalidOriginalDate) || targetDateBadInput) && (
                   <button
                     type="button"
-                    onClick={() => { setTargetDate(''); setShowDates(false); }}
+                    aria-label="Remove due date"
+                    onClick={() => {
+                      setTargetDate('');
+                      setTargetDateTouched(true);
+                      setTargetDateBadInput(false);
+                      setTargetDateError(undefined);
+                      setShowDates(false);
+                    }}
                     className="text-xs text-[#A8B2B2] hover:text-red-400 transition-colors"
                   >
                     Remove
@@ -451,11 +560,28 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               </div>
               <Input
                 id="target-date"
+                ref={targetDateInputRef}
                 type="date"
+                aria-invalid={!!targetDateError}
+                aria-describedby={[
+                  !targetDateTouched && invalidOriginalDate ? 'target-date-repair' : undefined,
+                  targetDateError ? 'target-date-error' : undefined,
+                ].filter(Boolean).join(' ') || undefined}
                 value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
+                onChange={(e) => {
+                  setTargetDate(e.currentTarget.value);
+                  setTargetDateTouched(true);
+                  setTargetDateBadInput(e.currentTarget.validity.badInput);
+                  setTargetDateError(undefined);
+                }}
                 className="bg-white/5 border-white/10 text-[#F2F7F7] h-9"
               />
+              {!targetDateTouched && invalidOriginalDate && (
+                <p id="target-date-repair" role="status" className="text-xs text-amber-300 [overflow-wrap:anywhere]">
+                  The saved due date “{invalidOriginalDate}” is invalid. Choose a valid date or remove it. It will stay unchanged until you do.
+                </p>
+              )}
+              {targetDateError && <p id="target-date-error" role="alert" className="text-xs text-red-400">{targetDateError}</p>}
             </div>
           )}
 
@@ -467,7 +593,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                 {recurrence && (
                   <button
                     type="button"
-                    onClick={() => { setRecurrence(null); setShowRecurrence(false); }}
+                    aria-label="Remove recurrence"
+                    onClick={() => { setRecurrence(null); setShowRecurrence(false); setRecurrenceTouched(true); setRecurrenceErrors({}); }}
                     className="text-xs text-[#A8B2B2] hover:text-red-400 transition-colors"
                   >
                     Remove
@@ -481,7 +608,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   <button
                     key={freq}
                     type="button"
-                    onClick={() => setRecurrence({ frequency: freq, interval: recurrence?.interval || 1, ...(freq === 'weekly' && recurrence?.daysOfWeek ? { daysOfWeek: recurrence.daysOfWeek } : {}), ...(freq === 'monthly' && recurrence?.dayOfMonth ? { dayOfMonth: recurrence.dayOfMonth } : {}) })}
+                    onClick={() => changeRecurrenceFrequency(freq)}
+                    aria-pressed={recurrence?.frequency === freq}
                     className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors capitalize ${
                       recurrence?.frequency === freq
                         ? 'border-[#78fcd6]/40 bg-[#78fcd6]/10 text-[#78fcd6]'
@@ -499,10 +627,18 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   <span className="text-xs text-[#A8B2B2]">Every</span>
                   <Input
                     type="number"
+                    aria-label="Repeat every"
+                    aria-invalid={!!recurrenceErrors.interval}
+                    aria-describedby={recurrenceErrors.interval ? 'recurrence-interval-error' : undefined}
                     min={1}
                     max={99}
-                    value={recurrence.interval}
-                    onChange={(e) => setRecurrence({ ...recurrence, interval: Math.max(1, parseInt(e.target.value) || 1) })}
+                    step={1}
+                    value={recurrenceIntervalInput}
+                    onChange={(e) => {
+                      setRecurrenceIntervalInput(e.target.value);
+                      setRecurrenceTouched(true);
+                      setRecurrenceErrors((errors) => ({ ...errors, interval: undefined }));
+                    }}
                     className="w-16 h-8 bg-white/5 border-white/10 text-[#F2F7F7] text-center text-xs"
                   />
                   <span className="text-xs text-[#A8B2B2]">
@@ -510,20 +646,24 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   </span>
                 </div>
               )}
+              {recurrenceErrors.interval && <p id="recurrence-interval-error" role="alert" className="text-xs text-red-400">{recurrenceErrors.interval}</p>}
 
               {/* Weekly: day of week picker */}
               {recurrence?.frequency === 'weekly' && (
                 <div className="flex gap-1">
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => {
+                  {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => {
                     const selected = recurrence.daysOfWeek?.includes(idx) ?? false;
                     return (
                       <button
                         key={idx}
                         type="button"
+                        aria-label={day}
+                        aria-pressed={selected}
                         onClick={() => {
                           const current = recurrence.daysOfWeek || [];
                           const next = selected ? current.filter((d) => d !== idx) : [...current, idx];
                           setRecurrence({ ...recurrence, daysOfWeek: next.length > 0 ? next : undefined });
+                          setRecurrenceTouched(true);
                         }}
                         className={`w-8 h-8 rounded-md text-xs font-medium transition-colors ${
                           selected
@@ -531,7 +671,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                             : 'bg-white/5 text-[#A8B2B2] border border-white/10 hover:bg-white/10'
                         }`}
                       >
-                        {day}
+                        {day[0]}
                       </button>
                     );
                   })}
@@ -544,15 +684,24 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                   <span className="text-xs text-[#A8B2B2]">On day</span>
                   <Input
                     type="number"
+                    aria-label="Day of month"
+                    aria-invalid={!!recurrenceErrors.dayOfMonth}
+                    aria-describedby={recurrenceErrors.dayOfMonth ? 'recurrence-month-day-error recurrence-month-day-hint' : 'recurrence-month-day-hint'}
                     min={1}
                     max={31}
-                    value={recurrence.dayOfMonth || ''}
-                    onChange={(e) => setRecurrence({ ...recurrence, dayOfMonth: parseInt(e.target.value) || undefined })}
-                    placeholder="Any"
+                    step={1}
+                    value={recurrenceMonthDayInput}
+                    onChange={(e) => {
+                      setRecurrenceMonthDayInput(e.target.value);
+                      setRecurrenceTouched(true);
+                      setRecurrenceErrors((errors) => ({ ...errors, dayOfMonth: undefined }));
+                    }}
                     className="w-16 h-8 bg-white/5 border-white/10 text-[#F2F7F7] text-center text-xs"
                   />
                 </div>
               )}
+              {recurrence?.frequency === 'monthly' && <p id="recurrence-month-day-hint" className="text-xs text-[#A8B2B2]">Leave blank to use the due date’s day, or today’s day if no date is set.</p>}
+              {recurrenceErrors.dayOfMonth && <p id="recurrence-month-day-error" role="alert" className="text-xs text-red-400">{recurrenceErrors.dayOfMonth}</p>}
             </div>
           )}
 
@@ -591,7 +740,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <AlignLeft className="w-4 h-4 text-[#A8B2B2]" />
-              <span className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Description</span>
+              <label htmlFor="card-description" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Description</label>
             </div>
             <Textarea
               id="card-description"
@@ -603,6 +752,23 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               rows={4}
             />
           </div>
+
+          {contentType === 'text' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <AlignLeft className="w-4 h-4 text-[#A8B2B2]" />
+                <label htmlFor="card-body-text" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Body text</label>
+              </div>
+              <Textarea
+                id="card-body-text"
+                value={bodyText}
+                onChange={(e) => setBodyText(e.target.value)}
+                placeholder="Add body text..."
+                className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 min-h-[100px] resize-y"
+                rows={4}
+              />
+            </div>
+          )}
 
           {/* Checklist Section */}
           {contentType === 'checklist' && (
@@ -698,6 +864,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                       {editingAttachmentId === attachment.id ? (
                         <Input
                           autoFocus
+                          aria-label="Attachment name"
                           defaultValue={attachment.name}
                           onBlur={(e) => renameAttachment(attachment.id, e.target.value)}
                           onKeyDown={(e) => {
@@ -727,14 +894,25 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                       <DropdownMenuTrigger asChild>
                         <button
                           type="button"
+                          aria-label={`Actions for ${attachment.name}`}
                           className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-white/10 text-[#A8B2B2] transition-opacity flex-shrink-0"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-[#111515] border-white/10" align="end">
+                      <DropdownMenuContent
+                        className="bg-[#111515] border-white/10"
+                        align="end"
+                        onCloseAutoFocus={(event) => {
+                          const editId = pendingAttachmentEditRef.current;
+                          if (!editId) return;
+                          event.preventDefault();
+                          pendingAttachmentEditRef.current = null;
+                          setEditingAttachmentId(editId);
+                        }}
+                      >
                         <DropdownMenuItem
-                          onClick={() => setEditingAttachmentId(attachment.id)}
+                          onSelect={() => { pendingAttachmentEditRef.current = attachment.id; }}
                           className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
                         >
                           Edit
@@ -776,6 +954,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
             />
             <button
               type="button"
+              aria-label="Remove card cover"
               onClick={() => toggleCover(coverAttachment.id)}
               className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors text-xs"
             >
@@ -828,7 +1007,8 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               {/* Card Template Picker (create mode only) */}
               <CardTemplatePicker onApply={(tpl) => {
                 setTitle(tpl.card.title);
-                setDescription(tpl.card.description || '');
+                setDescription(tpl.card.description ?? '');
+                setBodyText(tpl.card.content.text ?? '');
                 setContentType(tpl.card.content.type === 'image' ? 'text' : tpl.card.content.type);
                 setChecklist(tpl.card.content.checklist ? tpl.card.content.checklist.map(item => ({ ...item, id: genId(), completed: false })) : []);
                 setLabels(tpl.card.labels || []);

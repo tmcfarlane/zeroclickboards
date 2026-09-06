@@ -148,6 +148,14 @@ describe('useBoardStore', () => {
       expect(cardId).toBeDefined();
     });
 
+    it('creates independent description and body values', () => {
+      const cardId = useBoardStore.getState().addCard(boardId, columnId, 'Separate fields',
+        { type: 'text', text: 'Long body from the editor' }, undefined,
+        { description: 'Short summary' });
+      const card = useBoardStore.getState().boards[0].columns[0].cards.find((card) => card.id === cardId);
+      expect(card).toMatchObject({ description: 'Short summary', content: { type: 'text', text: 'Long body from the editor' } });
+    });
+
     it('addCard with content and targetDate', () => {
       useBoardStore.getState().addCard(
         boardId,

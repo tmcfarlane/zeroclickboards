@@ -80,7 +80,7 @@ Visualize card target dates on a Gantt-style timeline for project planning.
 
 ### Card Editor
 
-Rich card editing with 6 label colors, cover images, checklists, and target dates. Archive cards to declutter, then restore or duplicate them anytime.
+Card editing includes separate descriptions and body text, 6 label colors, cover images, checklists, and target dates. Daily, weekly, and monthly schedules create the next occurrence when a recurring card is archived. Configure schedules in the browser or through MCP, then restore or duplicate cards as needed.
 
 ![Card editor with labels, covers, and checklists](docs/screenshots/card-editor.png)
 

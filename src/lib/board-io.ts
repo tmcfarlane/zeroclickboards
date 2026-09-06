@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Board, Column, Card, CardContent, CardLabel, ChecklistItem, Attachment, RecurrenceConfig } from '@/types';
+import { normalizeCalendarDate } from './calendar-date';
+import { parseRecurrence, recurrenceSchema } from '../../mcp-server/src/recurrence-schema';
 
 // ---- Export Format ----
 
@@ -170,6 +172,13 @@ export function validateBoardJSON(
       if (!content || typeof content !== 'object' || !VALID_CONTENT_TYPES.includes(content.type as string)) {
         return { valid: false, error: `Column "${col.title}", card "${card.title}": invalid content type` };
       }
+      if (card.targetDate !== undefined && card.targetDate !== null && card.targetDate !== '' &&
+        (typeof card.targetDate !== 'string' || !normalizeCalendarDate(card.targetDate))) {
+        return { valid: false, error: `Column "${col.title}", card "${card.title}": invalid due date. Use a real calendar date such as 2026-06-03.` };
+      }
+      if (card.recurrence !== undefined && card.recurrence !== null && !recurrenceSchema.safeParse(card.recurrence).success) {
+        return { valid: false, error: `Column "${col.title}", card "${card.title}": invalid recurrence. Use a daily, weekly, or monthly schedule with an interval from 1 to 99 and valid day selections.` };
+      }
       if (card.labels && Array.isArray(card.labels)) {
         for (const label of card.labels) {
           if (!VALID_LABELS.includes(label as CardLabel)) {
@@ -188,6 +197,8 @@ export function importBoardFromJSON(payload: ZeroBoardExport): {
   description?: string;
   columns: Column[];
 } {
+  const validation = validateBoardJSON(payload);
+  if (!validation.valid) throw new Error(validation.error);
   const now = new Date().toISOString();
   const { board } = payload;
 
@@ -212,7 +223,7 @@ export function importBoardFromJSON(payload: ZeroBoardExport): {
         updatedAt: now,
       };
       if (ec.description) card.description = ec.description;
-      if (ec.targetDate) card.targetDate = ec.targetDate;
+      if (ec.targetDate) card.targetDate = normalizeCalendarDate(ec.targetDate);
       if (ec.labels?.length) card.labels = [...ec.labels];
       if (ec.coverImage) card.coverImage = ec.coverImage;
       if (ec.attachments?.length) {
@@ -224,7 +235,7 @@ export function importBoardFromJSON(payload: ZeroBoardExport): {
           ...(att.isCover ? { isCover: true } : {}),
         }));
       }
-      if (ec.recurrence) card.recurrence = structuredClone(ec.recurrence);
+      if (ec.recurrence) card.recurrence = parseRecurrence(ec.recurrence);
       if (ec.isArchived) {
         card.isArchived = true;
         if (ec.archivedAt) card.archivedAt = ec.archivedAt;

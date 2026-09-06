@@ -74,9 +74,41 @@ describe('ReadOnlyBoard', () => {
     expect(screen.getByText('Checklist Card')).toBeInTheDocument();
   });
 
+  it('displays the assigned calendar day without a UTC shift', () => {
+    const board = makeBoard();
+    board.columns[0].cards[0].targetDate = '2026-06-03';
+    render(<ReadOnlyBoard board={board} />);
+    expect(screen.getByText(`Due: ${new Date(2026, 5, 3).toLocaleDateString()}`)).toBeInTheDocument();
+  });
+
+  it('keeps the written day of legacy timestamp dates', () => {
+    const board = makeBoard();
+    board.columns[0].cards[0].targetDate = '2026-06-03T23:30:00-08:00';
+    render(<ReadOnlyBoard board={board} />);
+    expect(screen.getByText(`Due: ${new Date(2026, 5, 3).toLocaleDateString()}`)).toBeInTheDocument();
+  });
+
+  it('identifies a malformed saved date instead of displaying a different day', () => {
+    const board = makeBoard();
+    board.columns[0].cards[0].targetDate = '2026-02-31';
+    render(<ReadOnlyBoard board={board} />);
+    expect(screen.getByText('Invalid due date')).toBeInTheDocument();
+    expect(screen.getByText('First Task')).toBeInTheDocument();
+  });
+
   it('shows card description text', () => {
     render(<ReadOnlyBoard board={makeBoard()} />);
     expect(screen.getByText('Some description text')).toBeInTheDocument();
+  });
+
+  it('uses the separate description for text and checklist previews', () => {
+    const board = makeBoard();
+    board.columns[0].cards[0].description = 'Short text summary';
+    board.columns[0].cards[1].description = 'Checklist summary';
+    render(<ReadOnlyBoard board={board} />);
+    expect(screen.getByText('Short text summary')).toBeInTheDocument();
+    expect(screen.getByText('Checklist summary')).toBeInTheDocument();
+    expect(screen.queryByText('Some description text')).not.toBeInTheDocument();
   });
 
   it('shows checklist progress', () => {

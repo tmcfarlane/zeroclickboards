@@ -19,7 +19,7 @@ npx -y @zeroclickdev/zeroboard-mcp login
 
 ## What you get
 
-**MCP server** — 26 tools (`list_boards`, `get_board`, `create_board`, `add_card`, `move_card`, `archive_card`, checklist/label/date/cover, `search`, …) and resources (`zeroboard://boards`, `zeroboard://board/{id}`). All scoped to your account via Supabase RLS. See the [server README](../mcp-server/README.md).
+**MCP server** — tools for boards, cards, checklists, labels, dates, covers, and recurring schedules, plus search and resources (`zeroboard://boards`, `zeroboard://board/{id}`). Configure a schedule with `add_card` or replace/clear it with `set_recurrence`. All operations follow your account's Supabase RLS permissions. See the [server README](../mcp-server/README.md) for the full tool list and recurrence examples.
 
 **Commands**
 - `/zeroboard:zeroboard-standup [board]` — a standup-style summary of what's in progress, blocked, and up next.

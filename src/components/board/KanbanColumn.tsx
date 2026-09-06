@@ -73,6 +73,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
 
   const handleAddCard = (data: CardEditorSaveData) => {
     addCard(boardId, column.id, data.title, data.content, data.targetDate, {
+      description: data.description,
       labels: data.labels,
       coverImage: data.coverImage,
       attachments: data.attachments,
