@@ -1,4 +1,5 @@
-import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { createNodeClient } from './node-client.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, storageKeyFor, assertConfigured } from './config.js';
 import { fileStorage } from './credentials.js';
 
@@ -11,7 +12,7 @@ import { fileStorage } from './credentials.js';
  */
 export function makeClient(): SupabaseClient {
   assertConfigured();
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  return createNodeClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       storage: fileStorage,
       storageKey: storageKeyFor(SUPABASE_URL),

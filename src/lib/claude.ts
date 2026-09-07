@@ -4,9 +4,10 @@ export function formatCardAsInstructions(card: Card): string {
   let text = `## ${card.title}\n`;
   if (card.description) text += `\n${card.description}\n`;
 
-  if (card.content.type === 'text' && card.content.text) {
+  if (card.content.text) {
     text += `\n${card.content.text}\n`;
-  } else if (card.content.type === 'checklist' && card.content.checklist) {
+  }
+  if (card.content.type === 'checklist' && card.content.checklist) {
     text += '\nChecklist:\n';
     for (const item of card.content.checklist) {
       text += `- [${item.completed ? 'x' : ' '}] ${item.text}\n`;

@@ -2,7 +2,7 @@ import readline from 'node:readline';
 import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { createClient } from '@supabase/supabase-js';
+import { createNodeClient } from './node-client.js';
 import { makeClient, getAuthedClient, NotAuthenticatedError } from './supabase.js';
 import { setSupabaseUrl, clearCredentials, hasCredentials } from './credentials.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, WEB_BASE_URL } from './config.js';
@@ -77,7 +77,7 @@ async function browserLogin(): Promise<void> {
 
     // Validate with a throwaway, non-persisting client so a bad session never
     // pollutes the credential store.
-    const probe = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const probe = createNodeClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
     const set = await probe.auth.setSession(tokens);

@@ -45,6 +45,23 @@ describe('formatCardAsInstructions', () => {
     expect(result).toContain('Checklist:');
   });
 
+  it('includes body text together with an active checklist', () => {
+    const result = formatCardAsInstructions(makeCard({ content: {
+      type: 'checklist', text: 'Shared body notes', checklist: [{ id: 'item', text: 'Task', completed: false }],
+    } }));
+    expect(result).toContain('Shared body notes');
+    expect(result).toContain('- [ ] Task');
+  });
+
+  it('keeps the body visible while retained checklist items are hidden', () => {
+    const result = formatCardAsInstructions(makeCard({ content: {
+      type: 'text', text: 'Shared body notes', checklist: [{ id: 'item', text: 'Hidden task', completed: true }],
+    } }));
+    expect(result).toContain('Shared body notes');
+    expect(result).not.toContain('Hidden task');
+    expect(result).not.toContain('Checklist:');
+  });
+
   it('includes target date', () => {
     const result = formatCardAsInstructions(makeCard({ targetDate: '2026-04-15' }));
     expect(result).toContain('Due: 2026-04-15');

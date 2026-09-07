@@ -11,7 +11,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "homepage": "https://board.zeroclickdev.ai",
   "repository": {
@@ -29,6 +29,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "smoke": "node dist/smoke.js",
+    "smoke:mcp": "npm run build && node test/live-protocol-smoke.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
@@ -42,11 +44,13 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.0",
-    "@supabase/supabase-js": "^2.56.0",
+    "@supabase/supabase-js": "2.108.2",
+    "ws": "8.21.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/ws": "8.18.1",
     "typescript": "^5.6.0"
   }
 }

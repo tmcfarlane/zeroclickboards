@@ -8,6 +8,8 @@ import { getAuthedClient, NotAuthenticatedError } from './supabase.js';
 import * as db from './board-data.js';
 import { generateBoardTemplate } from './ai.js';
 import { CARD_LABELS, type CardContent, type CardLabel } from './types.js';
+import { recurrenceSchema } from './recurrence-schema.js';
+import { targetDateSchema } from './target-date-schema.js';
 
 const text = (data: unknown): CallToolResult => ({
   content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }],
@@ -28,8 +30,14 @@ const labelEnum = z.enum(CARD_LABELS as [string, ...string[]]);
 const textToContent = (t?: string): CardContent | undefined =>
   t === undefined ? undefined : { type: 'text', text: t };
 
-function buildServer(client: SupabaseClient, user: User): McpServer {
+/** Build the complete protocol surface; injecting clients also permits offline MCP tests. */
+export function buildServer(
+  client: SupabaseClient,
+  user: User,
+  { readOnly = READ_ONLY }: { readOnly?: boolean } = {},
+): McpServer {
   const server = new McpServer({ name: 'zeroboard-mcp', version: '0.1.0' });
+  registerResources(server, client, user);
   const RO = { readOnlyHint: true } as const;
   const DESTRUCTIVE = { destructiveHint: true } as const;
 
@@ -106,7 +114,7 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
     async ({ query, includeArchived }) => safe(() => db.search(client, query, includeArchived ?? false)),
   );
 
-  if (READ_ONLY) return server;
+  if (readOnly) return server;
 
   // ----- Write tools ----------------------------------------------------
   server.registerTool(
@@ -178,13 +186,14 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
         boardId: z.string(),
         columnId: z.string(),
         title: z.string(),
-        description: z.string().optional(),
+        description: z.string().optional().describe('Short description, separate from the card body text'),
         text: z.string().optional().describe('Card body text'),
-        targetDate: z.string().optional().describe('ISO date'),
+        targetDate: targetDateSchema.optional(),
         labels: z.array(labelEnum).optional(),
+        recurrence: recurrenceSchema.optional(),
       },
     },
-    async ({ boardId, columnId, title, description, text: body, targetDate, labels }) =>
+    async ({ boardId, columnId, title, description, text: body, targetDate, labels, recurrence }) =>
       safe(() =>
         db.addCard(client, boardId, columnId, {
           title,
@@ -192,6 +201,7 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
           content: textToContent(body),
           targetDate,
           labels: labels as CardLabel[] | undefined,
+          recurrence,
         }),
       ),
   );
@@ -200,14 +210,14 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
     'update_card',
     {
       title: 'Update card',
-      description: 'Update fields of a card.',
+      description: 'Update fields of a card. Description and body text are separate; omitted fields are preserved. Body edits retain checklist items and metadata, and migrate legacy content images to attachments.',
       inputSchema: {
         boardId: z.string(),
         cardId: z.string(),
         title: z.string().optional(),
-        description: z.string().optional(),
-        text: z.string().optional(),
-        targetDate: z.string().optional(),
+        description: z.string().optional().describe('Short description; empty string clears it'),
+        text: z.string().optional().describe('Body text independent of any checklist; empty string clears only the body'),
+        targetDate: targetDateSchema.optional(),
       },
     },
     async ({ boardId, cardId, title, description, text: body, targetDate }) =>
@@ -215,7 +225,7 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
         db.updateCard(client, boardId, cardId, {
           ...(title !== undefined ? { title } : {}),
           ...(description !== undefined ? { description } : {}),
-          ...(body !== undefined ? { content: textToContent(body) } : {}),
+          ...(body !== undefined ? { text: body } : {}),
           ...(targetDate !== undefined ? { targetDate } : {}),
         }),
       ),
@@ -229,7 +239,7 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
 
   server.registerTool(
     'archive_card',
-    { title: 'Archive card', description: 'Archive a card.', inputSchema: { boardId: z.string(), cardId: z.string() } },
+    { title: 'Archive card', description: 'Archive a card. A recurring card creates its next scheduled copy, as in the web app; archiving an already archived card does not create another copy.', inputSchema: { boardId: z.string(), cardId: z.string() } },
     async ({ boardId, cardId }) => safe(() => db.setCardArchived(client, boardId, cardId, true)),
   );
 
@@ -253,13 +263,13 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
 
   server.registerTool(
     'add_checklist_item',
-    { title: 'Add checklist item', description: 'Add a checklist item to a card (converts the card content to a checklist).', inputSchema: { boardId: z.string(), cardId: z.string(), text: z.string() } },
+    { title: 'Add checklist item', description: 'Enable a card checklist and append an item, preserving existing items, body text, and metadata. Legacy content images become attachments. Invalid stored checklists must be repaired first.', inputSchema: { boardId: z.string(), cardId: z.string(), text: z.string() } },
     async ({ boardId, cardId, text: itemText }) => safe(() => db.addChecklistItem(client, boardId, cardId, itemText)),
   );
 
   server.registerTool(
     'toggle_checklist_item',
-    { title: 'Toggle checklist item', description: 'Toggle (or set) a checklist item completed state.', inputSchema: { boardId: z.string(), cardId: z.string(), itemId: z.string(), completed: z.boolean().optional() } },
+    { title: 'Toggle checklist item', description: 'Toggle (or set) an item in the active checklist. Inactive or malformed checklists are rejected without a write.', inputSchema: { boardId: z.string(), cardId: z.string(), itemId: z.string(), completed: z.boolean().optional() } },
     async ({ boardId, cardId, itemId, completed }) => safe(() => db.toggleChecklistItem(client, boardId, cardId, itemId, completed)),
   );
 
@@ -277,13 +287,23 @@ function buildServer(client: SupabaseClient, user: User): McpServer {
 
   server.registerTool(
     'set_target_date',
-    { title: 'Set target date', description: 'Set or clear a card target date (ISO string, or null to clear).', inputSchema: { boardId: z.string(), cardId: z.string(), targetDate: z.string().nullable() } },
+    { title: 'Set target date', description: 'Set a calendar due date (YYYY-MM-DD) or clear it with null. Valid ISO timestamps use their written calendar date, without timezone conversion.', inputSchema: { boardId: z.string(), cardId: z.string(), targetDate: targetDateSchema.nullable() } },
     async ({ boardId, cardId, targetDate }) => safe(() => db.setTargetDate(client, boardId, cardId, targetDate)),
   );
 
   server.registerTool(
+    'set_recurrence',
+    {
+      title: 'Set recurrence',
+      description: 'Replace or clear a card recurrence (null clears it), preserving its target date and other fields. Archiving a recurring card creates its next scheduled copy; configuring recurrence does not create copies.',
+      inputSchema: { boardId: z.string(), cardId: z.string(), recurrence: recurrenceSchema.nullable() },
+    },
+    async ({ boardId, cardId, recurrence }) => safe(() => db.setRecurrence(client, boardId, cardId, recurrence)),
+  );
+
+  server.registerTool(
     'set_cover_image',
-    { title: 'Set cover image', description: 'Set or clear a card cover image URL (or null to clear).', inputSchema: { boardId: z.string(), cardId: z.string(), coverImage: z.string().nullable() } },
+    { title: 'Set cover image', description: 'Set or clear a card cover image URL (or null to clear). Attachment cover flags follow the selected URL; clearing keeps the attachments.', inputSchema: { boardId: z.string(), cardId: z.string(), coverImage: z.string().nullable() } },
     async ({ boardId, cardId, coverImage }) => safe(() => db.setCoverImage(client, boardId, cardId, coverImage)),
   );
 
@@ -336,7 +356,6 @@ export async function runServer(): Promise<void> {
   }
 
   const server = buildServer(client, user);
-  registerResources(server, client, user);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

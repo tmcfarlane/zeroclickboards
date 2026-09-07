@@ -78,6 +78,9 @@ jobs:
       - name: Provision dedicated test user
         if: steps.guard.outputs.run == 'true'
         run: npm run test:e2e:setup
+      - name: Build MCP server for browser synchronization tests
+        if: steps.guard.outputs.run == 'true'
+        run: npm ci --prefix mcp-server && npm run build --prefix mcp-server
       - name: Run Playwright e2e
         if: steps.guard.outputs.run == 'true'
         run: npm run test:e2e
@@ -94,8 +97,11 @@ jobs:
     # created per-run (supabase branches) instead of the main project.
 
   mcp-server:
-    name: MCP Server Build
+    name: MCP Server Build & Tests (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
     defaults:
       run:
         working-directory: mcp-server
@@ -103,10 +109,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
           cache: npm
           cache-dependency-path: mcp-server/package-lock.json
+          node-version: ${{ matrix.node }}
       - run: npm ci
-      - run: npm run build
+      - run: npm test
       # The data-layer smoke test (npm run smoke) needs Supabase + E2E creds and
       # writes to a live project, so it is run locally/manually, not in CI.
