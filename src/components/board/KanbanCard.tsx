@@ -139,7 +139,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
 
         {/* Description preview */}
         {(() => {
-          const desc = card.description?.trim() || (card.content.type === 'text' ? card.content.text?.trim() : undefined);
+          const desc = card.description?.trim() || card.content.text?.trim();
           if (!desc) return null;
           return (
             <p className="text-xs text-[#A8B2B2] mt-1 leading-relaxed line-clamp-2">

@@ -516,6 +516,108 @@ describe('signed-in board sync integration', () => {
     expect(columns(rows.get(original.id)!)[1].cards[0]).toMatchObject({ title: 'Original card', content: { text: 'Updated MCP body' }, labels: ['blue'] });
   });
 
+  it('merges a checkbox edit with an incoming body addition without introducing normalized empty fields', async () => {
+    const original = row();
+    const item = { id: 'task-1', text: 'Keep the task', completed: false, source: 'imported' };
+    columns(original)[0].cards[0].content = Object.assign({ type: 'checklist' as const, checklist: [item] }, { metadata: { version: 1 } });
+    rows.set(original.id, original);
+    await signIn();
+    useBoardStore.getState().openCardEditor(original.id, 'card-1');
+    const initialForm = { title: 'Original card', content: { type: 'checklist' as const, text: '', checklist: [item] }, labels: [] };
+    const remote = structuredClone(original);
+    Object.assign(columns(remote)[0].cards[0].content, { text: 'Body added through MCP', metadata: { version: 2 } });
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+    useBoardStore.getState().saveCardEditor({ ...initialForm, content: { ...initialForm.content, checklist: [{ ...item, completed: true }] } }, initialForm);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(columns(rows.get(original.id)!)[0].cards[0].content).toEqual({
+      type: 'checklist', text: 'Body added through MCP', checklist: [{ ...item, completed: true }], metadata: { version: 2 },
+    });
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+  });
+
+  it('enables a stored checklist while preserving an incoming MCP body edit', async () => {
+    const original = row();
+    const item = { id: 'task-1', text: 'Previously hidden task', completed: true };
+    columns(original)[0].cards[0].content = { type: 'text', text: 'Original body', checklist: [item] };
+    rows.set(original.id, original);
+    await signIn();
+    useBoardStore.getState().openCardEditor(original.id, 'card-1');
+    const initialForm = { title: 'Original card', content: structuredClone(columns(original)[0].cards[0].content), labels: [] };
+    const remote = structuredClone(original);
+    columns(remote)[0].cards[0].content.text = 'MCP changed only the body';
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+    useBoardStore.getState().saveCardEditor({ ...initialForm, content: { ...initialForm.content, type: 'checklist' } }, initialForm);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(columns(rows.get(original.id)!)[0].cards[0].content).toEqual({ type: 'checklist', text: 'MCP changed only the body', checklist: [item] });
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+  });
+
+  it('replays editor undo and redo without erasing later MCP content', async () => {
+    const original = row();
+    const first = { id: 'task-1', text: 'Keep this task', completed: false };
+    columns(original)[0].cards[0].content = { type: 'checklist', text: 'Original body', checklist: [first], metadata: { version: 1 } } as unknown as Card['content'];
+    rows.set(original.id, original);
+    await signIn();
+    useBoardStore.getState().openCardEditor(original.id, 'card-1');
+    const initialForm = { title: 'Original card', content: structuredClone(columns(original)[0].cards[0].content), labels: [] };
+    const remote = structuredClone(original);
+    const remoteContent = columns(remote)[0].cards[0].content as unknown as Record<string, unknown>;
+    Object.assign(remoteContent, {
+      text: 'MCP body', metadata: { version: 2 },
+      checklist: [first, { id: 'task-2', text: 'Added by MCP', completed: true }],
+    });
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+    useBoardStore.getState().saveCardEditor({ ...initialForm, content: { ...initialForm.content, checklist: [{ ...first, completed: true }] } }, initialForm);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(columns(rows.get(original.id)!)[0].cards[0].content).toMatchObject({
+      text: 'MCP body', metadata: { version: 2 }, checklist: [{ ...first, completed: true }, { id: 'task-2', text: 'Added by MCP', completed: true }],
+    });
+
+    useUndoStore.getState().undo();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(columns(rows.get(original.id)!)[0].cards[0].content).toMatchObject({
+      text: 'MCP body', metadata: { version: 2 }, checklist: [{ ...first, completed: false }, { id: 'task-2', text: 'Added by MCP', completed: true }],
+    });
+    useUndoStore.getState().redo();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(columns(rows.get(original.id)!)[0].cards[0].content).toMatchObject({
+      text: 'MCP body', metadata: { version: 2 }, checklist: [{ ...first, completed: true }, { id: 'task-2', text: 'Added by MCP', completed: true }],
+    });
+  });
+
+  it.each([false, true])('retains mixed-content metadata and incoming body while repairing a legacy image (remove: %s)', async (removeImage) => {
+    const original = row();
+    const imageUrl = 'https://example.com/mixed-legacy.png';
+    const item = { id: 'task-1', text: 'Review image', completed: false };
+    columns(original)[0].cards[0].content = Object.assign({ type: 'checklist' as const, text: 'Original body', checklist: [item], imageUrl }, { metadata: { owner: 'original' } });
+    rows.set(original.id, original);
+    await signIn();
+    useBoardStore.getState().openCardEditor(original.id, 'card-1');
+    const image = { id: 'legacy-image', name: 'Image', url: imageUrl, addedAt: FIRST_REVISION, isCover: false };
+    const initialForm = { title: 'Original card', content: { type: 'checklist' as const, text: 'Original body', checklist: [item] }, labels: [], attachments: [image] };
+    const remote = structuredClone(original);
+    columns(remote)[0].cards[0].content.text = 'New MCP body';
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+    useBoardStore.getState().saveCardEditor({
+      ...initialForm,
+      content: { ...initialForm.content, checklist: [{ ...item, completed: true }] },
+      attachments: removeImage ? undefined : initialForm.attachments,
+    }, initialForm);
+    await vi.advanceTimersByTimeAsync(400);
+    const saved = columns(rows.get(original.id)!)[0].cards[0];
+    expect(saved.content).toEqual({ type: 'checklist', text: 'New MCP body', checklist: [{ ...item, completed: true }], metadata: { owner: 'original' } });
+    expect(saved.attachments?.some((attachment) => attachment.url === imageUrl) ?? false).toBe(!removeImage);
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+  });
+
   it.each(['local', 'remote'] as const)('resolves competing recurrence frequencies to the complete %s schedule', async (choice) => {
     const original = row();
     const originalRecurrence = { frequency: 'weekly' as const, interval: 1 };

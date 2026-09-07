@@ -123,6 +123,25 @@ function documentToBoard(board: Board, document: BoardDocument): Board {
   };
 }
 
+/** Replay an editor change against the latest board, keeping fields changed by
+ * another client while applying the recorded form delta. This makes undo/redo
+ * safe when MCP or realtime updates arrive after the form was opened. */
+function replayEditorDocument(boardId: string, from: BoardDocument, to: BoardDocument): void {
+  const current = useBoardStore.getState().boards.find((board) => board.id === boardId);
+  if (!current) return;
+  const currentDocument = boardToDocument(current);
+  const merged = mergeBoardDocuments(from, to, currentDocument, 'remote');
+  if (boardSync && useBoardStore.getState().currentUserId) {
+    void boardSync.stage(boardId, currentDocument, merged.document, boardSync.getBaseline(boardId)).catch(() => {
+      toast.error('Unable to reconcile this card. Your latest board changes are kept.');
+    });
+    return;
+  }
+  useBoardStore.setState((state) => ({
+    boards: state.boards.map((board) => board.id === boardId ? documentToBoard(board, merged.document) : board),
+  }));
+}
+
 function rowToSnapshot(row: BoardRow): BoardSnapshot {
   if (!row.data || typeof row.data !== 'object' || Array.isArray(row.data)) throw new Error('Board data could not be read safely');
   const data = { ...row.data, columns: row.data.columns === undefined ? [] : row.data.columns } as Record<string, unknown>;
@@ -436,31 +455,59 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     // and empty optional fields must not masquerade as deliberate user edits.
     const updates = Object.fromEntries(Object.entries(data).filter(([key, value]) =>
       !initialForm || JSON.stringify(value) !== JSON.stringify(initialForm[key as keyof CardEditorSaveData]))) as Partial<Card>;
-    const legacyImageUrl = session.card.content.type === 'image' ? session.card.content.imageUrl : undefined;
+    if (updates.content) {
+      // Normalized empty body/checklist fields are display defaults. Apply only
+      // nested form changes, retaining opaque content fields and absent values
+      // so an unrelated incoming body or checklist edit can still merge.
+      const contentChanges = Object.fromEntries(Object.entries(data.content).filter(([key, value]) =>
+        !initialForm || JSON.stringify(value) !== JSON.stringify(initialForm.content[key as keyof CardContent])));
+      if (Object.keys(contentChanges).length) updates.content = { ...session.card.content, ...contentChanges };
+      else delete updates.content;
+    }
+    const legacyImageUrl = session.card.content.imageUrl;
     if (legacyImageUrl) {
       // Removing the displayed legacy attachment also removes its original
       // content URL, even when the normalized text body was left untouched.
       const removedLegacyImage = Object.prototype.hasOwnProperty.call(updates, 'attachments') &&
         initialForm?.attachments?.some((attachment) => attachment.url === legacyImageUrl) &&
         !data.attachments?.some((attachment) => attachment.url === legacyImageUrl);
-      if (removedLegacyImage && !updates.content) updates.content = data.content;
-      // Replacing image content must carry its displayed attachment into
-      // storage unless the user removed it. Otherwise its only URL is lost.
-      if (updates.content && updates.content.type !== 'image') updates.attachments = data.attachments;
+      if (updates.content || removedLegacyImage) {
+        const content = { ...session.card.content, ...updates.content };
+        delete content.imageUrl;
+        if (content.type === 'image') {
+          content.type = data.content.type;
+          if (content.text === undefined) content.text = data.content.text ?? '';
+        }
+        updates.content = content;
+        // Retire legacy image URLs only when their visible attachment is kept
+        // or explicitly removed. Older mixed checklist/image cards follow the
+        // same migration, and a missing normalized form cannot lose the image.
+        if (!removedLegacyImage) {
+          const attachments = [...(data.attachments ?? session.card.attachments ?? [])];
+          if (!attachments.some((attachment) => attachment.url === legacyImageUrl)) {
+            attachments.push({
+              id: uuidv4(), name: 'Image', url: legacyImageUrl, addedAt: new Date().toISOString(),
+              isCover: (data.coverImage ?? session.card.coverImage) === legacyImageUrl,
+            });
+          }
+          updates.attachments = attachments;
+        }
+      }
     }
     if (!Object.keys(updates).length) { set({ cardEditorSession: null }); return; }
     const draft = structuredClone(session.document);
     draft.data.columns = (draft.data.columns as Column[]).map((column) => ({ ...column, cards: column.cards.map((card) =>
       card.id === session.cardId ? { ...card, ...updates, updatedAt: new Date().toISOString() } : card) }));
+    const beforeDocument = structuredClone(session.document);
+    const afterDocument = structuredClone(draft);
     const epoch = sessionEpoch;
     const previousCard = get().boards.find((board) => board.id === session.boardId)?.columns.flatMap((column) => column.cards).find((card) => card.id === session.cardId);
     const recordUndo = () => {
       if (!previousCard || ['conflict', 'deleted', 'error'].includes(get().boardSyncStates[session.boardId]?.status ?? '')) return;
-      const previous = Object.fromEntries(Object.keys(updates).map((key) => [key, structuredClone(previousCard[key as keyof Card])])) as Partial<Card>;
       useUndoStore.getState().pushAction({
         description: `Edit card '${previousCard.title}'`,
-        undo: () => get().editCard(session.boardId, '', session.cardId, previous),
-        redo: () => get().editCard(session.boardId, '', session.cardId, updates),
+        undo: () => replayEditorDocument(session.boardId, afterDocument, beforeDocument),
+        redo: () => replayEditorDocument(session.boardId, beforeDocument, afterDocument),
       });
     };
     if (get().currentUserId && boardSync) {

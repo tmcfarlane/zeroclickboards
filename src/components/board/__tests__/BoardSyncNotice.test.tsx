@@ -37,6 +37,27 @@ beforeEach(() => {
 });
 
 describe('BoardSyncNotice', () => {
+  it('describes checklist visibility separately from competing body text', async () => {
+    const user = userEvent.setup();
+    store.boardSyncStates[boardId] = {
+      status: 'conflict',
+      conflicts: [
+        { path: 'data.cards[task-1].card.content.type', local: 'text', remote: 'checklist' },
+        { path: 'data.cards[task-1].card.content.text', local: 'checklist', remote: 'Incoming body text' },
+      ],
+    };
+    render(<BoardSyncNotice boardId={boardId} />);
+    await user.click(screen.getByRole('button', { name: 'Review changes' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Card: My task title · Checklist visibility' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: 'Card: My task title · Body text' })).toBeInTheDocument();
+    for (const text of ['Checklist hidden', 'Checklist shown', 'checklist', 'Incoming body text']) {
+      expect(within(dialog).getByText(text, { exact: true })).toBeInTheDocument();
+    }
+    await user.click(within(dialog).getByRole('button', { name: 'Use incoming edits' }));
+    expect(store.resolveBoardConflict).toHaveBeenCalledWith(boardId, 'remote');
+  });
+
   it('describes complete recurrence choices using readable schedules', async () => {
     const user = userEvent.setup();
     store.boardSyncStates[boardId] = {

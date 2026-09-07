@@ -10,6 +10,7 @@ import {
   type Card,
   type CardContent,
   type CardLabel,
+  type ChecklistItem,
   type Column,
   type FullBoard,
   type BoardTemplate,
@@ -202,8 +203,9 @@ export function createBoardFromTemplate(
   userId: string,
   template: BoardTemplate,
 ): Promise<FullBoard> {
+  const draft = structuredClone(template);
   const now = nowIso();
-  const columns: Column[] = template.columns.map((col, i) => ({
+  const columns: Column[] = draft.columns.map((col, i) => ({
     id: newId(),
     title: col.title,
     order: i,
@@ -212,6 +214,7 @@ export function createBoardFromTemplate(
         c.content?.type === 'checklist'
           ? {
               type: 'checklist',
+              ...(c.content.text === undefined ? {} : { text: c.content.text }),
               checklist: (c.content.checklist ?? []).map((it) => ({ id: newId(), text: it.text, completed: false })),
             }
           : { type: 'text', text: c.content?.text ?? '' };
@@ -227,7 +230,7 @@ export function createBoardFromTemplate(
       };
     }),
   }));
-  return createBoard(client, userId, template.name, template.description, columns);
+  return createBoard(client, userId, draft.name, draft.description, columns);
 }
 
 export async function updateBoardMeta(
@@ -317,6 +320,10 @@ export interface NewCardInput {
   recurrence?: RecurrenceConfig;
 }
 
+export type CardUpdateInput = Partial<Pick<Card, 'title' | 'description' | 'targetDate' | 'labels' | 'coverImage'>> & {
+  text?: string;
+};
+
 /** coverImage is the selected URL; attachment flags mirror that selection. */
 function applyCoverImage(card: Card, coverImage: string | undefined): void {
   card.coverImage = coverImage;
@@ -328,6 +335,57 @@ function applyCoverImage(card: Card, coverImage: string | undefined): void {
       return { ...attachment, isCover };
     });
   }
+}
+
+function checkedContent(card: Card): CardContent {
+  const content = asRecord(card.content);
+  if (!content || !['text', 'checklist', 'image'].includes(content.type as string)) {
+    throw new BoardError(`Card ${card.id} has invalid content. Repair it before editing its body or checklist.`);
+  }
+  return card.content;
+}
+
+function checkedChecklist(card: Card): ChecklistItem[] {
+  const content = checkedContent(card);
+  if (content.checklist === undefined) return [];
+  if (!Array.isArray(content.checklist)) throw new BoardError(`Card ${card.id} has an invalid checklist; expected a list of items.`);
+  const ids = new Set<string>();
+  for (const item of content.checklist) {
+    const record = asRecord(item);
+    if (!record || typeof record.id !== 'string' || !record.id.trim() || typeof record.text !== 'string' || typeof record.completed !== 'boolean') {
+      throw new BoardError(`Card ${card.id} has an invalid checklist item; each item needs an id, text, and completed flag.`);
+    }
+    if (ids.has(record.id)) throw new BoardError(`Card ${card.id} has duplicate checklist item ids.`);
+    ids.add(record.id);
+  }
+  return content.checklist;
+}
+
+/** Migrate a legacy content image only when content is deliberately edited. */
+function migrateContentImage(card: Card): void {
+  const content = checkedContent(card);
+  const url = content.imageUrl;
+  if (url !== undefined && typeof url !== 'string') throw new BoardError(`Card ${card.id} has an invalid content image URL.`);
+  if (url) {
+    if (card.attachments !== undefined && (!Array.isArray(card.attachments) || card.attachments.some((attachment) => !asRecord(attachment)))) {
+      throw new BoardError(`Card ${card.id} has invalid attachments. Repair them before migrating its content image.`);
+    }
+    const attachments = card.attachments ?? [];
+    if (!attachments.some((attachment) => attachment.url === url)) {
+      attachments.push({ id: newId(), name: 'Image', url, addedAt: nowIso(), isCover: false });
+    }
+    // Keep existing records and metadata; only the first canonical cover URL
+    // is selected. Do not add an equivalent false flag to untouched records.
+    let selected = false;
+    card.attachments = attachments.map((attachment) => {
+      const isCover = !selected && !!card.coverImage && attachment.url === card.coverImage;
+      if (isCover) selected = true;
+      return attachment.isCover === isCover || (!isCover && attachment.isCover === undefined)
+        ? attachment : { ...attachment, isCover };
+    });
+  }
+  delete content.imageUrl;
+  if (content.type === 'image') content.type = 'text';
 }
 
 export async function addCard(
@@ -364,14 +422,19 @@ export async function updateCard(
   client: SupabaseClient,
   boardId: string,
   cardId: string,
-  patch: Partial<Pick<Card, 'title' | 'description' | 'content' | 'targetDate' | 'labels' | 'coverImage'>>,
+  patch: CardUpdateInput,
 ): Promise<FullBoard> {
-  const draft = { ...patch };
+  const { text, ...draft } = structuredClone(patch);
+  if (text !== undefined && typeof text !== 'string') throw new BoardError('Card body text must be a string.');
   if (draft.targetDate === undefined) delete draft.targetDate;
   else draft.targetDate = parseTargetDate(draft.targetDate);
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
     Object.assign(card, draft, { updatedAt: nowIso() });
+    if (text !== undefined) {
+      migrateContentImage(card);
+      card.content.text = text;
+    }
     if (Object.prototype.hasOwnProperty.call(draft, 'coverImage')) applyCoverImage(card, draft.coverImage);
     return columns;
   });
@@ -435,32 +498,35 @@ export function duplicateCard(client: SupabaseClient, boardId: string, cardId: s
 // Card detail mutations
 // ---------------------------------------------------------------------------
 
-export function addChecklistItem(
+export async function addChecklistItem(
   client: SupabaseClient,
   boardId: string,
   cardId: string,
   text: string,
 ): Promise<FullBoard> {
+  if (typeof text !== 'string') throw new BoardError('Checklist item text must be a string.');
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
-    const checklist = card.content.type === 'checklist' && card.content.checklist ? card.content.checklist : [];
+    const checklist = checkedChecklist(card);
+    migrateContentImage(card);
     card.content = { ...card.content, type: 'checklist', checklist: [...checklist, { id: newId(), text, completed: false }] };
     card.updatedAt = nowIso();
     return columns;
   });
 }
 
-export function toggleChecklistItem(
+export async function toggleChecklistItem(
   client: SupabaseClient,
   boardId: string,
   cardId: string,
   itemId: string,
   completed?: boolean,
 ): Promise<FullBoard> {
+  if (completed !== undefined && typeof completed !== 'boolean') throw new BoardError('Checklist completed state must be a boolean.');
   return mutateColumns(client, boardId, (columns) => {
     const { card } = locateCard(columns, cardId);
-    const items = card.content.checklist;
-    if (!items) throw new BoardError(`Card ${cardId} has no checklist`);
+    const items = checkedChecklist(card);
+    if (card.content.type !== 'checklist') throw new BoardError(`Card ${cardId} has no active checklist. Add a checklist item to enable it first.`);
     const item = items.find((i) => i.id === itemId);
     if (!item) notFound('Checklist item', itemId);
     item!.completed = completed ?? !item!.completed;

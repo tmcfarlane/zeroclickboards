@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Attachment, Card } from '@/types';
+import { deleteUserCardTemplate, saveUserCardTemplate } from '@/lib/templates';
 import { CardEditor } from '../CardEditor';
 
 vi.mock('../CardActivityFeed', () => ({ CardActivityFeed: () => null }));
@@ -37,9 +38,9 @@ describe('CardEditor text fields', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
     const [submitted, baseline] = save.mock.calls[0];
     expect(submitted.description).toBe(initial.description);
-    expect(submitted.content).toEqual(initial.content);
+    expect(submitted.content).toEqual({ ...initial.content, checklist: [] });
     expect(baseline.description).toBe(initial.description);
-    expect(baseline.content).toEqual(initial.content);
+    expect(baseline.content).toEqual({ ...initial.content, checklist: [] });
   });
 
   it.each(['Description', 'Body text'] as const)('can clear %s without clearing the other field', async (field) => {
@@ -57,11 +58,120 @@ describe('CardEditor text fields', () => {
     const user = userEvent.setup();
     const content = { type: 'checklist' as const, checklist: [{ id: 'item-1', text: 'Task', completed: false }] };
     const save = open(card({ content }));
-    expect(screen.queryByLabelText('Body text')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Body text')).toHaveValue('');
     await user.clear(screen.getByLabelText('Description'));
     await user.type(screen.getByLabelText('Description'), 'Updated checklist context');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(save.mock.calls[0][0]).toMatchObject({ description: 'Updated checklist context', content });
+  });
+
+  it('edits a checklist body without changing its items or description', async () => {
+    const user = userEvent.setup();
+    const content = { type: 'checklist' as const, text: 'Existing body', checklist: [{ id: 'item-1', text: 'Task', completed: true }] };
+    const initial = card({ content });
+    const save = open(initial);
+    expect(screen.getByLabelText('Body text')).toHaveValue(content.text);
+    expect(screen.getByRole('checkbox', { name: 'Complete Task' })).toBeChecked();
+    await user.type(screen.getByLabelText('Body text'), '\nNew context');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const [submitted, baseline] = save.mock.calls[0];
+    expect(submitted.content).toEqual({ ...content, text: 'Existing body\nNew context' });
+    expect(submitted.description).toBe(initial.description);
+    expect(baseline.content).toEqual(content);
+  });
+
+  it('keeps a body draft when adding a checklist', async () => {
+    const user = userEvent.setup();
+    const initial = card();
+    const save = open(initial);
+    await user.type(screen.getByLabelText('Body text'), 'Added context');
+    await user.click(screen.getByRole('button', { name: 'Checklist' }));
+    expect(screen.getByLabelText('Body text')).toHaveValue(`${initial.content.text}Added context`);
+    await user.type(screen.getByRole('textbox', { name: 'New checklist item' }), 'First task');
+    await user.click(screen.getByRole('button', { name: 'Add checklist item' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const [submitted, baseline] = save.mock.calls[0];
+    expect(submitted.content).toEqual({
+      type: 'checklist', text: `${initial.content.text}Added context`,
+      checklist: [{ id: expect.any(String), text: 'First task', completed: false }],
+    });
+    expect(baseline.content).toEqual({ ...initial.content, checklist: [] });
+  });
+
+  it('hides and restores a checklist with its item state and metadata intact', async () => {
+    const user = userEvent.setup();
+    const content = {
+      type: 'checklist' as const, text: 'Keep this body',
+      checklist: [{ id: 'item-1', text: 'Task', completed: true, source: { name: 'MCP' } }],
+    };
+    const save = open(card({ content }));
+    const toggle = screen.getByRole('button', { name: 'Checklist' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(toggle).toHaveAttribute('title', 'Hide checklist (keeps its items)');
+    expect(toggle).toHaveAccessibleDescription(/Hiding the checklist keeps its items/);
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('checkbox', { name: 'Complete Task' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Body text')).toHaveValue(content.text);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].content).toEqual({ ...content, type: 'text' });
+    expect(save.mock.calls[0][1].content).toEqual(content);
+    await user.click(toggle);
+    expect(screen.getByRole('checkbox', { name: 'Complete Task' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[1][0].content).toEqual(content);
+  });
+
+  it('removes only the chosen item and retains body and other item metadata through hide/show', async () => {
+    const user = userEvent.setup();
+    const keptItem = { id: 'item-2', text: 'Keep me', completed: false, source: 'MCP' };
+    const content = { type: 'checklist' as const, text: 'Body context', checklist: [
+      { id: 'item-1', text: 'Remove me', completed: true }, keptItem,
+    ] };
+    const save = open(card({ content }));
+    await user.click(screen.getByRole('button', { name: 'Remove checklist item: Remove me' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Complete Keep me' }));
+    await user.click(screen.getByRole('button', { name: 'Checklist' }));
+    await user.click(screen.getByRole('button', { name: 'Checklist' }));
+    expect(screen.queryByRole('checkbox', { name: 'Complete Remove me' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Complete Keep me' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].content).toEqual({ ...content, checklist: [{ ...keptItem, completed: true }] });
+    expect(save.mock.calls[0][1].content).toEqual(content);
+  });
+
+  it('shows dormant checklist items and preserves them during unrelated edits', async () => {
+    const user = userEvent.setup();
+    const content = { type: 'text' as const, text: 'Visible body', checklist: [{ id: 'item-1', text: 'Saved task', completed: true }] };
+    const save = open(card({ content }));
+    expect(screen.getByRole('button', { name: 'Checklist' })).toHaveAttribute('aria-pressed', 'false');
+    await user.type(screen.getByPlaceholderText('Card title...'), ' renamed');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].content).toEqual(content);
+    expect(save.mock.calls[0][1].content).toEqual(content);
+    await user.click(screen.getByRole('button', { name: 'Checklist' }));
+    expect(screen.getByRole('checkbox', { name: 'Complete Saved task' })).toBeChecked();
+  });
+
+  it('retains body and hidden items when creating a card from a template', async () => {
+    const user = userEvent.setup();
+    const content = { type: 'text' as const, text: 'Template body', checklist: [{ id: 'template-item', text: 'Template task', completed: true }] };
+    const template = saveUserCardTemplate({ name: 'Body and hidden tasks', card: { title: 'Template title', description: 'Template summary', content } });
+    try {
+      const save = vi.fn();
+      render(<CardEditor isOpen mode="create" onClose={() => {}} onSave={save} />);
+      await user.click(screen.getByRole('button', { name: template.name }));
+      expect(screen.getByLabelText('Body text')).toHaveValue(content.text);
+      expect(screen.getByRole('button', { name: 'Checklist' })).toHaveAttribute('aria-pressed', 'false');
+      await user.click(screen.getByRole('button', { name: 'Add Card' }));
+      expect(save.mock.calls[0][0]).toMatchObject({ title: 'Template title', description: 'Template summary', content: {
+        type: 'text', text: 'Template body', checklist: [{ id: expect.any(String), text: 'Template task', completed: false }],
+      } });
+      expect(save.mock.calls[0][0].content.checklist[0].id).not.toBe('template-item');
+      expect(save.mock.calls[0][1]).toBeUndefined();
+    } finally {
+      deleteUserCardTemplate(template.id);
+    }
   });
 });
 
@@ -82,7 +192,7 @@ describe('CardEditor due dates', () => {
     expect(submitted.targetDate).toBe(displayedDate);
     expect(baseline.targetDate).toBe(displayedDate);
     expect(submitted.description).toBe(initial.description);
-    expect(submitted.content).toEqual(initial.content);
+    expect(submitted.content).toEqual({ ...initial.content, checklist: [] });
   });
 
   it.each(['2026-02-30', 'not-a-date', '2026-02-28T99:30:00Z'])('shows invalid saved date %s for repair and preserves it during an unrelated edit', async (targetDate) => {
@@ -107,7 +217,7 @@ describe('CardEditor due dates', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(save.mock.calls[0][0].targetDate).toBe(action === 'change' ? '2026-03-01' : undefined);
-    expect(save.mock.calls[0][0].content).toEqual(initial.content);
+    expect(save.mock.calls[0][0].content).toEqual({ ...initial.content, checklist: [] });
     expect(save.mock.calls[0][0].description).toBe(initial.description);
   });
 
@@ -260,6 +370,82 @@ describe('CardEditor recurrence', () => {
 });
 
 describe('CardEditor cover selection', () => {
+  it.each(['text', 'checklist', 'image'] as const)('preserves a saved %s template image alongside existing attachments without changing the cover', async (type) => {
+    const user = userEvent.setup();
+    const imageUrl = 'https://example.com/template.png';
+    const content = { type, text: 'Template body', imageUrl, checklist: [{ id: 'template-task', text: 'Template task', completed: true }] };
+    const template = saveUserCardTemplate({ name: 'Template with image', card: { title: 'Image template', content } });
+    const coverImage = type === 'image' ? undefined : first.url;
+    const existing = { ...first, metadata: { caption: 'User attachment' } };
+    try {
+      const save = vi.fn();
+      render(<CardEditor isOpen mode="create" initialData={card({ attachments: [existing], coverImage })} onClose={() => {}} onSave={save} />);
+      await user.click(screen.getByRole('button', { name: template.name }));
+      await user.click(screen.getByRole('button', { name: template.name }));
+      expect(screen.getAllByRole('button', { name: 'Actions for Image' })).toHaveLength(1);
+      expect(screen.getByRole('button', { name: 'Actions for First image' })).toBeInTheDocument();
+      if (coverImage) expect(screen.getByAltText('Card cover')).toHaveAttribute('src', coverImage);
+      else expect(screen.queryByAltText('Card cover')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Add Card' }));
+      const [submitted] = save.mock.calls[0];
+      expect(submitted.coverImage).toBe(coverImage);
+      expect(submitted.attachments).toEqual([
+        { ...existing, isCover: !!coverImage },
+        expect.objectContaining({ name: 'Image', url: imageUrl, isCover: false }),
+      ]);
+      expect(submitted.content).toEqual({
+        type: type === 'image' ? 'text' : type, text: content.text,
+        checklist: [{ id: expect.any(String), text: 'Template task', completed: false }],
+      });
+    } finally {
+      deleteUserCardTemplate(template.id);
+    }
+  });
+
+  it('retains an existing attachment and its metadata when a template uses the same image URL', async () => {
+    const user = userEvent.setup();
+    const template = saveUserCardTemplate({ name: 'Existing image template', card: { title: 'Same image', content: { type: 'text', imageUrl: first.url } } });
+    const existing = { ...first, metadata: { caption: 'Keep caption' } };
+    try {
+      const save = vi.fn();
+      render(<CardEditor isOpen mode="create" initialData={card({ attachments: [existing], coverImage: first.url })} onClose={() => {}} onSave={save} />);
+      await user.click(screen.getByRole('button', { name: template.name }));
+      expect(screen.queryByRole('button', { name: 'Actions for Image' })).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Add Card' }));
+      expect(save.mock.calls[0][0].attachments).toEqual([existing]);
+      expect(save.mock.calls[0][0].coverImage).toBe(first.url);
+    } finally {
+      deleteUserCardTemplate(template.id);
+    }
+  });
+
+  it.each(['text', 'checklist', 'image'] as const)('displays a legacy image under %s content without creating a cover or an unrelated form edit', async (type) => {
+    const user = userEvent.setup();
+    const content = { type, text: 'Body to retain', imageUrl: 'https://example.com/legacy.png', checklist: [{ id: 'item-1', text: 'Task', completed: false }] };
+    const save = open(card({ content }));
+    expect(screen.getByRole('button', { name: 'Actions for Image' })).toBeInTheDocument();
+    expect(screen.queryByAltText('Card cover')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Body text')).toHaveValue(content.text);
+    await user.type(screen.getByPlaceholderText('Card title...'), ' renamed');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const [submitted, baseline] = save.mock.calls[0];
+    expect(submitted.content).toEqual({ type: type === 'image' ? 'text' : type, text: content.text, checklist: content.checklist });
+    expect(submitted.content).toEqual(baseline.content);
+    expect(submitted.attachments).toEqual([expect.objectContaining({ url: content.imageUrl, name: 'Image', isCover: false })]);
+    expect(submitted.attachments).toEqual(baseline.attachments);
+    expect(submitted.coverImage).toBeUndefined();
+  });
+
+  it('does not duplicate an existing attachment for a dormant image URL', async () => {
+    const user = userEvent.setup();
+    const attachment = { ...first, isCover: false, metadata: { caption: 'Keep caption' } };
+    const save = open(card({ attachments: [attachment], content: { type: 'checklist', imageUrl: first.url, text: 'Body' } }));
+    expect(screen.queryByRole('button', { name: 'Actions for Image' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].attachments).toEqual([attachment]);
+    expect(save.mock.calls[0][0].attachments).toEqual(save.mock.calls[0][1].attachments);
+  });
+
   it('uses the canonical cover URL and selects only the first matching attachment while retaining metadata', async () => {
     const user = userEvent.setup();
     const selected = { ...second, extra: { caption: 'Metadata to retain' } };

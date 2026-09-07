@@ -78,6 +78,16 @@ try {
   assert.equal(unscheduled.content.text, 'MCP body');
   passed('MCP creates a recurring card and clears its schedule without changing the body');
 
+  await call('add_checklist_item', { boardId, cardId, text: 'Keep this completed task' });
+  const withChecklist = await call('get_card', { boardId, cardId });
+  await call('toggle_checklist_item', { boardId, cardId, itemId: withChecklist.content.checklist[0].id, completed: true });
+  await call('update_card', { boardId, cardId, text: 'MCP body with checklist' });
+  const editedBody = await call('get_card', { boardId, cardId });
+  assert.equal(editedBody.content.type, 'checklist');
+  assert.equal(editedBody.content.text, 'MCP body with checklist');
+  assert.deepEqual(editedBody.content.checklist, [{ ...withChecklist.content.checklist[0], completed: true }]);
+  passed('MCP body edits preserve the active checklist and its completion state');
+
   let release;
   const ready = new Promise((resolve) => { release = resolve; });
   const gate = { reads: 0, release, ready };
@@ -105,7 +115,7 @@ try {
   await call('move_card', { boardId, cardId, targetColumnId: secondColumnId });
   const moved = await call('get_card', { boardId, cardId });
   assert.equal(moved.columnId, secondColumnId);
-  assert.equal(moved.content.text, 'MCP body');
+  assert.equal(moved.content.text, 'MCP body with checklist');
   passed('MCP move_card and get_card round trip');
 
   await call('set_target_date', { boardId, cardId, targetDate: '2028-01-31T23:30:00-08:00' });
@@ -120,7 +130,7 @@ try {
   await call('set_recurrence', { boardId, cardId, recurrence: { frequency: 'monthly', interval: 1 } });
   const scheduled = await call('get_card', { boardId, cardId });
   assert.equal(scheduled.targetDate, '2028-01-31');
-  assert.equal(scheduled.content.text, 'MCP body');
+  assert.equal(scheduled.content.text, 'MCP body with checklist');
   assert.deepEqual([...scheduled.labels].sort(), ['blue', 'red']);
   await call('archive_card', { boardId, cardId });
   await call('archive_card', { boardId, cardId });
@@ -128,6 +138,8 @@ try {
   assert.equal(remaining.length, 1);
   assert.equal(remaining[0].targetDate, '2028-02-29');
   assert.equal(remaining[0].recurrence.dayOfMonth, 31);
+  assert.equal(remaining[0].content.text, 'MCP body with checklist');
+  assert.equal(remaining[0].content.checklist[0].completed, false);
   assert.notEqual(remaining[0].id, cardId);
   await call('archive_card', { boardId, cardId: remaining[0].id });
   const march = await call('list_cards', { boardId });

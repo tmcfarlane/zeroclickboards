@@ -113,6 +113,69 @@ test.describe('Card field parity between MCP and browser', () => {
     });
   });
 
+  test('keeps body and checklist edits through hiding, restoring, and later MCP body updates', async ({ page }) => {
+    await withTemporaryCard(page, async (mcp, board, card) => {
+      await mcp.call('add_checklist_item', { boardId: board.id, cardId: card.id, text: 'Review source' });
+      await loadBoard(page, board);
+      const editor = await openCard(page, card.title);
+      await expect(editor.getByLabel('Body text', { exact: true })).toHaveValue(body);
+      await editor.getByRole('checkbox', { name: 'Complete Review source', exact: true }).check();
+      await editor.getByLabel('Body text', { exact: true }).fill('Browser body beside completed tasks');
+      await saveEditor(editor);
+      await expect.poll(async () => {
+        const saved = await mcp.call<Card>('get_card', { boardId: board.id, cardId: card.id });
+        return { type: saved.content.type, body: saved.content.text, completed: saved.content.checklist?.[0].completed };
+      }).toEqual({ type: 'checklist', body: 'Browser body beside completed tasks', completed: true });
+
+      await loadBoard(page, board);
+      const hideEditor = await openCard(page, card.title);
+      await hideEditor.getByRole('button', { name: 'Checklist', exact: true }).click();
+      await expect(hideEditor.getByRole('checkbox')).toHaveCount(0);
+      await expect(hideEditor.getByLabel('Body text', { exact: true })).toHaveValue('Browser body beside completed tasks');
+      await saveEditor(hideEditor);
+      await expect.poll(async () => (await mcp.call<Card>('get_card', { boardId: board.id, cardId: card.id })).content.type).toBe('text');
+      const hidden = await mcp.call<Card>('get_card', { boardId: board.id, cardId: card.id });
+      expect(hidden.content.checklist).toHaveLength(1);
+      expect(hidden.content.checklist?.[0].completed).toBe(true);
+      await expect(mcp.call('toggle_checklist_item', { boardId: board.id, cardId: card.id, itemId: hidden.content.checklist![0].id })).rejects.toThrow();
+      expect(await mcp.call('get_card', { boardId: board.id, cardId: card.id })).toEqual(hidden);
+
+      await mcp.call('add_checklist_item', { boardId: board.id, cardId: card.id, text: 'Publish notes' });
+      await mcp.call('update_card', { boardId: board.id, cardId: card.id, text: 'MCP body keeps both tasks' });
+      const restored = await mcp.call<Card>('get_card', { boardId: board.id, cardId: card.id });
+      expect(restored.content.type).toBe('checklist');
+      expect(restored.content.checklist?.map((item) => ({ text: item.text, completed: item.completed }))).toEqual([
+        { text: 'Review source', completed: true }, { text: 'Publish notes', completed: false },
+      ]);
+      expect(restored.description).toBe(description);
+      await loadBoard(page, board);
+      const restoredEditor = await openCard(page, card.title);
+      await expect(restoredEditor.getByLabel('Body text', { exact: true })).toHaveValue('MCP body keeps both tasks');
+      await expect(restoredEditor.getByRole('checkbox', { name: 'Complete Review source', exact: true })).toBeChecked();
+      await expect(restoredEditor.getByRole('checkbox', { name: 'Complete Publish notes', exact: true })).not.toBeChecked();
+    });
+  });
+
+  test('merges an open body draft with a checklist added through MCP', async ({ page }) => {
+    await withTemporaryCard(page, async (mcp, board, card) => {
+      await loadBoard(page, board);
+      const editor = await openCard(page, card.title);
+      await editor.getByLabel('Body text', { exact: true }).fill('Open browser body draft');
+      await mcp.call('add_checklist_item', { boardId: board.id, cardId: card.id, text: 'Task added while editor was open' });
+      await expect(page.locator('[data-kanban-card]').getByText('0/1', { exact: true })).toBeVisible({ timeout: 15_000 });
+      await expect(editor.getByLabel('Body text', { exact: true })).toHaveValue('Open browser body draft');
+      await saveEditor(editor);
+      await expect.poll(async () => {
+        const saved = await mcp.call<Card>('get_card', { boardId: board.id, cardId: card.id });
+        return { type: saved.content.type, body: saved.content.text, tasks: saved.content.checklist?.map((item) => item.text) };
+      }).toEqual({ type: 'checklist', body: 'Open browser body draft', tasks: ['Task added while editor was open'] });
+      await loadBoard(page, board);
+      const reopened = await openCard(page, card.title);
+      await expect(reopened.getByLabel('Body text', { exact: true })).toHaveValue('Open browser body draft');
+      await expect(reopened.getByRole('checkbox', { name: 'Complete Task added while editor was open', exact: true })).not.toBeChecked();
+    });
+  });
+
   test('selects the correct existing attachment when MCP changes a cover and keeps it after browser save', async ({ page }) => {
     await withTemporaryCard(page, async (mcp, board, card) => {
       const images = attachments();

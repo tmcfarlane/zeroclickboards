@@ -2,12 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   addCard,
+  addChecklistItem,
+  createBoardFromTemplate,
   deleteBoard,
   getBoard,
   reorderColumns,
   setCoverImage,
   setRecurrence,
   setTargetDate,
+  toggleChecklistItem,
   updateCard,
   updateColumn,
 } from '../dist/board-data.js';
@@ -497,4 +500,205 @@ test('normalized date updates preserve concurrent card moves, additions, and unr
   assert.deepEqual(state.row.data.columns[0].cards.map((card) => card.id), ['new-card']);
   assert.deepEqual(state.row.data.futureSetting, { keep: true });
   assert.equal(writes(state).length, 2);
+});
+
+function contentBoard(content, cardFields = {}) {
+  const row = makeBoard();
+  Object.assign(row.data.columns[0].cards[0], { content }, cardFields);
+  return row;
+}
+
+const task = (id, overrides = {}) => ({ id, text: id, completed: false, ...overrides });
+
+test('body edits and clears preserve active checklist data and unknown content metadata', async () => {
+  const content = { type: 'checklist', text: 'Old body', checklist: [task('task', { completed: true, future: { keep: true } })], future: { keep: ['metadata'] } };
+  const { client, state } = createBoardFixture({ row: contentBoard(content) });
+  for (const text of ['New body', '']) {
+    await updateCard(client, 'board-1', 'card-a', { text });
+    assert.deepEqual(state.row.data.columns[0].cards[0].content, { ...content, text });
+  }
+});
+
+test('adding checklist items restores dormant tasks and retains body and item metadata', async () => {
+  const content = { type: 'text', text: 'Keep the body', checklist: [task('old', { completed: true, future: { keep: true } })], future: { keep: true } };
+  const { client, state } = createBoardFixture({ row: contentBoard(content) });
+  await addChecklistItem(client, 'board-1', 'card-a', 'New task');
+  const saved = state.row.data.columns[0].cards[0].content;
+  assert.equal(saved.type, 'checklist');
+  assert.equal(saved.text, content.text);
+  assert.deepEqual(saved.future, content.future);
+  assert.deepEqual(saved.checklist[0], content.checklist[0]);
+  assert.equal(saved.checklist[1].text, 'New task');
+  assert.equal(saved.checklist[1].completed, false);
+  assert.notEqual(saved.checklist[1].id, 'old');
+});
+
+test('body and checklist conversions migrate legacy images once and preserve canonical cover metadata', async () => {
+  for (const operation of ['body', 'checklist']) {
+    const url = 'https://example.com/legacy.png';
+    const existing = { id: 'cover', name: 'Existing cover', url: 'https://example.com/cover.png', addedAt: '2026-01-01', isCover: true, future: { keep: true } };
+    const row = contentBoard({ type: 'image', text: 'Caption', imageUrl: url, future: { keep: true } }, { coverImage: existing.url, attachments: [existing] });
+    const { client, state } = createBoardFixture({ row });
+    if (operation === 'body') await updateCard(client, row.id, 'card-a', { text: 'Updated caption' });
+    else await addChecklistItem(client, row.id, 'card-a', 'New task');
+    const saved = state.row.data.columns[0].cards[0];
+    assert.equal(saved.content.type, operation === 'body' ? 'text' : 'checklist');
+    assert.equal(saved.content.text, operation === 'body' ? 'Updated caption' : 'Caption');
+    assert.deepEqual(saved.content.future, { keep: true });
+    assert.equal(Object.hasOwn(saved.content, 'imageUrl'), false);
+    assert.equal(saved.coverImage, existing.url);
+    assert.deepEqual(saved.attachments[0], existing);
+    assert.equal(saved.attachments[1].url, url);
+    assert.equal(saved.attachments[1].isCover, false);
+    await updateCard(client, row.id, 'card-a', { text: '' });
+    assert.equal(state.row.data.columns[0].cards[0].attachments.filter((attachment) => attachment.url === url).length, 1);
+  }
+});
+
+test('legacy URL migration retains existing same-URL attachment records and canonical cover selection', async () => {
+  const url = 'https://example.com/legacy.png';
+  const attachments = [
+    { id: 'first', name: 'Keep name', url, addedAt: '2026-01-01', future: { keep: true } },
+    { id: 'second', name: 'Another record', url, addedAt: '2026-01-02', isCover: true, future: { also: true } },
+  ];
+  const { client, state } = createBoardFixture({ row: contentBoard({ type: 'image', imageUrl: url }, { coverImage: url, attachments }) });
+  await updateCard(client, 'board-1', 'card-a', { text: 'Body' });
+  const saved = state.row.data.columns[0].cards[0];
+  assert.equal(saved.coverImage, url);
+  assert.deepEqual(saved.attachments, [{ ...attachments[0], isCover: true }, { ...attachments[1], isCover: false }]);
+});
+
+test('title-only and empty patches do not migrate or otherwise change content', async () => {
+  const row = contentBoard({ type: 'image', imageUrl: 'https://example.com/image.png', text: 'Caption', future: { keep: true } });
+  const { client, state } = createBoardFixture({ row });
+  for (const patch of [{}, { title: 'Renamed' }]) {
+    await updateCard(client, row.id, 'card-a', patch);
+    assert.deepEqual(state.row.data.columns[0].cards[0].content, row.data.columns[0].cards[0].content);
+    assert.equal(state.row.data.columns[0].cards[0].attachments, undefined);
+  }
+});
+
+test('invalid stored checklists and duplicate IDs fail add and toggle without any write', async () => {
+  for (const checklist of [null, 'old', {}, [null], [{}], [task('')], [task('task', { text: 42 })], [task('task', { completed: 'true' })], [task('duplicate'), task('duplicate')]]) {
+    const row = contentBoard({ type: 'checklist', checklist, text: 'Keep body' });
+    const { client, state } = createBoardFixture({ row });
+    await assert.rejects(addChecklistItem(client, row.id, 'card-a', 'New task'), /invalid checklist|duplicate checklist/);
+    await assert.rejects(toggleChecklistItem(client, row.id, 'card-a', 'task', true), /invalid checklist|duplicate checklist/);
+    assert.deepEqual(state.row, row);
+    assert.equal(writes(state).length, 0);
+  }
+});
+
+test('toggling inactive or missing checklist items never changes hidden data', async () => {
+  for (const type of ['text', 'image']) {
+    const row = contentBoard({ type, checklist: [task('task')] });
+    const { client, state } = createBoardFixture({ row });
+    await assert.rejects(toggleChecklistItem(client, row.id, 'card-a', 'task'), /no active checklist/);
+    assert.deepEqual(state.row, row);
+    assert.equal(writes(state).length, 0);
+  }
+  const { client, state } = createBoardFixture({ row: contentBoard({ type: 'checklist', checklist: [task('task')] }) });
+  await assert.rejects(toggleChecklistItem(client, 'board-1', 'card-a', 'missing'), /not found/);
+  assert.equal(writes(state).length, 0);
+});
+
+test('body retry follows a moved card and preserves concurrent checklist conversion, additions, and metadata', async () => {
+  const { client, state } = createBoardFixture({ row: contentBoard({ type: 'text', text: 'Old body', future: { base: true } }),
+    onRequest(request, state) {
+      if (request.method === 'PATCH' && writes(state).length === 1) {
+        const card = state.row.data.columns[0].cards.shift();
+        Object.assign(card.content, { type: 'checklist', checklist: [task('remote', { completed: true, future: { keep: true } })], newer: { keep: true } });
+        card.labels = ['green'];
+        state.row.data.columns[1].cards.push(card);
+        state.row.updated_at = '2026-09-06T00:00:00.123456Z';
+      }
+    },
+  });
+  await updateCard(client, 'board-1', 'card-a', { text: 'New body' });
+  const saved = state.row.data.columns[1].cards.at(-1);
+  assert.deepEqual(saved.content, { type: 'checklist', text: 'New body', future: { base: true }, checklist: [task('remote', { completed: true, future: { keep: true } })], newer: { keep: true } });
+  assert.deepEqual(saved.labels, ['green']);
+  assert.equal(writes(state).length, 2);
+});
+
+test('migration retries use the latest image and retain concurrently added attachments', async () => {
+  const oldUrl = 'https://example.com/old.png', freshUrl = 'https://example.com/fresh.png';
+  const existing = { id: 'remote', name: 'Fresh image', url: freshUrl, addedAt: '2026-09-06', future: { keep: true } };
+  const { client, state } = createBoardFixture({ row: contentBoard({ type: 'image', imageUrl: oldUrl }),
+    onRequest(request, state) {
+      if (request.method === 'PATCH' && writes(state).length === 1) {
+        const card = state.row.data.columns[0].cards[0];
+        card.content.imageUrl = freshUrl;
+        card.attachments = [existing];
+        state.row.updated_at = '2026-09-06T00:00:00.123456Z';
+      }
+    },
+  });
+  await updateCard(client, 'board-1', 'card-a', { text: 'New body' });
+  assert.deepEqual(state.row.data.columns[0].cards[0].attachments, [existing]);
+  assert.deepEqual(state.row.data.columns[0].cards[0].content, { type: 'text', text: 'New body' });
+  assert.equal(writes(state).length, 2);
+});
+
+test('concurrent checklist additions survive once each and toggle follows a moved item', async () => {
+  const { client, state } = createBoardFixture({ row: contentBoard({ type: 'text', text: 'Body', checklist: [task('existing', { future: { keep: true } })] }) });
+  await Promise.all([addChecklistItem(client, 'board-1', 'card-a', 'First'), addChecklistItem(client, 'board-1', 'card-a', 'Second')]);
+  const saved = state.row.data.columns[0].cards[0].content;
+  assert.deepEqual(saved.checklist.map((item) => item.text).sort(), ['First', 'Second', 'existing']);
+  assert.equal(new Set(saved.checklist.map((item) => item.id)).size, 3);
+  const moved = createBoardFixture({ row: state.row,
+    onRequest(request, state) {
+      if (request.method === 'PATCH' && writes(state).length === 1) {
+        const card = state.row.data.columns[0].cards.shift();
+        card.content.checklist[0].text = 'Edited remotely';
+        card.content.checklist.push(task('later'));
+        state.row.data.columns[1].cards.push(card);
+        state.row.updated_at = '2026-09-06T00:00:00.123456Z';
+      }
+    },
+  });
+  await toggleChecklistItem(moved.client, 'board-1', 'card-a', 'existing', true);
+  const content = moved.state.row.data.columns[1].cards.at(-1).content;
+  assert.deepEqual(content.checklist[0], task('existing', { text: 'Edited remotely', completed: true, future: { keep: true } }));
+  assert.equal(content.checklist.length, 4);
+  assert.equal(content.text, 'Body');
+});
+
+test('mutation arguments are snapshotted and invalid new item or completion values never reach the database', async () => {
+  const { client, state } = createBoardFixture();
+  const patch = { text: 'Submitted body', labels: ['blue'] };
+  const saving = updateCard(client, 'board-1', 'card-a', patch);
+  patch.text = 'Changed after call'; patch.labels.push('red');
+  await saving;
+  assert.equal(state.row.data.columns[0].cards[0].content.text, 'Submitted body');
+  assert.deepEqual(state.row.data.columns[0].cards[0].labels, ['blue']);
+  const count = state.requests.length;
+  await assert.rejects(updateCard(client, 'board-1', 'card-a', { text: 42 }), /must be a string/);
+  await assert.rejects(addChecklistItem(client, 'board-1', 'card-a', 42), /must be a string/);
+  await assert.rejects(toggleChecklistItem(client, 'board-1', 'card-a', 'task', 'true'), /must be a boolean/);
+  assert.equal(state.requests.length, count);
+});
+
+test('AI board templates retain independent checklist body text and snapshot input data', async () => {
+  const { client, state } = createBoardFixture({ onRequest(request, state) {
+    if (request.method === 'POST') {
+      state.row = makeBoard(request.body);
+      return jsonResponse(state.row);
+    }
+  } });
+  const template = { name: 'Generated', columns: [{ title: 'Work', sampleCards: [
+    { title: 'Checklist', description: 'Summary', content: { type: 'checklist', text: 'Body beside tasks', checklist: [{ text: 'Task' }] }, labels: ['blue'] },
+    { title: 'Empty body', content: { type: 'checklist', text: '', checklist: [] } },
+  ] }] };
+  const saving = createBoardFromTemplate(client, 'user-1', template);
+  template.columns[0].sampleCards[0].content.text = 'Changed after call';
+  template.columns[0].sampleCards[0].labels.push('red');
+  const result = await saving;
+  assert.equal(result.columns[0].cards[0].content.text, 'Body beside tasks');
+  assert.equal(result.columns[0].cards[0].description, 'Summary');
+  assert.equal(result.columns[0].cards[0].content.checklist[0].text, 'Task');
+  assert.equal(result.columns[0].cards[0].content.checklist[0].completed, false);
+  assert.deepEqual(result.columns[0].cards[0].labels, ['blue']);
+  assert.equal(result.columns[0].cards[1].content.text, '');
+  assert.equal(state.requests.length, 1);
 });

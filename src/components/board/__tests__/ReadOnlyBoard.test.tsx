@@ -116,6 +116,17 @@ describe('ReadOnlyBoard', () => {
     expect(screen.getByText('2/3 completed')).toBeInTheDocument();
   });
 
+  it.each(['text', 'checklist'] as const)('shows shared body with %s content while only active checklist progress is shown', (type) => {
+    const board = makeBoard();
+    board.columns[0].cards = [{
+      ...board.columns[0].cards[0], description: undefined,
+      content: { type, text: 'Shared body notes', checklist: [{ id: 'item', text: 'Task', completed: true }] },
+    }];
+    render(<ReadOnlyBoard board={board} />);
+    expect(screen.getByText('Shared body notes')).toBeInTheDocument();
+    expect(screen.queryByText('1/1 completed') !== null).toBe(type === 'checklist');
+  });
+
   it('does not render archived cards', () => {
     render(<ReadOnlyBoard board={makeBoard()} />);
     expect(screen.queryByText('Archived Card')).not.toBeInTheDocument();

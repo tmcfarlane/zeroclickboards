@@ -182,7 +182,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
           });
         }
 
-        if (initialData.content.type === 'image' && initialData.content.imageUrl &&
+        if (initialData.content.imageUrl &&
             !existing.some(a => a.url === initialData.content.imageUrl)) {
           existing.push({
             id: genId(),
@@ -215,9 +215,11 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         initialFormRef.current = structuredClone({
           title: initialData.title.trim(),
           description: initialDescription.trim() || undefined,
-          content: initialContentType === 'checklist'
-            ? { type: 'checklist', checklist: initialData.content.checklist || [] }
-            : { type: 'text', text: initialBodyText },
+          content: {
+            type: initialContentType,
+            text: initialBodyText,
+            checklist: initialData.content.checklist || [],
+          },
           targetDate: initialTargetDate ?? (initialData.targetDate || undefined),
           labels: initialData.labels || [],
           coverImage: existing.find((attachment) => attachment.isCover)?.url,
@@ -294,12 +296,11 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
       if (recurrence.frequency === 'monthly' && dayOfMonth !== undefined) submittedRecurrence.dayOfMonth = dayOfMonth;
     }
 
-    let content: CardContent;
-    if (contentType === 'checklist') {
-      content = { type: 'checklist', checklist };
-    } else {
-      content = { type: 'text', text: bodyText };
-    }
+    const content: CardContent = {
+      type: contentType === 'checklist' ? 'checklist' : 'text',
+      text: bodyText,
+      checklist,
+    };
 
     const coverAttachment = attachments.find(a => a.isCover);
 
@@ -502,11 +503,17 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
             <button
               type="button"
               onClick={() => setContentType(contentType === 'checklist' ? 'text' : 'checklist')}
+              aria-pressed={contentType === 'checklist'}
+              aria-describedby="checklist-visibility-hint"
+              title={contentType === 'checklist' ? 'Hide checklist (keeps its items)' : 'Show checklist'}
               className={pillClass(contentType === 'checklist')}
             >
               <ListTodo className="w-3.5 h-3.5" />
               Checklist
             </button>
+            <span id="checklist-visibility-hint" className="sr-only">
+              Hiding the checklist keeps its items. Show it again to edit them, or remove individual items to delete them.
+            </span>
             <button
               type="button"
               onClick={() => {
@@ -753,22 +760,20 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
             />
           </div>
 
-          {contentType === 'text' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <AlignLeft className="w-4 h-4 text-[#A8B2B2]" />
-                <label htmlFor="card-body-text" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Body text</label>
-              </div>
-              <Textarea
-                id="card-body-text"
-                value={bodyText}
-                onChange={(e) => setBodyText(e.target.value)}
-                placeholder="Add body text..."
-                className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 min-h-[100px] resize-y"
-                rows={4}
-              />
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <AlignLeft className="w-4 h-4 text-[#A8B2B2]" />
+              <label htmlFor="card-body-text" className="text-xs font-medium text-[#A8B2B2] uppercase tracking-wider">Body text</label>
             </div>
-          )}
+            <Textarea
+              id="card-body-text"
+              value={bodyText}
+              onChange={(e) => setBodyText(e.target.value)}
+              placeholder="Add body text..."
+              className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 min-h-[100px] resize-y"
+              rows={4}
+            />
+          </div>
 
           {/* Checklist Section */}
           {contentType === 'checklist' && (
@@ -785,6 +790,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                     className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 group transition-colors"
                   >
                     <Checkbox
+                      aria-label={`Complete ${item.text}`}
                       checked={item.completed}
                       onCheckedChange={() => toggleChecklistItem(item.id)}
                       className="border-white/20 data-[state=checked]:bg-[#78fcd6] data-[state=checked]:border-[#78fcd6]"
@@ -798,8 +804,9 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                     </span>
                     <button
                       type="button"
+                      aria-label={`Remove checklist item: ${item.text}`}
                       onClick={() => removeChecklistItem(item.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded text-[#A8B2B2] hover:text-red-400 transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-1 hover:bg-white/10 rounded text-[#A8B2B2] hover:text-red-400 transition-opacity"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -809,6 +816,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
 
               <div className="flex gap-2">
                 <Input
+                  aria-label="New checklist item"
                   value={newChecklistItem}
                   onChange={(e) => setNewChecklistItem(e.target.value)}
                   placeholder="Add an item..."
@@ -817,6 +825,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                 />
                 <Button
                   type="button"
+                  aria-label="Add checklist item"
                   onClick={addChecklistItem}
                   variant="outline"
                   className="border-white/10 text-[#F2F7F7] hover:bg-white/5 h-9 px-3"
@@ -1011,6 +1020,12 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
                 setBodyText(tpl.card.content.text ?? '');
                 setContentType(tpl.card.content.type === 'image' ? 'text' : tpl.card.content.type);
                 setChecklist(tpl.card.content.checklist ? tpl.card.content.checklist.map(item => ({ ...item, id: genId(), completed: false })) : []);
+                const imageUrl = tpl.card.content.imageUrl;
+                if (imageUrl) {
+                  setAttachments((existing) => existing.some((attachment) => attachment.url === imageUrl)
+                    ? existing
+                    : [...existing, { id: genId(), name: 'Image', url: imageUrl, addedAt: new Date().toISOString(), isCover: false }]);
+                }
                 setLabels(tpl.card.labels || []);
                 if (tpl.card.labels && tpl.card.labels.length > 0) setShowLabels(true);
               }} />

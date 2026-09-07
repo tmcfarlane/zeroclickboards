@@ -243,12 +243,8 @@ function mergeValue(base: unknown, local: unknown, remote: unknown, path: string
   if (local === undefined || remote === undefined) return copy(context.conflict(path, local, remote));
   if (isObject(local) && isObject(remote) && (base === undefined || isObject(base))) {
     const before = isObject(base) ? base : {};
-    // Switching the visible content variant conflicts with an edit to the old
-    // variant as a whole. Resolving only its hidden body field would retain the
-    // new type and make the explicitly selected old-variant edit invisible.
-    if (path.endsWith('.card.content') && local.type !== remote.type) {
-      return copy(context.conflict(path, local, remote));
-    }
+    // Body text and retained checklist items are independent of checklist
+    // visibility. Merge each field (and each checklist item) normally.
     // A frequency switch and an edit to the old schedule cannot be combined
     // field by field: selecting weekdays must also retain their weekly rule.
     if (kind === 'recurrence' && local.frequency !== remote.frequency) {

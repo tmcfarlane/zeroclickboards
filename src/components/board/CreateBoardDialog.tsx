@@ -90,17 +90,17 @@ function sleepAbortable(ms: number, signal: AbortSignal): Promise<void> {
 
 function aiCardToCard(tmpl: AITemplateCard): Card {
   const now = new Date().toISOString();
-  const content: CardContent =
-    tmpl.content.type === 'checklist'
-      ? {
-          type: 'checklist',
-          checklist: (tmpl.content.checklist ?? []).map((item) => ({
-            id: uuidv4(),
-            text: item.text,
-            completed: false,
-          })),
-        }
-      : { type: 'text', text: tmpl.content.text ?? '' };
+  const content: CardContent = {
+    type: tmpl.content.type,
+    text: tmpl.content.text ?? '',
+    ...(tmpl.content.checklist || tmpl.content.type === 'checklist' ? {
+      checklist: (tmpl.content.checklist ?? []).map((item) => ({
+        id: uuidv4(),
+        text: item.text,
+        completed: false,
+      })),
+    } : {}),
+  };
 
   return {
     id: uuidv4(),

@@ -210,13 +210,13 @@ export function buildServer(
     'update_card',
     {
       title: 'Update card',
-      description: 'Update fields of a card. Description and body text are separate; omitted fields are preserved.',
+      description: 'Update fields of a card. Description and body text are separate; omitted fields are preserved. Body edits retain checklist items and metadata, and migrate legacy content images to attachments.',
       inputSchema: {
         boardId: z.string(),
         cardId: z.string(),
         title: z.string().optional(),
         description: z.string().optional().describe('Short description; empty string clears it'),
-        text: z.string().optional().describe('Card body text; empty string clears it'),
+        text: z.string().optional().describe('Body text independent of any checklist; empty string clears only the body'),
         targetDate: targetDateSchema.optional(),
       },
     },
@@ -225,7 +225,7 @@ export function buildServer(
         db.updateCard(client, boardId, cardId, {
           ...(title !== undefined ? { title } : {}),
           ...(description !== undefined ? { description } : {}),
-          ...(body !== undefined ? { content: textToContent(body) } : {}),
+          ...(body !== undefined ? { text: body } : {}),
           ...(targetDate !== undefined ? { targetDate } : {}),
         }),
       ),
@@ -263,13 +263,13 @@ export function buildServer(
 
   server.registerTool(
     'add_checklist_item',
-    { title: 'Add checklist item', description: 'Add a checklist item to a card (converts the card content to a checklist).', inputSchema: { boardId: z.string(), cardId: z.string(), text: z.string() } },
+    { title: 'Add checklist item', description: 'Enable a card checklist and append an item, preserving existing items, body text, and metadata. Legacy content images become attachments. Invalid stored checklists must be repaired first.', inputSchema: { boardId: z.string(), cardId: z.string(), text: z.string() } },
     async ({ boardId, cardId, text: itemText }) => safe(() => db.addChecklistItem(client, boardId, cardId, itemText)),
   );
 
   server.registerTool(
     'toggle_checklist_item',
-    { title: 'Toggle checklist item', description: 'Toggle (or set) a checklist item completed state.', inputSchema: { boardId: z.string(), cardId: z.string(), itemId: z.string(), completed: z.boolean().optional() } },
+    { title: 'Toggle checklist item', description: 'Toggle (or set) an item in the active checklist. Inactive or malformed checklists are rejected without a write.', inputSchema: { boardId: z.string(), cardId: z.string(), itemId: z.string(), completed: z.boolean().optional() } },
     async ({ boardId, cardId, itemId, completed }) => safe(() => db.toggleChecklistItem(client, boardId, cardId, itemId, completed)),
   );
 

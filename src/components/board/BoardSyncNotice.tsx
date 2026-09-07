@@ -28,6 +28,11 @@ function readableValue(value: unknown, path: string): string {
   if (value === undefined) return 'Removed';
   if (value === null) return 'None';
   if (value === '') return '(Empty text)';
+  if (/^data\.cards\[[^\]]+\]\.card\.content\.type$/.test(path)) {
+    if (value === 'text') return 'Checklist hidden';
+    if (value === 'checklist') return 'Checklist shown';
+    if (value === 'image') return 'Checklist hidden (image card)';
+  }
   if (typeof value === 'string') return value;
   if (/^data\.cards\[[^\]]+\]\.card\.recurrence$/.test(path) && typeof value === 'object' && !Array.isArray(value)) {
     const rule = value as Partial<RecurrenceConfig>;
@@ -46,7 +51,7 @@ function conflictLabel(path: string, board: Board | undefined): string {
   const names: Record<string, string> = {
     name: 'Name', description: 'Description', 'data.background': 'Board background',
     'data.hiddenColumnIds': 'Hidden columns', 'data.columns.order': 'Column order',
-    title: 'Title', content: 'Content', 'content.text': 'Body text', labels: 'Labels',
+    title: 'Title', content: 'Content', 'content.text': 'Body text', 'content.type': 'Checklist visibility', labels: 'Labels',
     targetDate: 'Due date', coverImage: 'Cover image', attachments: 'Attachments',
     recurrence: 'Recurrence', isArchived: 'Archived status', archivedAt: 'Archive date',
     columnId: 'Column', 'cards.order': 'Card order',

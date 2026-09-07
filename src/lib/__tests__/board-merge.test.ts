@@ -6,7 +6,7 @@ type TestCard = {
   title: string;
   updatedAt: string;
   description?: string;
-  content?: { type: string; text?: string; checklist?: { id: string; text: string; completed: boolean }[] };
+  content?: { type: string; text?: string; checklist?: { id: string; text: string; completed: boolean }[]; [key: string]: unknown };
   attachments?: { id: string; name: string; url: string; isCover?: boolean; [key: string]: unknown }[];
   labels?: string[];
   recurrence?: { frequency: string; interval: number; daysOfWeek?: number[]; dayOfMonth?: number; [key: string]: unknown };
@@ -191,18 +191,88 @@ describe('mergeBoardDocuments', () => {
     ]);
   });
 
-  it.each(['local', 'remote'] as const)('keeps the selected content visible after a type-switch conflict resolved to %s', (choice) => {
+  it('merges enabling a checklist with an independent body edit', () => {
     const base = board();
     base.data.columns[0].cards[0].content = { type: 'text', text: 'Original text' };
     const local = clone(base), remote = clone(base);
-    local.data.columns[0].cards[0].content = { type: 'checklist', checklist: [{ id: 'item', text: 'Checklist', completed: false }] };
+    local.data.columns[0].cards[0].content = { type: 'checklist', text: 'Original text', checklist: [{ id: 'item', text: 'Checklist', completed: false }] };
     local.data.columns[0].cards[0].title = 'Independent local title';
     remote.data.columns[0].cards[0].content!.text = 'Remote text';
     remote.data.columns[0].cards[0].description = 'Independent remote description';
-    const { document, conflicts } = mergeBoardDocuments(base, local, remote, choice);
-    expect(conflicts.map((entry) => entry.path)).toEqual(['data.cards[a].card.content']);
-    expect(byId(document, 'a')?.content).toEqual((choice === 'local' ? local : remote).data.columns[0].cards[0].content);
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote);
+    expect(conflicts).toEqual([]);
+    expect(byId(document, 'a')?.content).toEqual({ type: 'checklist', text: 'Remote text', checklist: [{ id: 'item', text: 'Checklist', completed: false }] });
     expect(byId(document, 'a')).toMatchObject({ title: 'Independent local title', description: 'Independent remote description' });
+  });
+
+  it.each(['local', 'remote'] as const)('retains incoming checklist edits and additions when %s hides the checklist, then restores them on re-enable', (hidingSide) => {
+    const base = board();
+    base.data.columns[0].cards[0].content = {
+      type: 'checklist', text: 'Shared body', checklist: [{ id: 'item', text: 'Original item', completed: false }],
+    };
+    const local = clone(base), remote = clone(base);
+    const hidden = hidingSide === 'local' ? local : remote;
+    const edited = hidingSide === 'local' ? remote : local;
+    byId(hidden, 'a')!.content!.type = 'text';
+    byId(edited, 'a')!.content!.checklist = [
+      { id: 'item', text: 'Incoming item edit', completed: true },
+      { id: 'added', text: 'Incoming addition', completed: false },
+    ];
+    const merged = mergeBoardDocuments(base, local, remote);
+    expect(merged.conflicts).toEqual([]);
+    expect(byId(merged.document, 'a')!.content).toEqual({
+      type: 'text', text: 'Shared body', checklist: byId(edited, 'a')!.content!.checklist,
+    });
+    const restored = clone(merged.document), incomingBody = clone(merged.document);
+    byId(restored, 'a')!.content!.type = 'checklist';
+    byId(incomingBody, 'a')!.content!.text = 'Newer body';
+    const reopened = mergeBoardDocuments(merged.document, restored, incomingBody);
+    expect(reopened.conflicts).toEqual([]);
+    expect(byId(reopened.document, 'a')!.content).toEqual({
+      type: 'checklist', text: 'Newer body', checklist: byId(edited, 'a')!.content!.checklist,
+    });
+  });
+
+  it.each(['local', 'remote'] as const)('resolves only competing body edits to %s while keeping checklist visibility and item edits', (choice) => {
+    const base = board();
+    base.data.columns[0].cards[0].content = {
+      type: 'checklist', text: 'Original body', checklist: [{ id: 'item', text: 'Original item', completed: false }],
+    };
+    const local = clone(base), remote = clone(base);
+    byId(local, 'a')!.content!.type = 'text';
+    byId(local, 'a')!.content!.text = 'Local body';
+    byId(remote, 'a')!.content!.text = 'Remote body';
+    byId(remote, 'a')!.content!.checklist![0].completed = true;
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote, choice);
+    expect(conflicts).toEqual([{ path: 'data.cards[a].card.content.text', local: 'Local body', remote: 'Remote body' }]);
+    expect(byId(document, 'a')!.content).toEqual({
+      type: 'text', text: choice === 'local' ? 'Local body' : 'Remote body',
+      checklist: [{ id: 'item', text: 'Original item', completed: true }],
+    });
+  });
+
+  it.each(['local', 'remote'] as const)('resolves a real type conflict to %s without discarding independent body, image, item, or metadata fields', (choice) => {
+    const base = board();
+    base.data.columns[0].cards[0].content = {
+      type: 'image', text: 'Original body', imageUrl: '/old.png', metadata: { retained: true },
+      checklist: [{ id: 'item', text: 'Original item', completed: false }],
+    };
+    const local = clone(base), remote = clone(base);
+    byId(local, 'a')!.content!.type = 'text';
+    byId(local, 'a')!.content!.imageUrl = '/new.png';
+    byId(local, 'a')!.content!.metadata = { retained: true, local: true };
+    byId(local, 'a')!.content!.checklist![0].text = 'Local item text';
+    byId(remote, 'a')!.content!.type = 'checklist';
+    byId(remote, 'a')!.content!.text = 'Remote body';
+    byId(remote, 'a')!.content!.metadata = { retained: true, remote: true };
+    byId(remote, 'a')!.content!.checklist![0].completed = true;
+    const { document, conflicts } = mergeBoardDocuments(base, local, remote, choice);
+    expect(conflicts).toEqual([{ path: 'data.cards[a].card.content.type', local: 'text', remote: 'checklist' }]);
+    expect(byId(document, 'a')!.content).toEqual({
+      type: choice === 'local' ? 'text' : 'checklist', text: 'Remote body', imageUrl: '/new.png',
+      checklist: [{ id: 'item', text: 'Local item text', completed: true }],
+      metadata: { retained: true, local: true, remote: true },
+    });
   });
 
   it('accepts a one-sided content-type change alongside an unrelated card edit', () => {

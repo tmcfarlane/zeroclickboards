@@ -17,7 +17,7 @@ const LABEL_COLORS: Record<CardLabel, string> = {
 
 function ReadOnlyCard({ card }: { card: Card }) {
   if (card.isArchived) return null;
-  const description = card.description?.trim() || (card.content?.type === 'text' ? card.content.text?.trim() : undefined);
+  const description = card.description?.trim() || card.content?.text?.trim();
   const dueDate = card.targetDate ? parseLocalDate(card.targetDate) : undefined;
 
   return (

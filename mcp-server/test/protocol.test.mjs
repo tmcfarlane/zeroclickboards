@@ -310,3 +310,74 @@ test('MCP archive reports repairable invalid legacy dates without mutating the b
   payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: row.id, cardId: 'card-a', title: 'Still editable' } }));
   assert.equal(state.row.data.columns[0].cards[0].targetDate, 'not-a-date');
 });
+
+test('MCP content tools advertise additive body edits and active-checklist requirements', async (t) => {
+  const { mcp } = await connect(t);
+  const { tools } = await mcp.listTools();
+  const update = tools.find((tool) => tool.name === 'update_card');
+  assert.match(update.inputSchema.properties.text.description, /independent of any checklist/);
+  assert.match(update.description, /retain checklist items and metadata/);
+  assert.match(tools.find((tool) => tool.name === 'add_checklist_item').description, /preserving existing items, body text/);
+  assert.match(tools.find((tool) => tool.name === 'toggle_checklist_item').description, /active checklist/);
+});
+
+test('MCP body edits, clears, additions and toggles preserve checklist and metadata through reads', async (t) => {
+  const row = makeBoard();
+  const item = { id: 'old', text: 'Stored task', completed: true, future: { keep: true } };
+  row.data.columns[0].cards[0].content = { type: 'text', text: 'Old body', checklist: [item], future: { keep: true } };
+  const { mcp } = await connect(t, { row });
+  payload(await mcp.callTool({ name: 'add_checklist_item', arguments: { boardId: row.id, cardId: 'card-a', text: 'New task' } }));
+  for (const text of ['New body', '']) {
+    payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: row.id, cardId: 'card-a', text } }));
+    const card = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: row.id, cardId: 'card-a' } }));
+    assert.equal(card.content.type, 'checklist');
+    assert.equal(card.content.text, text);
+    assert.deepEqual(card.content.checklist[0], item);
+    assert.equal(card.content.checklist.length, 2);
+    assert.deepEqual(card.content.future, { keep: true });
+  }
+  payload(await mcp.callTool({ name: 'toggle_checklist_item', arguments: { boardId: row.id, cardId: 'card-a', itemId: 'old', completed: false } }));
+  const resource = await mcp.readResource({ uri: 'zeroboard://board/board-1' });
+  const saved = JSON.parse(resource.contents[0].text).columns[0].cards[0];
+  assert.deepEqual(saved.content.checklist[0], { ...item, completed: false });
+  assert.equal(saved.content.text, '');
+});
+
+test('MCP legacy image body edits expose one attachment without changing the canonical cover', async (t) => {
+  const row = makeBoard();
+  const cover = 'https://example.com/cover.png', legacy = 'https://example.com/legacy.png';
+  Object.assign(row.data.columns[0].cards[0], { content: { type: 'image', imageUrl: legacy, future: { keep: true } }, coverImage: cover,
+    attachments: [{ id: 'cover', name: 'Keep name', url: cover, addedAt: '2026-01-01', isCover: true, future: { keep: true } }] });
+  const { mcp } = await connect(t, { row });
+  payload(await mcp.callTool({ name: 'update_card', arguments: { boardId: row.id, cardId: 'card-a', text: 'Body text' } }));
+  payload(await mcp.callTool({ name: 'add_checklist_item', arguments: { boardId: row.id, cardId: 'card-a', text: 'New task' } }));
+  const saved = payload(await mcp.callTool({ name: 'get_card', arguments: { boardId: row.id, cardId: 'card-a' } }));
+  assert.equal(saved.content.type, 'checklist');
+  assert.equal(saved.content.text, 'Body text');
+  assert.equal(saved.content.imageUrl, undefined);
+  assert.deepEqual(saved.content.future, { keep: true });
+  assert.equal(saved.coverImage, cover);
+  assert.deepEqual(saved.attachments[0], row.data.columns[0].cards[0].attachments[0]);
+  assert.equal(saved.attachments.filter((attachment) => attachment.url === legacy).length, 1);
+});
+
+test('MCP malformed or inactive checklist mutations return errors without writing', async (t) => {
+  for (const content of [
+    { type: 'checklist', checklist: 'old' },
+    { type: 'checklist', checklist: [{ id: 'task', text: 'Invalid', completed: 'true' }] },
+    { type: 'checklist', checklist: [{ id: 'task', text: 'One', completed: false }, { id: 'task', text: 'Two', completed: false }] },
+    { type: 'text', checklist: [{ id: 'task', text: 'Inactive', completed: false }] },
+  ]) {
+    const row = makeBoard(); row.data.columns[0].cards[0].content = content;
+    const { mcp, state } = await connect(t, { row });
+    const requests = [{ name: 'toggle_checklist_item', arguments: { boardId: row.id, cardId: 'card-a', itemId: 'task' } }];
+    if (content.type === 'checklist') requests.push({ name: 'add_checklist_item', arguments: { boardId: row.id, cardId: 'card-a', text: 'New task' } });
+    for (const request of requests) {
+      const result = await mcp.callTool(request);
+      assert.equal(result.isError, true);
+      assert.match(result.content[0].text, /invalid checklist|duplicate checklist|no active checklist/);
+    }
+    assert.deepEqual(state.row, row);
+    assert.equal(state.requests.filter((request) => request.method === 'PATCH').length, 0);
+  }
+});
