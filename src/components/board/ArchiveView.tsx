@@ -54,7 +54,8 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
                             ? {
                                 ...b,
                                 columns: b.columns.map((c) =>
-                                  c.id === columnId ? { ...c, cards: [...c.cards, card] } : c
+                                  c.id === columnId && !b.columns.some((column) => column.cards.some((existing) => existing.id === card.id))
+                                    ? { ...c, cards: [...c.cards, card] } : c
                                 ),
                                 updatedAt: new Date().toISOString(),
                               }
@@ -62,6 +63,7 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
                         ),
                       }));
                     });
+                    useBoardStore.getState().syncBoard(boardId);
                   },
                   redo: () => {
                     snapshot.forEach(({ card, columnId }) => {

@@ -2,9 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useBoardStore } from '../useBoardStore';
 import { useUndoStore } from '../useUndoStore';
 
-vi.mock('uuid', () => {
+vi.mock('uuid', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('uuid')>();
   let counter = 0;
   return {
+    ...actual,
     v4: vi.fn(() => `store-uuid-${++counter}`),
   };
 });
@@ -146,6 +148,14 @@ describe('useBoardStore', () => {
       expect(col.cards).toHaveLength(1);
       expect(col.cards[0].title).toBe('New Card');
       expect(cardId).toBeDefined();
+    });
+
+    it('creates independent description and body values', () => {
+      const cardId = useBoardStore.getState().addCard(boardId, columnId, 'Separate fields',
+        { type: 'text', text: 'Long body from the editor' }, undefined,
+        { description: 'Short summary' });
+      const card = useBoardStore.getState().boards[0].columns[0].cards.find((card) => card.id === cardId);
+      expect(card).toMatchObject({ description: 'Short summary', content: { type: 'text', text: 'Long body from the editor' } });
     });
 
     it('addCard with content and targetDate', () => {

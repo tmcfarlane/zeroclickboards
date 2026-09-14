@@ -51,9 +51,17 @@ describe('parseLocalDate', () => {
     expect(d.getDate()).toBe(31);
   });
 
-  it('falls back to Date constructor for non-matching formats', () => {
-    const d = parseLocalDate('2026-04-15T10:30:00Z');
-    expect(d instanceof Date).toBe(true);
-    expect(d.getFullYear()).toBe(2026);
+  it('retains the written calendar date of a valid ISO timestamp', () => {
+    const d = parseLocalDate('2026-04-15T23:30:00-08:00');
+    expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()]).toEqual([2026, 3, 15, 0]);
+  });
+
+  it.each(['not-a-date', '2026-02-31', '2026-04-15garbage'])('rejects %s without guessing or rolling to another day', (value) => {
+    expect(Number.isNaN(parseLocalDate(value).getTime())).toBe(true);
+  });
+
+  it('preserves early years instead of adding 1900', () => {
+    const d = parseLocalDate('0099-12-31');
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([99, 11, 31]);
   });
 });

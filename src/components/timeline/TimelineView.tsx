@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ViewToggle } from '@/components/board/ViewToggle';
 import { BoardSelector } from '@/components/board/BoardSelector';
-import { CardEditor, type CardEditorSaveData } from '@/components/board/CardEditor';
 import {
   Popover,
   PopoverAnchor,
@@ -517,12 +516,11 @@ interface TimelineCardItemProps {
 function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
   const { card, occurrenceDate, isRecurringInstance } = item;
   const isRecurring = !!card.recurrence;
-  const { editCard, removeCard } = useBoardStore();
+  const { editCard, openCardEditor } = useBoardStore();
   const { logActivity } = useActivityLogger();
 
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [titleDraft, setTitleDraft] = useState(card.title);
-  const [editingFull, setEditingFull] = useState(false);
 
   const {
     attributes,
@@ -581,33 +579,6 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
       logActivity(card.id, 'label_changed', { added, removed });
     }
     editCard(boardId, columnId, card.id, { labels: nextLabels });
-  };
-
-  const handleFullSave = (data: CardEditorSaveData) => {
-    if (data.title !== card.title) {
-      logActivity(card.id, 'renamed', { from: card.title, to: data.title });
-    }
-    const oldLabels = card.labels || [];
-    const newLabels = data.labels || [];
-    const addedLabels = newLabels.filter((l) => !oldLabels.includes(l));
-    const removedLabels = oldLabels.filter((l) => !newLabels.includes(l));
-    if (addedLabels.length > 0 || removedLabels.length > 0) {
-      logActivity(card.id, 'label_changed', { added: addedLabels, removed: removedLabels });
-    }
-    if (data.targetDate !== card.targetDate) {
-      logActivity(card.id, 'date_changed', { from: card.targetDate || null, to: data.targetDate || null });
-    }
-    editCard(boardId, columnId, card.id, {
-      title: data.title,
-      description: data.description,
-      content: data.content,
-      targetDate: data.targetDate,
-      labels: data.labels,
-      coverImage: data.coverImage,
-      attachments: data.attachments,
-      recurrence: data.recurrence,
-    });
-    setEditingFull(false);
   };
 
   const recurringTitle = isRecurring
@@ -718,7 +689,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
               size="sm"
               onClick={() => {
                 setPopoverOpen(false);
-                setEditingFull(true);
+                openCardEditor(boardId, card.id);
               }}
               className="w-full h-8 border-white/10 bg-white/5 text-[#F2F7F7] hover:bg-white/10"
             >
@@ -729,20 +700,6 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
         </PopoverContent>
       </Popover>
 
-      {editingFull && (
-        <CardEditor
-          isOpen={editingFull}
-          onClose={() => setEditingFull(false)}
-          onSave={handleFullSave}
-          onDelete={() => {
-            removeCard(boardId, columnId, card.id);
-            setEditingFull(false);
-          }}
-          mode="edit"
-          cardId={card.id}
-          initialData={card}
-        />
-      )}
     </>
   );
 }

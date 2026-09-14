@@ -20,6 +20,14 @@ export interface CardContent {
   imageUrl?: string;
 }
 
+export interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  addedAt: string;
+  isCover?: boolean;
+}
+
 export interface RecurrenceConfig {
   frequency: 'daily' | 'weekly' | 'monthly';
   interval: number;
@@ -35,6 +43,7 @@ export interface Card {
   targetDate?: string;
   labels?: CardLabel[];
   coverImage?: string;
+  attachments?: Attachment[];
   recurrence?: RecurrenceConfig;
   isArchived?: boolean;
   archivedAt?: string;

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useBoardStore } from "@/store/useBoardStore";
 import { useAuthContext } from "@/components/auth/AuthProvider";
-import type { AICommand, AIMessage } from "@/types";
+import type { AICommand, AIMessage, Card } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -720,7 +720,17 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
     }
   }, [messages]);
 
-  const executeCommand = (command: AICommand): string => {
+  const executeCommand = (command: AICommand, requestUserId: string | null): string => {
+    const currentState = useBoardStore.getState();
+    if (currentState.currentUserId !== requestUserId) {
+      return "This request was canceled because the signed-in account changed.";
+    }
+    // Keep the requested board, but read its latest cards after the AI response
+    // arrives. A render snapshot can predate incoming MCP edits and card moves.
+    const activeBoard = currentState.boards.find((board) => board.id === activeBoardId);
+    if (activeBoardId && !activeBoard && command.type !== "create_board") {
+      return "The requested board is no longer available.";
+    }
     const getString = (key: string) => {
       const value = command.params[key];
       return typeof value === "string" ? value : undefined;
@@ -1259,10 +1269,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
         const buildChecklist = (existingContent: import("@/types").CardContent) => {
           const newItems = items.map((text) => ({ id: uuidv4(), text, completed: false }));
-          if (existingContent.type === "checklist" && existingContent.checklist) {
-            return { type: "checklist" as const, checklist: [...existingContent.checklist, ...newItems] };
-          }
-          return { type: "checklist" as const, checklist: newItems };
+          return {
+            ...existingContent,
+            type: "checklist" as const,
+            checklist: [...(Array.isArray(existingContent.checklist) ? existingContent.checklist : []), ...newItems],
+          };
         };
 
         if (allCards) {
@@ -1333,11 +1344,14 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
         const updates: Parameters<typeof editCard>[3] = {};
         if (newTitle !== undefined) updates.title = newTitle;
         if (description !== undefined) updates.description = description;
-        if (bodyText !== undefined) updates.content = { type: "text", text: bodyText };
+        const updatesFor = (card: Card) => ({
+          ...updates,
+          ...(bodyText !== undefined ? { content: { ...card.content, text: bodyText } } : {}),
+        });
 
         const editHit = cardById();
         if (editHit) {
-          editCard(activeBoardId, editHit.column.id, editHit.card.id, updates);
+          editCard(activeBoardId, editHit.column.id, editHit.card.id, updatesFor(editHit.card));
           lastCardTitle.current = newTitle ?? editHit.card.title;
           return `Updated "${editHit.card.title}"`;
         }
@@ -1350,7 +1364,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
             c.title.toLowerCase().includes(cardTitle.toLowerCase()),
           );
           if (card) {
-            editCard(activeBoardId, column.id, card.id, updates);
+            editCard(activeBoardId, column.id, card.id, updatesFor(card));
             lastCardTitle.current = newTitle ?? card.title;
             return `Updated "${card.title}"`;
           }
@@ -1429,6 +1443,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
   const handleSend = async (overrideText?: string) => {
     const text = overrideText || input.trim();
     if (!text || isProcessing) return;
+    const requestUserId = useBoardStore.getState().currentUserId;
 
     const userMessage: AIMessage = {
       id: uuidv4(),
@@ -1518,7 +1533,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
 
     const results: string[] = [];
     for (let i = 0; i < commands.length; i++) {
-      const result = executeCommand(commands[i]);
+      const result = executeCommand(commands[i], requestUserId);
       results.push(result);
       if (i < commands.length - 1) {
         await new Promise((r) => setTimeout(r, 300));

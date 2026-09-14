@@ -92,12 +92,17 @@ describe('templateCardToCard', () => {
     expect(card.updatedAt).toBeDefined();
   });
 
-  it('deep clones content', () => {
-    const templateCard = BUILT_IN_CARD_TEMPLATES[0].card;
+  it('deep clones simultaneous body text and checklist items', () => {
+    const templateCard = {
+      ...BUILT_IN_CARD_TEMPLATES[0].card,
+      content: { ...BUILT_IN_CARD_TEMPLATES[0].card.content, text: 'Body retained alongside checklist items' },
+    };
     const card = templateCardToCard(templateCard);
 
     expect(card.content).not.toBe(templateCard.content);
     expect(card.content).toEqual(templateCard.content);
+    card.content.checklist![0].text = 'Edited copy';
+    expect(templateCard.content.checklist![0].text).not.toBe('Edited copy');
   });
 
   it('copies labels as new array', () => {

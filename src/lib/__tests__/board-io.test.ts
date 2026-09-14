@@ -6,6 +6,7 @@ import {
   type ZeroBoardExport,
 } from '../board-io';
 import type { Board } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 vi.mock('uuid', () => {
   let counter = 0;
@@ -191,6 +192,95 @@ describe('validateBoardJSON', () => {
 });
 
 describe('importBoardFromJSON', () => {
+  it('rejects a recurrence that would create a backwards occurrence before generating any imported cards', () => {
+    const payload = JSON.parse(exportBoardToJSON(makeSampleBoard()));
+    payload.board.columns[1].cards.push({
+      title: 'Backwards schedule', content: { type: 'text', text: 'Keep this body' }, targetDate: '2026-01-31',
+      recurrence: { frequency: 'monthly', interval: 1, dayOfMonth: -1 },
+    });
+    const before = structuredClone(payload);
+    const idsBefore = vi.mocked(uuidv4).mock.calls.length;
+    expect(validateBoardJSON(payload)).toEqual({
+      valid: false,
+      error: 'Column "Done", card "Backwards schedule": invalid recurrence. Use a daily, weekly, or monthly schedule with an interval from 1 to 99 and valid day selections.',
+    });
+    expect(() => importBoardFromJSON(payload)).toThrow('invalid recurrence');
+    expect(vi.mocked(uuidv4).mock.calls).toHaveLength(idsBefore);
+    expect(payload).toEqual(before);
+  });
+
+  it.each([
+    {}, { frequency: 'yearly', interval: 1 },
+    { frequency: 'daily', interval: 0 }, { frequency: 'daily', interval: 100 }, { frequency: 'daily', interval: 1.5 },
+    { frequency: 'daily', interval: 1, daysOfWeek: [] },
+    { frequency: 'weekly', interval: 1, dayOfMonth: 1 },
+    { frequency: 'weekly', interval: 1, daysOfWeek: [1, 1] },
+    { frequency: 'weekly', interval: 1, daysOfWeek: [7] },
+    { frequency: 'monthly', interval: 1, daysOfWeek: [1] },
+    { frequency: 'monthly', interval: 1, dayOfMonth: 32 },
+    { frequency: 'monthly', interval: 1, dayOfMonth: 1.5 },
+    { frequency: 'monthly', interval: 1, dayOfMonth: '1' },
+    { frequency: 'daily', interval: 1, unsupported: true },
+    'daily', false,
+  ])('rejects imported schedules outside the shared recurrence contract: %j', (recurrence) => {
+    const payload = JSON.parse(exportBoardToJSON(makeSampleBoard()));
+    payload.board.columns[0].cards[0].recurrence = recurrence;
+    const validation = validateBoardJSON(payload);
+    expect(validation.valid).toBe(false);
+    if (!validation.valid) expect(validation.error).toContain('Column "To Do", card "Test Card": invalid recurrence');
+    expect(() => importBoardFromJSON(payload)).toThrow('invalid recurrence');
+  });
+
+  it('normalizes valid imported weekdays without mutating the source schedule or other fields', () => {
+    const payload = JSON.parse(exportBoardToJSON(makeSampleBoard()));
+    payload.board.columns[0].cards[0].recurrence = { frequency: 'weekly', interval: 2, daysOfWeek: [5, 0, 3] };
+    const before = structuredClone(payload);
+    expect(validateBoardJSON(payload).valid).toBe(true);
+    const imported = importBoardFromJSON(payload).columns[0].cards[0];
+    expect(imported.recurrence).toEqual({ frequency: 'weekly', interval: 2, daysOfWeek: [0, 3, 5] });
+    expect(imported.description).toBe('Card desc');
+    expect(imported.targetDate).toBe('2026-04-15');
+    expect(imported.content.checklist?.map((item) => item.completed)).toEqual([true, false]);
+    expect(payload).toEqual(before);
+  });
+
+  it.each([
+    { frequency: 'daily', interval: 99 },
+    { frequency: 'weekly', interval: 1 },
+    { frequency: 'weekly', interval: 1, daysOfWeek: [] },
+    { frequency: 'monthly', interval: 1 },
+    { frequency: 'monthly', interval: 1, dayOfMonth: 31 },
+  ])('preserves valid optional recurrence selections: %j', (recurrence) => {
+    const payload = JSON.parse(exportBoardToJSON(makeSampleBoard()));
+    payload.board.columns[0].cards[0].recurrence = recurrence;
+    expect(importBoardFromJSON(payload).columns[0].cards[0].recurrence).toEqual(recurrence);
+  });
+
+  it.each([undefined, null])('treats omitted or null imported recurrence as no schedule: %s', (recurrence) => {
+    const payload = JSON.parse(exportBoardToJSON(makeSampleBoard()));
+    if (recurrence === undefined) delete payload.board.columns[0].cards[0].recurrence;
+    else payload.board.columns[0].cards[0].recurrence = null;
+    expect(validateBoardJSON(payload).valid).toBe(true);
+    expect(importBoardFromJSON(payload).columns[0].cards[0]).not.toHaveProperty('recurrence');
+  });
+
+  it.each(['not-a-date', '2026-02-31', '2026-13-01', '2026-04-15garbage', '2026-04-15T25:00:00Z', 123])('rejects an invalid imported due date before creating cards: %s', (date) => {
+    const payload = JSON.parse(exportBoardToJSON(makeSampleBoard()));
+    payload.board.columns[0].cards[0].targetDate = date;
+    const validation = validateBoardJSON(payload);
+    expect(validation).toEqual({ valid: false, error: 'Column "To Do", card "Test Card": invalid due date. Use a real calendar date such as 2026-06-03.' });
+    expect(() => importBoardFromJSON(payload)).toThrow('invalid due date');
+  });
+
+  it.each(['2024-02-29T23:30:00-08:00', '0099-12-31'])('normalizes a valid imported calendar date without changing its day: %s', (date) => {
+    const payload = JSON.parse(exportBoardToJSON(makeSampleBoard()));
+    payload.board.columns[0].cards[0].targetDate = date;
+    expect(validateBoardJSON(payload).valid).toBe(true);
+    const imported = importBoardFromJSON(payload);
+    expect(imported.columns[0].cards[0].targetDate).toBe(date.split('T')[0]);
+    expect(payload.board.columns[0].cards[0].targetDate).toBe(date);
+  });
+
   it('generates new IDs for columns and cards', () => {
     const payload: ZeroBoardExport = {
       format: 'zeroboard',

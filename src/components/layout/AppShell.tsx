@@ -8,6 +8,8 @@ import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
 import { KanbanBoard } from '@/components/board/KanbanBoard';
 import { BoardSkeleton } from '@/components/board/BoardSkeleton';
+import { ActiveCardEditor } from '@/components/board/ActiveCardEditor';
+import { BoardSyncNotice } from '@/components/board/BoardSyncNotice';
 import { TimelineView } from '@/components/timeline/TimelineView';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
@@ -30,6 +32,8 @@ export function AppShell() {
     getActiveBoard,
     getBoardsForUser,
     setCurrentUserId,
+    boardSyncStates,
+    cardEditorSession,
     remoteStatus,
     refreshFromRemote
   } = useBoardStore();
@@ -43,6 +47,7 @@ export function AppShell() {
 
   const activeBoard = getActiveBoard();
   const userBoards = getBoardsForUser();
+  const hasUnsavedChanges = !!cardEditorSession || Object.values(boardSyncStates).some((state) => state.status !== 'saved');
   const repoUrl = import.meta.env.VITE_GITHUB_REPO_URL as string | undefined;
   const searchInputId = 'board-search-input';
 
@@ -67,10 +72,23 @@ export function AppShell() {
   }, [isLoaded, userId, setCurrentUserId]);
 
   useEffect(() => {
-    if (isSignedIn && remoteStatus === 'error') {
+    if (!isSignedIn) return;
+    const refreshOnFocus = () => {
       void refreshFromRemote();
-    }
-  }, [isSignedIn, remoteStatus, refreshFromRemote]);
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [isSignedIn, refreshFromRemote]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [hasUnsavedChanges]);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -88,13 +106,13 @@ export function AppShell() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (isSignedIn && remoteStatus === 'ready' && userBoards.length === 0) {
+    if (isSignedIn && remoteStatus === 'ready' && userBoards.length === 0 && !cardEditorSession) {
       const boardId = createBoard('My First Project', 'Welcome to ZeroBoard!');
       setActiveBoard(boardId);
     } else if (!activeBoardId && userBoards.length > 0) {
       setActiveBoard(userBoards[0].id);
     }
-  }, [userBoards, activeBoardId, createBoard, setActiveBoard, isSignedIn, isLoaded, remoteStatus]);
+  }, [userBoards, activeBoardId, createBoard, setActiveBoard, isSignedIn, isLoaded, remoteStatus, cardEditorSession]);
 
   const handleAIClick = () => {
     setIsAIOpen((v) => !v);
@@ -166,6 +184,7 @@ export function AppShell() {
       <div className="flex-1 min-h-0 flex overflow-hidden">
         <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} onUpgrade={() => setIsUpgradePromptOpen(true)} />
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {activeBoard ? <BoardSyncNotice boardId={activeBoard.id} /> : null}
           <main className="flex-1 min-h-0 overflow-hidden">
             {remoteStatus === 'loading' && !activeBoard ? (
               <BoardSkeleton />
@@ -206,6 +225,7 @@ export function AppShell() {
       </div>
 
 
+      <ActiveCardEditor />
       <AIUpgradePrompt isOpen={isUpgradePromptOpen} onOpenChange={setIsUpgradePromptOpen} />
       <KeyboardShortcutsHelp isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <SignInModal isOpen={isSignInModalOpen} onOpenChange={setIsSignInModalOpen} />
