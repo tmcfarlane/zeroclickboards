@@ -123,10 +123,10 @@ function documentToBoard(board: Board, document: BoardDocument): Board {
   };
 }
 
-/** Replay an editor change against the latest board, keeping fields changed by
- * another client while applying the recorded form delta. This makes undo/redo
+/** Replay a board change against the latest board, keeping fields changed by
+ * another client while applying the recorded delta. This makes undo/redo
  * safe when MCP or realtime updates arrive after the form was opened. */
-function replayEditorDocument(boardId: string, from: BoardDocument, to: BoardDocument): void {
+function replayBoardDocument(boardId: string, from: BoardDocument, to: BoardDocument): void {
   const current = useBoardStore.getState().boards.find((board) => board.id === boardId);
   if (!current) return;
   const currentDocument = boardToDocument(current);
@@ -140,6 +140,54 @@ function replayEditorDocument(boardId: string, from: BoardDocument, to: BoardDoc
   useBoardStore.setState((state) => ({
     boards: state.boards.map((board) => board.id === boardId ? documentToBoard(board, merged.document) : board),
   }));
+}
+
+/** Archive the selected sources and add their successors in one local/sync/undo
+ * transaction. Validate every copy before changing any part of the board. */
+function archiveBoardCards(board: Board, cardIds: string[], description: string): number | undefined {
+  const selected = new Set(cardIds);
+  const sources = board.columns.flatMap((column) => column.cards).filter((card) => selected.has(card.id) && !card.isArchived);
+  if (!sources.length) return;
+  const existing = new Set(board.columns.flatMap((column) => column.cards.map((card) => card.id)));
+  const copies = new Map<string, Card>();
+  for (const card of sources) {
+    if (!card.recurrence) continue;
+    try {
+      const copy = createRecurringCardCopy(card);
+      // A restored source must reuse its successor wherever it now lives,
+      // including if that successor has already been archived.
+      if (!existing.has(copy.id)) {
+        copies.set(card.id, copy);
+        existing.add(copy.id);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Correct its due date before archiving.';
+      toast.error(`Cannot archive “${card.title}”: ${reason}`);
+      return;
+    }
+  }
+  const now = new Date().toISOString();
+  const before = structuredClone(boardToDocument(board));
+  const after = structuredClone(boardToDocument({
+    ...board,
+    columns: board.columns.map((column) => ({
+      ...column,
+      cards: [
+        ...column.cards.map((card) => selected.has(card.id) && !card.isArchived
+          ? { ...card, isArchived: true, archivedAt: now, updatedAt: now } : card),
+        ...column.cards.flatMap((card) => copies.has(card.id) ? [copies.get(card.id)!] : []),
+      ],
+    })),
+  }));
+  useBoardStore.setState((state) => ({ boards: state.boards.map((current) => current.id === board.id
+    ? { ...documentToBoard(current, after), updatedAt: now } : current) }));
+  scheduleBoardSync(board.id);
+  useUndoStore.getState().pushAction({
+    description,
+    undo: () => replayBoardDocument(board.id, after, before),
+    redo: () => replayBoardDocument(board.id, before, after),
+  });
+  return copies.size;
 }
 
 function rowToSnapshot(row: BoardRow): BoardSnapshot {
@@ -506,8 +554,8 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       if (!previousCard || ['conflict', 'deleted', 'error'].includes(get().boardSyncStates[session.boardId]?.status ?? '')) return;
       useUndoStore.getState().pushAction({
         description: `Edit card '${previousCard.title}'`,
-        undo: () => replayEditorDocument(session.boardId, afterDocument, beforeDocument),
-        redo: () => replayEditorDocument(session.boardId, beforeDocument, afterDocument),
+        undo: () => replayBoardDocument(session.boardId, afterDocument, beforeDocument),
+        redo: () => replayBoardDocument(session.boardId, beforeDocument, afterDocument),
       });
     };
     if (get().currentUserId && boardSync) {
@@ -886,97 +934,19 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     scheduleBoardSync(boardId);
   },
 
-  archiveCard: (boardId, columnId, cardId) => {
-    // Look up card BEFORE archiving to check for recurrence
-    const board = get().boards.find((b) => b.id === boardId);
-    const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
-    columnId = column?.id ?? columnId;
-    const card = column?.cards.find((c) => c.id === cardId);
-    if (!card) return;
-    const hasRecurrence = card?.recurrence && !card.isArchived;
-    let newCard: Card | undefined;
-    try {
-      if (hasRecurrence) newCard = createRecurringCardCopy(card);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Correct the due date before archiving this recurring card.');
-      return;
-    }
-
-    get().editCard(boardId, columnId, cardId, { isArchived: true, archivedAt: new Date().toISOString() });
-
-    // If card has recurrence, create a new copy in the same column
-    if (newCard) {
-      const recurringCopy = newCard;
-      set((state) => ({
-        boards: state.boards.map((b) =>
-          b.id === boardId
-            ? {
-                ...b,
-                columns: b.columns.map((c) =>
-                  c.id === columnId ? { ...c, cards: [...c.cards, recurringCopy] } : c
-                ),
-                updatedAt: new Date().toISOString(),
-              }
-            : b
-        ),
-      }));
-      scheduleBoardSync(boardId);
-      toast.success('Card archived — recurring copy created');
-    } else {
-      toast.success('Card archived');
-    }
-
-    // editCard already pushed an undo action — replace its description with a cleaner one
-    const undoStore = useUndoStore.getState();
-    const lastAction = undoStore.undoStack[undoStore.undoStack.length - 1];
-    if (lastAction) {
-      useUndoStore.setState((s) => ({
-        undoStack: [...s.undoStack.slice(0, -1), { ...lastAction, description: `Archive card` }],
-      }));
-    }
+  archiveCard: (boardId, _columnId, cardId) => {
+    const board = get().boards.find((candidate) => candidate.id === boardId);
+    if (!board) return;
+    const copies = archiveBoardCards(board, [cardId], 'Archive card');
+    if (copies !== undefined) toast.success(copies ? 'Card archived — recurring copy created' : 'Card archived');
   },
 
   archiveAllCards: (boardId, columnId) => {
-    const now = new Date().toISOString();
-    const board = get().boards.find((b) => b.id === boardId);
-    const column = board?.columns.find((c) => c.id === columnId);
-    const recurringCards = column?.cards.filter((c) => c.recurrence && !c.isArchived) || [];
-    const newRecurringCards: Card[] = [];
-    for (const card of recurringCards) {
-      try {
-        newRecurringCards.push(createRecurringCardCopy(card));
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : 'Correct its due date before archiving.';
-        toast.error(`Cannot archive “${card.title}”: ${reason}`);
-        return;
-      }
-    }
-
-    set((state) => ({
-      boards: state.boards.map((b) =>
-        b.id === boardId
-          ? {
-              ...b,
-              columns: b.columns.map((c) =>
-                c.id === columnId
-                  ? {
-                      ...c,
-                      cards: [
-                        ...c.cards.map((card) =>
-                          card.isArchived ? card : { ...card, isArchived: true, archivedAt: now, updatedAt: now }
-                        ),
-                        ...newRecurringCards,
-                      ],
-                    }
-                  : c
-              ),
-              updatedAt: now,
-            }
-          : b
-      ),
-    }));
-    toast.success(newRecurringCards.length > 0 ? `All cards archived — ${newRecurringCards.length} recurring copies created` : 'All cards archived');
-    scheduleBoardSync(boardId);
+    const board = get().boards.find((candidate) => candidate.id === boardId);
+    const column = board?.columns.find((candidate) => candidate.id === columnId);
+    if (!board || !column) return;
+    const copies = archiveBoardCards(board, column.cards.map((card) => card.id), 'Archive all cards');
+    if (copies !== undefined) toast.success(copies ? `All cards archived — ${copies} recurring copies created` : 'All cards archived');
   },
 
   restoreCard: (boardId, columnId, cardId) => {

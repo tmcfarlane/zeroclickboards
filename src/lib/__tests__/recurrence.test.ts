@@ -8,10 +8,7 @@ import {
 import type { Card, RecurrenceConfig } from '@/types';
 import { parseLocalDate } from '../utils';
 
-// Mock uuid for deterministic IDs
-vi.mock('uuid', () => ({
-  v4: vi.fn(() => 'test-uuid'),
-}));
+import { createRecurringCardCopy as createMcpRecurringCardCopy } from '../../../mcp-server/src/recurrence';
 
 
 const weeklyDateCases: [string, number, number[], string][] = [
@@ -381,6 +378,44 @@ describe('createRecurringCardCopy', () => {
     expect(card.recurrence!.daysOfWeek).toEqual([1, 3]);
   });
 
+  it('preserves opaque card fields with independent nested objects and clears archive metadata', () => {
+    const source = {
+      id: 'opaque-source', title: 'Full card', createdAt: '2026-01-01', updatedAt: '2026-01-02',
+      targetDate: '2026-04-15', recurrence: { frequency: 'daily' as const, interval: 1 },
+      content: { type: 'checklist' as const, text: 'Body', metadata: { nested: [1] }, checklist: [{ id: 'item', text: 'Task', completed: true, extra: { owner: 'MCP' } }] },
+      futureField: { nested: [{ value: 'keep me' }] }, isArchived: true, archivedAt: '2026-04-16',
+    };
+    const original = structuredClone(source);
+    const copy = createRecurringCardCopy(source) as typeof source;
+    expect(copy.futureField).toEqual(source.futureField);
+    expect(copy.content.metadata).toEqual(source.content.metadata);
+    expect(copy.content.checklist[0]).toEqual({ ...source.content.checklist[0], completed: false });
+    expect(copy).not.toHaveProperty('archivedAt');
+    copy.futureField.nested[0].value = 'changed';
+    copy.content.metadata.nested.push(2);
+    copy.content.checklist[0].extra.owner = 'browser';
+    expect(source).toEqual(original);
+  });
+
+  it('uses the same stable successor identity in browser and MCP regardless of clocks and schedule edits', () => {
+    const source: Card = { id: 'source', title: 'Recurring', content: { type: 'text' },
+      createdAt: '2026-01-01', updatedAt: '2026-01-01', recurrence: { frequency: 'daily', interval: 1 } };
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-04-15T23:59:00Z'));
+      const browser = createRecurringCardCopy(source);
+      vi.setSystemTime(new Date('2026-04-16T00:01:00Z'));
+      const mcp = createMcpRecurringCardCopy({ ...source, recurrence: { frequency: 'weekly', interval: 2 } });
+      expect(browser.id).toBe(mcp.id);
+      expect(createRecurringCardCopy({ ...source, id: 'different-source' }).id).not.toBe(browser.id);
+      const nextBrowser = createRecurringCardCopy(browser);
+      expect(nextBrowser.id).not.toBe(browser.id);
+      expect(nextBrowser.id).toBe(createMcpRecurringCardCopy(mcp).id);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('creates a copy with new ID and advanced date', () => {
     const card: Card = {
       id: 'original-id',
@@ -394,7 +429,7 @@ describe('createRecurringCardCopy', () => {
 
     const copy = createRecurringCardCopy(card);
 
-    expect(copy.id).toBe('test-uuid');
+    expect(copy.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(copy.id).not.toBe(card.id);
     expect(copy.title).toBe('Test Card');
     expect(copy.targetDate).toBe('2026-04-16');

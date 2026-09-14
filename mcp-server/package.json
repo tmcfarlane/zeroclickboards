@@ -45,6 +45,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.0",
     "@supabase/supabase-js": "2.108.2",
+    "uuid": "^13.0.2",
     "ws": "8.21.3",
     "zod": "^3.23.8"
   },

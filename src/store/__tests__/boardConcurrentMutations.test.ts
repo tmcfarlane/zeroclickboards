@@ -3,9 +3,10 @@ import type { Board, Card } from '@/types';
 import { useBoardStore } from '../useBoardStore';
 import { useUndoStore } from '../useUndoStore';
 
-vi.mock('uuid', () => {
+vi.mock('uuid', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('uuid')>();
   let serial = 0;
-  return { v4: vi.fn(() => `concurrent-${++serial}`) };
+  return { ...actual, v4: vi.fn(() => `concurrent-${++serial}`) };
 });
 
 const boardId = 'board';
@@ -161,5 +162,93 @@ describe('board mutations after concurrent updates', () => {
     expect(cardIds('source')).toEqual(['b']);
     expect(cardIds('destination')).toEqual(['a']);
     expect(cards()).toHaveLength(2);
+  });
+});
+
+
+describe('recurring archive transactions', () => {
+  function recurringSources() {
+    externalChange((board) => {
+      for (const entry of board.columns[0].cards) {
+        entry.recurrence = { frequency: 'daily', interval: 1 };
+        entry.targetDate = '2026-04-15';
+      }
+    });
+  }
+
+  it.each(['single', 'bulk'] as const)('undoes/redoes a %s archive and all its copies in one action, preserving remote edits and additions', (scope) => {
+    recurringSources();
+    if (scope === 'single') useBoardStore.getState().archiveCard(boardId, 'source', 'a');
+    else useBoardStore.getState().archiveAllCards(boardId, 'source');
+    const successorIds = cards().filter((entry) => !['a', 'b'].includes(entry.id)).map((entry) => entry.id);
+    expect(successorIds).toHaveLength(scope === 'single' ? 1 : 2);
+    expect(useUndoStore.getState().undoStack).toHaveLength(1);
+    externalChange((board) => {
+      const moved = board.columns[0].cards.shift()!;
+      moved.description = 'New MCP description';
+      board.columns[1].cards.push(moved);
+      board.columns[0].cards.push(card('remote-addition'));
+    });
+    useUndoStore.getState().undo();
+    expect(cards()).toHaveLength(3);
+    expect(cards().every((entry) => !entry.isArchived)).toBe(true);
+    expect(cards().find((entry) => entry.id === 'a')).toMatchObject({ description: 'New MCP description' });
+    expect(cardIds('destination')).toEqual(['a']);
+    expect(useUndoStore.getState().undoStack).toHaveLength(0);
+    useUndoStore.getState().redo();
+    expect(cards()).toHaveLength(3 + successorIds.length);
+    expect(cards().filter((entry) => entry.isArchived).map((entry) => entry.id).sort()).toEqual(scope === 'single' ? ['a'] : ['a', 'b']);
+    expect(cards().filter((entry) => successorIds.includes(entry.id))).toHaveLength(successorIds.length);
+    expect(cards().find((entry) => entry.id === 'a')).toMatchObject({ description: 'New MCP description' });
+    expect(cards().find((entry) => entry.id === 'remote-addition')?.isArchived).toBeUndefined();
+    expect(cardIds('destination')).toEqual(['a']);
+    useUndoStore.getState().undo();
+    expect(cards()).toHaveLength(3);
+  });
+
+  it.each(['single', 'bulk'] as const)('a %s rearchive reuses a moved, already archived successor and undo leaves it intact', (scope) => {
+    recurringSources();
+    useBoardStore.getState().archiveCard(boardId, 'source', 'a');
+    const successor = cards().find((entry) => !['a', 'b'].includes(entry.id))!;
+    useBoardStore.getState().restoreCard(boardId, 'source', 'a');
+    externalChange((board) => {
+      board.columns[0].cards = board.columns[0].cards.filter((entry) => entry.id !== successor.id && entry.id !== 'b');
+      board.columns[1].cards.push({ ...successor, title: 'Edited successor', isArchived: true, archivedAt: '2026-04-17' });
+    });
+    const before = structuredClone(current());
+    useUndoStore.getState().clearHistory();
+    if (scope === 'single') useBoardStore.getState().archiveCard(boardId, 'source', 'a');
+    else useBoardStore.getState().archiveAllCards(boardId, 'source');
+    expect(cards()).toHaveLength(2);
+    expect(cardIds('destination')).toEqual([successor.id]);
+    useUndoStore.getState().undo();
+    expect(current().columns).toEqual(before.columns);
+    useUndoStore.getState().redo();
+    expect(cards()).toHaveLength(2);
+    expect(cards().find((entry) => entry.id === successor.id)).toMatchObject({ title: 'Edited successor', isArchived: true });
+  });
+
+  it('repeated single archive is a no-op with no extra undo entry or timestamp changes', () => {
+    recurringSources();
+    useBoardStore.getState().archiveCard(boardId, 'source', 'a');
+    const before = structuredClone(current());
+    useBoardStore.getState().archiveCard(boardId, 'source', 'a');
+    expect(current()).toEqual(before);
+    expect(useUndoStore.getState().undoStack).toHaveLength(1);
+  });
+
+  it('undo keeps a successor edited remotely and redo does not add it twice', () => {
+    recurringSources();
+    useBoardStore.getState().archiveCard(boardId, 'source', 'a');
+    const successorId = cards().find((entry) => !['a', 'b'].includes(entry.id))!.id;
+    externalChange((board) => {
+      board.columns[0].cards.find((entry) => entry.id === successorId)!.description = 'MCP work after archive';
+    });
+    useUndoStore.getState().undo();
+    expect(cards().find((entry) => entry.id === 'a')?.isArchived).toBeUndefined();
+    expect(cards().find((entry) => entry.id === successorId)?.description).toBe('MCP work after archive');
+    useUndoStore.getState().redo();
+    expect(cards().filter((entry) => entry.id === successorId)).toHaveLength(1);
+    expect(cards().find((entry) => entry.id === successorId)?.description).toBe('MCP work after archive');
   });
 });

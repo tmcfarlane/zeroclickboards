@@ -250,3 +250,44 @@ test('recurrence beyond finite calendar bounds fails before archiving or copying
   assert.deepEqual(state.row, row);
   assert.equal(state.requests.filter((request) => request.method === 'PATCH').length, 0);
 });
+
+for (const successorArchived of [false, true]) {
+  test(`rearchive reuses its moved successor without overwriting it (archived: ${successorArchived})`, async () => {
+    const original = recurringCard();
+    const successor = { ...createRecurringCardCopy(original), title: 'Edited elsewhere', isArchived: successorArchived };
+    const row = makeBoard({ data: { columns: [
+      { id: 'source', title: 'Source', order: 0, cards: [original] },
+      { id: 'destination', title: 'Destination', order: 1, cards: [successor] },
+    ] } });
+    const { client } = createBoardFixture({ row });
+    const board = await setCardArchived(client, row.id, original.id, true);
+    assert.equal(board.columns.flatMap(column => column.cards).length, 2);
+    assert.equal(board.columns[0].cards[0].isArchived, true);
+    assert.deepEqual(board.columns[1].cards, [successor]);
+    const repeated = await setCardArchived(client, row.id, original.id, true);
+    assert.deepEqual(repeated.columns, board.columns);
+    await setCardArchived(client, row.id, original.id, false);
+    const rearchived = await setCardArchived(client, row.id, original.id, true);
+    assert.equal(rearchived.columns.flatMap(column => column.cards).length, 2);
+    assert.deepEqual(rearchived.columns[1].cards, [successor]);
+  });
+}
+
+test('a CAS retry reuses a successor even when the concurrent writer restored the source and moved the copy', async () => {
+  const original = recurringCard();
+  const successor = { ...createRecurringCardCopy(original), description: 'Browser work' };
+  let raced = false;
+  const { client, state } = createBoardFixture({
+    row: makeBoard({ data: { columns: [{ id: 'source', title: 'Source', order: 0, cards: [original] }] } }),
+    onRequest(request, current) {
+      if (request.method !== 'PATCH' || raced) return;
+      raced = true;
+      current.row.data.columns.push({ id: 'moved', title: 'Moved', order: 1, cards: [successor] });
+      current.row.updated_at = '2026-09-06T00:00:01.000Z';
+    },
+  });
+  const board = await setCardArchived(client, 'board-1', original.id, true);
+  assert.equal(board.columns.flatMap(column => column.cards).length, 2);
+  assert.deepEqual(board.columns[1].cards, [successor]);
+  assert.equal(state.requests.filter(request => request.method === 'PATCH').length, 2);
+});

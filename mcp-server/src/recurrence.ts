@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { recurringCardId } from './recurrence-identity.js';
 import type { Card, RecurrenceConfig } from './types.js';
 import { formatCalendarDate, parseCalendarDate } from './calendar-date.js';
 
@@ -62,7 +62,7 @@ export function createRecurringCardCopy(card: Card): Card {
   const now = new Date().toISOString();
   const copy: Card = {
     ...structuredClone(card),
-    id: randomUUID(),
+    id: recurringCardId(card.id),
     targetDate: card.recurrence
       ? calculateNextTargetDate(card.targetDate, card.recurrence)
       : undefined,

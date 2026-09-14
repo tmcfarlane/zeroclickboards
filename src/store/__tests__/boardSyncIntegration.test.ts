@@ -3,6 +3,7 @@ import type { BoardRow } from '@/types/database';
 import type { Card, Column } from '@/types';
 import { useBoardStore } from '../useBoardStore';
 import { useUndoStore } from '../useUndoStore';
+import { createRecurringCardCopy as createMcpRecurringCardCopy } from '../../../mcp-server/src/recurrence';
 
 type Request = {
   table: string;
@@ -643,6 +644,77 @@ describe('signed-in board sync integration', () => {
     expect(saved.recurrence).toEqual(choice === 'local' ? localRecurrence : remoteRecurrence);
     expect(saved.title).toBe('Browser title');
     expect(saved.description).toBe('MCP summary');
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+  });
+
+  it.each([
+    ['single', 'local'], ['single', 'remote'], ['bulk', 'local'], ['bulk', 'remote'],
+  ] as const)('deduplicates overlapping %s browser/MCP archives with %s conflict resolution', async (scope, choice) => {
+    const original = row();
+    const source = columns(original)[0].cards[0];
+    Object.assign(source, { recurrence: { frequency: 'daily', interval: 1 }, targetDate: '2026-04-15', futureField: { nested: ['MCP metadata'] } });
+    columns(original)[0].cards.push(card('other-source'));
+    rows.set(original.id, original);
+    await signIn();
+    if (scope === 'single') useBoardStore.getState().archiveCard(original.id, 'column-1', source.id);
+    else useBoardStore.getState().archiveAllCards(original.id, 'column-1');
+    expect(useUndoStore.getState().undoStack).toHaveLength(1);
+    // MCP commits before the queued browser archive: different clocks, one source.
+    vi.setSystemTime(new Date('2026-09-06T12:00:01Z'));
+    const remote = structuredClone(original);
+    const copy = createMcpRecurringCardCopy(source);
+    columns(remote)[0].cards.push(copy, card('mcp-addition'));
+    Object.assign(columns(remote)[0].cards[0], { isArchived: true, archivedAt: new Date().toISOString() });
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('conflict');
+    const draftCards = useBoardStore.getState().boards[0].columns.flatMap((column) => column.cards);
+    expect(draftCards.filter((entry) => entry.id === copy.id)).toHaveLength(1);
+    useBoardStore.getState().resolveBoardConflict(original.id, choice);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
+    const saved = columns(rows.get(original.id)!)[0].cards;
+    expect(saved).toHaveLength(4);
+    expect(saved.filter((entry) => entry.id === copy.id)).toHaveLength(1);
+    expect(saved.find((entry) => entry.id === copy.id)).toMatchObject({ isArchived: false, targetDate: '2026-04-16', futureField: { nested: ['MCP metadata'] } });
+    expect(saved.find((entry) => entry.id === source.id)?.isArchived).toBe(true);
+    expect(saved.find((entry) => entry.id === 'other-source')?.isArchived).toBe(scope === 'bulk' ? true : undefined);
+    expect(saved.find((entry) => entry.id === 'mcp-addition')?.isArchived).toBeUndefined();
+  });
+
+  it.each(['single', 'bulk'] as const)('persists %s archive undo/redo as one transaction against the latest board', async (scope) => {
+    const original = row();
+    Object.assign(columns(original)[0].cards[0], { recurrence: { frequency: 'daily', interval: 1 }, targetDate: '2026-04-15' });
+    columns(original)[0].cards.push(card('other-source'));
+    rows.set(original.id, original);
+    await signIn();
+    if (scope === 'single') useBoardStore.getState().archiveCard(original.id, 'column-1', 'card-1');
+    else useBoardStore.getState().archiveAllCards(original.id, 'column-1');
+    await vi.advanceTimersByTimeAsync(400);
+    expect(updateRequests()).toHaveLength(1);
+    expect(useUndoStore.getState().undoStack).toHaveLength(1);
+    const copyId = columns(rows.get(original.id)!)[0].cards[2].id;
+    const remote = structuredClone(rows.get(original.id)!);
+    columns(remote)[0].cards[0].description = 'MCP description after archive';
+    columns(remote)[0].cards.push(card('mcp-addition'));
+    remote.updated_at = SECOND_REVISION;
+    rows.set(remote.id, remote);
+    emit(remote);
+    useUndoStore.getState().undo();
+    await vi.advanceTimersByTimeAsync(400);
+    let saved = columns(rows.get(original.id)!)[0].cards;
+    expect(saved.map((entry) => entry.id)).toEqual(['card-1', 'other-source', 'mcp-addition']);
+    expect(saved.every((entry) => !entry.isArchived)).toBe(true);
+    expect(saved[0].description).toBe('MCP description after archive');
+    useUndoStore.getState().redo();
+    await vi.advanceTimersByTimeAsync(400);
+    saved = columns(rows.get(original.id)!)[0].cards;
+    expect(saved).toHaveLength(4);
+    expect(saved.find((entry) => entry.id === copyId)?.isArchived).toBe(false);
+    expect(saved[0]).toMatchObject({ isArchived: true, description: 'MCP description after archive' });
+    expect(saved.find((entry) => entry.id === 'mcp-addition')?.isArchived).toBeUndefined();
+    expect(updateRequests()).toHaveLength(3);
     expect(useBoardStore.getState().boardSyncStates[original.id].status).toBe('saved');
   });
 

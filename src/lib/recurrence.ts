@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { recurringCardId } from '../../mcp-server/src/recurrence-identity';
 import type { Card, RecurrenceConfig } from '@/types';
 import { parseLocalDate } from '@/lib/utils';
 import { formatCalendarDate } from '@/lib/calendar-date';
@@ -174,20 +174,18 @@ export function createRecurringCardCopy(card: Card, columnId?: string): Card {
 
   void columnId; // parameter reserved for future use
 
-  return {
-    id: uuidv4(),
-    title: card.title,
-    description: card.description,
+  const copy: Card = {
+    ...structuredClone(card),
+    id: recurringCardId(card.id),
     content,
     targetDate: nextDate,
-    labels: card.labels ? [...card.labels] : undefined,
-    coverImage: card.coverImage,
-    attachments: card.attachments ? structuredClone(card.attachments) : undefined,
     recurrence,
     isArchived: false,
     createdAt: now,
     updatedAt: now,
   };
+  delete copy.archivedAt;
+  return copy;
 }
 
 export function formatRecurrence(config: RecurrenceConfig): string {

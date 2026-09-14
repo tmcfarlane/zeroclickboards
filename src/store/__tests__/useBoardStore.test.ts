@@ -2,9 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useBoardStore } from '../useBoardStore';
 import { useUndoStore } from '../useUndoStore';
 
-vi.mock('uuid', () => {
+vi.mock('uuid', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('uuid')>();
   let counter = 0;
   return {
+    ...actual,
     v4: vi.fn(() => `store-uuid-${++counter}`),
   };
 });

@@ -474,13 +474,18 @@ export function setCardArchived(
 ): Promise<FullBoard> {
   return mutateColumns(client, boardId, (columns) => {
     const { column, card } = locateCard(columns, cardId);
+    if (!!card.isArchived === archived) return columns;
     const recurringCopy = archived && !card.isArchived && card.recurrence
       ? createRecurringCardCopy(card)
       : undefined;
     card.isArchived = archived;
     card.archivedAt = archived ? nowIso() : undefined;
     card.updatedAt = nowIso();
-    if (recurringCopy) column.cards.push(recurringCopy);
+    // The existing successor may have moved or been archived itself. Reuse its
+    // identity without overwriting its current content or starting it again.
+    if (recurringCopy && !columns.some((candidate) => candidate.cards.some((entry) => entry.id === recurringCopy.id))) {
+      column.cards.push(recurringCopy);
+    }
     return columns;
   });
 }

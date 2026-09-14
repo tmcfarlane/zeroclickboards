@@ -109,6 +109,19 @@ test.describe('Recurrence parity between MCP and browser', () => {
         };
       }).toEqual({ total: 2, originalArchived: true, active: [{ targetDate: '2026-06-15', recurrence: editedSchedule }] });
 
+      const [firstCopy] = await mcp.call<Card[]>('list_cards', { boardId: board.id });
+      await page.keyboard.press('ControlOrMeta+z');
+      await expect.poll(async () => {
+        const cards = await mcp.call<Card[]>('list_cards', { boardId: board.id, includeArchived: true });
+        return cards.map((candidate) => ({ id: candidate.id, archived: !!candidate.isArchived }));
+      }).toEqual([{ id: card.id, archived: false }]);
+      await expect(page.locator('[data-kanban-card]')).toHaveCount(1);
+      await page.keyboard.press('ControlOrMeta+Shift+z');
+      await expect.poll(async () => {
+        const cards = await mcp.call<Card[]>('list_cards', { boardId: board.id, includeArchived: true });
+        return cards.map((candidate) => ({ id: candidate.id, archived: !!candidate.isArchived }));
+      }).toEqual([{ id: card.id, archived: true }, { id: firstCopy.id, archived: false }]);
+
       const [mondayCopy] = await mcp.call<Card[]>('list_cards', { boardId: board.id });
       expect(mondayCopy.id).not.toBe(card.id);
       const archived = await mcp.call<Board>('archive_card', { boardId: board.id, cardId: mondayCopy.id });
@@ -129,6 +142,62 @@ test.describe('Recurrence parity between MCP and browser', () => {
       await expect(reopened.getByRole('button', { name: 'Wednesday', exact: true })).toHaveAttribute('aria-pressed', 'true');
     });
   });
+
+  for (const scope of ['single', 'bulk'] as const) {
+    test(`overlapping ${scope} browser and MCP archives persist exactly one next occurrence`, async ({ page }) => {
+      await withTemporaryCard(page, { frequency: 'daily', interval: 1 }, async (mcp, board, card) => {
+        await mcp.call<Board>('add_card', { boardId: board.id, columnId: board.columns[0].id, title: 'Ordinary task' });
+        await loadBoard(page, board);
+        await expect(cardTitle(page, card.title)).toBeVisible();
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => { release = resolve; });
+        let patchHeld = false;
+        const matchesBoard = (url: URL) => url.pathname === '/rest/v1/boards' && url.searchParams.get('id') === `eq.${board.id}`;
+        await page.route(matchesBoard, async (route) => {
+          if (route.request().method() === 'PATCH' && !patchHeld) {
+            patchHeld = true;
+            await gate;
+          }
+          await route.continue();
+        });
+        try {
+          if (scope === 'single') {
+            const tile = page.locator('[data-kanban-card]').filter({ has: page.getByRole('button', { name: card.title, exact: true }) });
+            await tile.hover();
+            await tile.locator('button[aria-haspopup="menu"]').click();
+            await page.getByRole('menuitem', { name: 'Archive', exact: true }).click();
+          } else {
+            await page.locator('[data-kanban-column]').first().locator('button[aria-haspopup="menu"]').first().click();
+            await page.getByRole('menuitem', { name: 'Archive all cards', exact: true }).click();
+          }
+          await expect.poll(() => patchHeld, { timeout: 10_000 }).toBe(true);
+          const archived = await mcp.call<Board>('archive_card', { boardId: board.id, cardId: card.id });
+          const copy = archived.columns.flatMap((column) => column.cards).find((candidate) => candidate.id !== card.id && candidate.recurrence)!;
+          expect(copy).toBeDefined();
+          release();
+          await page.getByRole('button', { name: 'Review changes', exact: true }).click();
+          await page.getByRole('button', { name: scope === 'single' ? 'Keep my edits' : 'Use incoming edits', exact: true }).click();
+          await expect(page.getByRole('button', { name: 'Review changes', exact: true })).toHaveCount(0);
+          await expect(page.getByText('Saving changes…', { exact: true })).toHaveCount(0);
+          await expect(page.getByText('Changes waiting to save…', { exact: true })).toHaveCount(0);
+          await expect.poll(async () => {
+            const cards = await mcp.call<Card[]>('list_cards', { boardId: board.id, includeArchived: true });
+            return {
+              total: cards.length,
+              sources: cards.filter((candidate) => candidate.id === card.id).map((candidate) => !!candidate.isArchived),
+              copies: cards.filter((candidate) => candidate.id !== card.id && candidate.recurrence).map((candidate) => ({ id: candidate.id, date: candidate.targetDate })),
+              ordinaryArchived: !!cards.find((candidate) => candidate.title === 'Ordinary task')?.isArchived,
+            };
+          }).toEqual({ total: 3, sources: [true], copies: [{ id: copy.id, date: '2026-06-04' }], ordinaryArchived: scope === 'bulk' });
+          await loadBoard(page, board);
+          await expect(page.locator('[data-kanban-card]')).toHaveCount(scope === 'bulk' ? 1 : 2);
+        } finally {
+          release();
+          await page.unroute(matchesBoard);
+        }
+      });
+    });
+  }
 
   test('preserves an incoming MCP recurrence clear while a title draft is open and archives without making a copy', async ({ page }) => {
     await withTemporaryCard(page, { frequency: 'daily', interval: 2 }, async (mcp, board, card) => {
