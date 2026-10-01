@@ -469,6 +469,59 @@ export function LandingPage() {
           </div>
         </div>
 
+        {/* MCP release film */}
+        <div className="relative mx-auto mt-16 max-w-5xl md:mt-20">
+          <div className="mb-8 text-center">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-[#78fcd6]">
+              Meet the ZeroBoard MCP server
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-[#F2F7F7] sm:text-4xl">
+              Your AI agent. Your board. In sync.
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-[#A8B2B2]">
+              Create cards, move tasks, and plan your work from the agent you
+              already use. Free, open source, and ready for your workflow.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-[#78fcd6]/20 bg-[#0E1414] shadow-2xl shadow-black/40">
+            <video
+              controls
+              playsInline
+              crossOrigin="anonymous"
+              preload="none"
+              poster="https://zeroboard-media.trent-a60.workers.dev/zeroboard-mcp-commercial-31cd224f.jpg"
+              aria-label="Watch the one-minute ZeroBoard MCP server release film"
+              className="block aspect-video w-full"
+            >
+              <source
+                src="https://zeroboard-media.trent-a60.workers.dev/zeroboard-mcp-commercial-31cd224f.mp4"
+                type="video/mp4"
+              />
+              <track
+                kind="captions"
+                src="/zeroboard-mcp-commercial.en.vtt"
+                srcLang="en"
+                label="English"
+              />
+              Your browser does not support this video.{" "}
+              <a href="https://zeroboard-media.trent-a60.workers.dev/zeroboard-mcp-commercial-31cd224f.mp4">
+                Watch the release film.
+              </a>
+            </video>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+            <span className="text-sm text-[#A8B2B2]">One minute. Zero clicks.</span>
+            <a
+              href="https://github.com/tmcfarlane/zeroclickboards/tree/main/mcp-server#quick-start"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#78fcd6] transition-colors hover:text-[#00ffb6]"
+            >
+              Connect your agent <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+
         {/* Hero product screenshot — Kanban */}
         <div className="relative mx-auto mt-16 max-w-6xl px-2 md:mt-20 md:px-0">
           {/* Glow underneath */}

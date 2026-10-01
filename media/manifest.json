@@ -1,0 +1,17 @@
+{
+  "origin": "https://zeroboard-media.trent-a60.workers.dev",
+  "cloudflare_worker": "zeroboard-media",
+  "approved_master_sha256": "31cd224fcf88af1e19847e47cec60c4a06c172f48ed5a1a692c90a5877f58f3a",
+  "assets": [
+    {
+      "path": "zeroboard-mcp-commercial-31cd224f.mp4",
+      "bytes": 12323129,
+      "sha256": "e7395cf0ac89ea524e92e72b03cf38e16dbac104219dd1aa72e19c3a0627b717"
+    },
+    {
+      "path": "zeroboard-mcp-commercial-31cd224f.jpg",
+      "bytes": 126001,
+      "sha256": "affc0432687ce5232c71a6b39ea1e43f1ec0e855b67779ee7c927aa4ad89f0e3"
+    }
+  ]
+}
