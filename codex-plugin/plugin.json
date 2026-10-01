@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "zeroboard",
+  "version": "0.2.0",
+  "description": "Preview meeting actions, save approved cards, and read standups on selected ZeroBoard boards.",
+  "repository": "https://github.com/tmcfarlane/zeroclickboards",
+  "homepage": "https://board.zeroclickdev.ai",
+  "license": "MIT"
+}

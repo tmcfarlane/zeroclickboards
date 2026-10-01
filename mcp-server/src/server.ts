@@ -1,3 +1,4 @@
+import { OpenAiMcpServer } from './openai-server.js';
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -9,6 +10,7 @@ import * as db from './board-data.js';
 import { generateBoardTemplate } from './ai.js';
 import { CARD_LABELS, type CardContent, type CardLabel } from './types.js';
 import { recurrenceSchema } from './recurrence-schema.js';
+import { registerMeetingTools } from './meeting.js';
 import { targetDateSchema } from './target-date-schema.js';
 
 const text = (data: unknown): CallToolResult => ({
@@ -34,29 +36,31 @@ const textToContent = (t?: string): CardContent | undefined =>
 export function buildServer(
   client: SupabaseClient,
   user: User,
-  { readOnly = READ_ONLY }: { readOnly?: boolean } = {},
+  { readOnly = READ_ONLY, plugin = false, boardIds, proposalKey }: { readOnly?: boolean; plugin?: boolean; boardIds?: readonly string[]; proposalKey?: string } = {},
 ): McpServer {
-  const server = new McpServer({ name: 'zeroboard-mcp', version: '0.1.0' });
+  boardIds = plugin ? boardIds ?? [] : boardIds;
+  db.bindBoardAccess(client, { userId: user.id, boardIds });
+  const server = plugin ? new OpenAiMcpServer({ name: 'zeroboard-mcp', version: '0.2.0' }) : new McpServer({ name: 'zeroboard-mcp', version: '0.2.0' });
   registerResources(server, client, user);
-  const RO = { readOnlyHint: true } as const;
+  const RO = { readOnlyHint: true, destructiveHint: false, openWorldHint: false } as const;
   const DESTRUCTIVE = { destructiveHint: true } as const;
 
   // ----- Read tools -----------------------------------------------------
   server.registerTool(
     'list_boards',
-    { title: 'List boards', description: 'List all of your ZeroBoard boards (id, name, column/card counts).', inputSchema: {}, annotations: RO },
+    { title: 'List boards', description: 'List boards explicitly accessible to this ZeroBoard account and grant (id, name, column/card counts).', inputSchema: {}, _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read'] }] }, annotations: RO },
     async () => safe(() => db.listBoards(client)),
   );
 
   server.registerTool(
     'get_board',
-    { title: 'Get board', description: 'Get a full board including its columns and cards.', inputSchema: { boardId: z.string().describe('Board id') }, annotations: RO },
+    { title: 'Get board', description: 'Get a full board including its columns and cards.', inputSchema: { boardId: z.string().describe('Board id') }, _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read'] }] }, annotations: RO },
     async ({ boardId }) => safe(() => db.getBoard(client, boardId)),
   );
 
   server.registerTool(
     'list_columns',
-    { title: 'List columns', description: 'List the columns of a board.', inputSchema: { boardId: z.string() }, annotations: RO },
+    { title: 'List columns', description: 'List the columns of a board.', inputSchema: { boardId: z.string() }, _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read'] }] }, annotations: RO },
     async ({ boardId }) =>
       safe(async () => {
         const b = await db.getBoard(client, boardId);
@@ -74,7 +78,7 @@ export function buildServer(
         columnId: z.string().optional(),
         includeArchived: z.boolean().optional(),
       },
-      annotations: RO,
+      _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read'] }] }, annotations: RO,
     },
     async ({ boardId, columnId, includeArchived }) =>
       safe(async () => {
@@ -91,7 +95,7 @@ export function buildServer(
 
   server.registerTool(
     'get_card',
-    { title: 'Get card', description: 'Get a single card by id.', inputSchema: { boardId: z.string(), cardId: z.string() }, annotations: RO },
+    { title: 'Get card', description: 'Get a single card by id.', inputSchema: { boardId: z.string(), cardId: z.string() }, _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read'] }] }, annotations: RO },
     async ({ boardId, cardId }) =>
       safe(async () => {
         const b = await db.getBoard(client, boardId);
@@ -109,12 +113,13 @@ export function buildServer(
       title: 'Search cards',
       description: 'Search across all your boards for cards whose title/description/content match the query.',
       inputSchema: { query: z.string(), includeArchived: z.boolean().optional() },
-      annotations: RO,
+      _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read'] }] }, annotations: RO,
     },
     async ({ query, includeArchived }) => safe(() => db.search(client, query, includeArchived ?? false)),
   );
 
-  if (readOnly) return server;
+  if (plugin) registerMeetingTools(server, client, readOnly, proposalKey, user.id, boardIds ?? []);
+  if (readOnly || plugin) return server;
 
   // ----- Write tools ----------------------------------------------------
   server.registerTool(
@@ -355,7 +360,9 @@ export async function runServer(): Promise<void> {
     throw err;
   }
 
-  const server = buildServer(client, user);
+  const plugin = process.argv.includes('--plugin');
+  const boardIds = plugin ? (process.env.ZEROBOARD_BOARD_IDS ?? '').split(',').map((id) => id.trim()).filter(Boolean) : undefined;
+  const server = buildServer(client, user, { plugin, boardIds });
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
