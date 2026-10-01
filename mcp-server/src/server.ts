@@ -36,7 +36,7 @@ export function buildServer(
   user: User,
   { readOnly = READ_ONLY }: { readOnly?: boolean } = {},
 ): McpServer {
-  const server = new McpServer({ name: 'zeroboard-mcp', version: '0.1.0' });
+  const server = new McpServer({ name: 'zeroboard-mcp', version: '0.2.0' });
   registerResources(server, client, user);
   const RO = { readOnlyHint: true } as const;
   const DESTRUCTIVE = { destructiveHint: true } as const;

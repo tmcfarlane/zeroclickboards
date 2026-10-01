@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Board, Card } from '@/types';
+import { documentsEqual } from '@/lib/board-merge';
 import { useBoardStore } from '../useBoardStore';
 import { useUndoStore } from '../useUndoStore';
 
@@ -12,6 +13,7 @@ vi.mock('uuid', async (importOriginal) => {
 const boardId = 'board';
 const card = (id: string): Card => ({ id, title: id, labels: ['red'], content: { type: 'text', text: '' }, createdAt: '2026-09-06T00:00:00Z', updatedAt: '2026-09-06T00:00:00Z' });
 const current = (): Board => useBoardStore.getState().boards[0];
+const document = (board: Board) => ({ name: board.name, description: board.description ?? null, data: { columns: board.columns } });
 const cards = (): Card[] => current().columns.flatMap((column) => column.cards);
 const cardIds = (columnId: string): string[] => current().columns.find((column) => column.id === columnId)!.cards.map((entry) => entry.id);
 function externalChange(change: (board: Board) => void) {
@@ -222,7 +224,8 @@ describe('recurring archive transactions', () => {
     expect(cards()).toHaveLength(2);
     expect(cardIds('destination')).toEqual([successor.id]);
     useUndoStore.getState().undo();
-    expect(current().columns).toEqual(before.columns);
+    // Replay may refresh updatedAt and normalize absent optional fields.
+    expect(documentsEqual(document(current()), document(before))).toBe(true);
     useUndoStore.getState().redo();
     expect(cards()).toHaveLength(2);
     expect(cards().find((entry) => entry.id === successor.id)).toMatchObject({ title: 'Edited successor', isArchived: true });
