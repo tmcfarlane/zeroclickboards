@@ -23,6 +23,14 @@
     }
   ],
   "rewrites": [
+    { "source": "/mcp", "destination": "/api/connector?route=mcp" },
+    { "source": "/authorize", "destination": "/api/connector?route=authorize" },
+    { "source": "/token", "destination": "/api/connector?route=token" },
+    { "source": "/revoke", "destination": "/api/connector?route=revoke" },
+    { "source": "/.well-known/oauth-authorization-server", "destination": "/api/connector?route=authorization-metadata" },
+    { "source": "/.well-known/oauth-protected-resource/mcp", "destination": "/api/connector?route=resource-metadata" },
+    { "source": "/account", "destination": "/index.html" },
+    { "source": "/auth/connector", "destination": "/index.html" },
     {
       "source": "/app",
       "destination": "/index.html"

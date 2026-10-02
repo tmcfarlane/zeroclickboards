@@ -1,11 +1,12 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Sparkles, CreditCard, Loader2, User, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { ConnectorSettings } from '@/components/connectors/ConnectorSettings';
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
@@ -17,11 +18,16 @@ function formatDate(dateStr: string | null | undefined): string {
 }
 
 export function AccountPage() {
+  const { hash } = useLocation();
   const { user, session, signOut } = useAuthContext();
   const { hasSubscription, subscription, isLoading } = useSubscription();
   const { isAdmin } = useAdmin();
   const [portalLoading, setPortalLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  useEffect(() => {
+    if (hash === '#connectors') document.getElementById('connectors')?.scrollIntoView({ block: 'start' });
+  }, [hash]);
 
   const isPro = hasSubscription || isAdmin;
   const plan = isPro ? 'Pro' : 'Free';
@@ -85,6 +91,8 @@ export function AccountPage() {
         </Link>
 
         <h1 className="text-2xl font-bold mb-8">Account</h1>
+
+        <ConnectorSettings />
 
         {/* Profile section */}
         <section className="rounded-xl border border-white/10 bg-[#111515] p-6 mb-6">

@@ -12,6 +12,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { AccountPage } from '@/pages/AccountPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { AuthCliPage } from '@/pages/AuthCliPage';
+import { ConnectorConsentPage } from '@/pages/ConnectorConsentPage';
 
 export function AppRoutes() {
   return (
@@ -37,6 +38,7 @@ export function AppRoutes() {
 
       {/* CLI sign-in bridge (no chrome; manages its own auth) */}
       <Route path="/auth/cli" element={<AuthCliPage />} />
+      <Route path="/auth/connector" element={<ConnectorConsentPage />} />
 
       {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />

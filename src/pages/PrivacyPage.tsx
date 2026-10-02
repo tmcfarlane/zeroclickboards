@@ -3,7 +3,7 @@ export function PrivacyPage() {
     <div className="min-h-screen bg-[#0B0F0F] text-[#F2F7F7] px-6 py-16">
       <div className="max-w-4xl mx-auto bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 md:p-12">
         <h1 className="text-4xl font-black text-[#F2F7F7] mb-2">Privacy Policy</h1>
-        <p className="text-sm text-[#A8B2B2] mb-10">Last updated: March 12, 2026</p>
+        <p className="text-sm text-[#A8B2B2] mb-10">Last updated: October 1, 2026</p>
 
         <div className="space-y-8">
           <section>
@@ -35,6 +35,14 @@ export function PrivacyPage() {
               operating the Service (such as Supabase for database hosting), but only to the extent
               necessary to provide those services. We may also disclose data if required by law or to
               protect the rights and safety of ZeroClickDev, our users, or the public.
+            </p>
+            <p className="mt-3 text-[#A8B2B2] leading-relaxed">
+              If you connect ChatGPT, Codex, or another supported client, that client can read the
+              boards you select and, when you approve that permission, add new cards. We store your
+              connection permissions and an encrypted, short-lived account access token to provide
+              this connection. Your password and refresh token are not shared with the client.
+              You can disconnect in your account settings; data already received by the client
+              remains subject to that provider's policies.
             </p>
           </section>
 
