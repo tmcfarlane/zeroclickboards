@@ -579,26 +579,26 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
       )}
 
       {/* Board Header */}
-      <div className="hidden sm:flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="hidden sm:flex flex-wrap items-center justify-between gap-2 px-4 pt-5 pb-3 border-b border-white/5">
+        <div className="flex flex-wrap items-center gap-3 min-w-0 max-w-full">
           <BoardSelector onCreateBoardClick={onNewBoardClick} />
           <ViewToggle />
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0 max-w-full">
           {/* Ask AI */}
           {onAIClick && (
             <button
               onClick={onAIClick}
-              className="mr-2 flex items-center gap-1.5 h-9 px-4 font-medium text-sm text-[#78fcd6] hover:text-[#00ffb6] transition-colors bg-white/5 border border-white/10 rounded-lg hover:bg-white/10"
+              className="mr-2 flex shrink-0 items-center gap-1.5 h-9 px-4 whitespace-nowrap font-medium text-sm text-[#78fcd6] hover:text-[#00ffb6] transition-colors bg-white/5 border border-white/10 rounded-lg hover:bg-white/10"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles className="w-4 h-4 shrink-0" />
               <span>Ask AI</span>
             </button>
           )}
 
           {/* Search */}
-          <div className="relative min-w-0 shrink">
+          <div className="relative w-32 sm:w-64 min-w-0 shrink">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
             <Input
               id="board-search-input"
@@ -607,7 +607,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search... (/)"
-              className="w-32 sm:w-64 pl-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-9"
+              className="w-full pl-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-9"
             />
           </div>
 

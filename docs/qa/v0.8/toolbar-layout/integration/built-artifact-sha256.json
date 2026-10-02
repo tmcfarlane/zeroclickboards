@@ -1,0 +1,171 @@
+{
+  "head": "54a767abfb0dc1fedbe61cb637cebac1ecbd6f1c",
+  "directory": "/private/tmp/zeroboard-mcp-final-integrated-built-smoke/dist",
+  "count": 41,
+  "artifacts": {
+    "android-chrome-192x192.png": {
+      "sha256": "50117c38991d1f05eb547aa9fdd5310ddbc1c3c3191074974178cedba6f67b88",
+      "bytes": 31787
+    },
+    "android-chrome-512x512.png": {
+      "sha256": "8372cbeffa825e3add85147f032f25f27c394bdec8f25765ca172b904d1e26d8",
+      "bytes": 136346
+    },
+    "apple-touch-icon.png": {
+      "sha256": "bc8585046099cb1b4ed0def79c5c8965be7503da6abd47b2bb266d896b210cdc",
+      "bytes": 28455
+    },
+    "assets/AppShell-ChgC_V2i.js": {
+      "sha256": "58e9947082b32c1a441b1730d09a8fa8a94500cd0177b7889687836a5dad1727",
+      "bytes": 409252
+    },
+    "assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff": {
+      "sha256": "9e97905f0663eab927bcaa72b4e5b844bfa980ada3f894ff92052ec7ed2d8c03",
+      "bytes": 7164
+    },
+    "assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2": {
+      "sha256": "259b63d9a2dcdf449b73f46624e409de1d62a51134e884d3f4af1242736cde10",
+      "bytes": 5460
+    },
+    "assets/geist-mono-latin-400-normal-CoULgQGM.woff": {
+      "sha256": "af2a06fc6940abff35305a96ce4e2f69c2934106339b488b8cb85ca6f136dfff",
+      "bytes": 19168
+    },
+    "assets/geist-mono-latin-400-normal-LC9RFr9I.woff2": {
+      "sha256": "616e37ca59a2afebe306751773a538b93f5a2d9a90fd3fc97ce73321cb93af51",
+      "bytes": 14712
+    },
+    "assets/geist-mono-latin-ext-400-normal-Cgks_Qgx.woff2": {
+      "sha256": "7f4a5d3c1cdf8a5bc8deb47b85606a5486d5159d42eba048bae9583c4d085cd0",
+      "bytes": 6424
+    },
+    "assets/geist-mono-latin-ext-400-normal-CxNRRMGd.woff": {
+      "sha256": "9f73a257660b9605fd3fae18eec73f1813da5d4e06638f5f7d2b155750530185",
+      "bytes": 8744
+    },
+    "assets/geist-sans-latin-400-normal-BOaIZNA2.woff": {
+      "sha256": "b2f5931f1a903bcc64af96ee41b3fed53a8ce74e9261181931a680a50560485b",
+      "bytes": 38912
+    },
+    "assets/geist-sans-latin-400-normal-gapTbOY8.woff2": {
+      "sha256": "e6ef6abb39c762ed2259cc814e6f16888c540cd84835962227b56ab2354f27f1",
+      "bytes": 33400
+    },
+    "assets/geist-sans-latin-500-normal-CN2lyvyL.woff": {
+      "sha256": "5d679b8796eed440d6e7e2e94c37390b82f9db77aa92cfc21e96a1cdeecfba3d",
+      "bytes": 40520
+    },
+    "assets/geist-sans-latin-500-normal-uokXdC-Q.woff2": {
+      "sha256": "40073e90816315c92e4f4381bd50b6fdc950b22b0dd010a4179046cf588d4f12",
+      "bytes": 34716
+    },
+    "assets/geist-sans-latin-600-normal-CA1yjETN.woff": {
+      "sha256": "3903ed7633d563de34bbbf609e869a878e4b4081a25011a195b7a80043ecafe9",
+      "bytes": 41204
+    },
+    "assets/geist-sans-latin-600-normal-DFOURf8L.woff2": {
+      "sha256": "9d99fbd791968493fa507ac846de561cee47b00f8100c23cad333b3cb78392d6",
+      "bytes": 35292
+    },
+    "assets/geist-sans-latin-700-normal-BmN9tIp5.woff2": {
+      "sha256": "3d59addfafec3452d44717aa0a18911d5c3812487ed06af47f2ef27192ea1eed",
+      "bytes": 35484
+    },
+    "assets/geist-sans-latin-700-normal-CjScfYeH.woff": {
+      "sha256": "a25e16202a8cd74d4a149b97d69262582e23ae59abfde1cee1a051ba5c41622a",
+      "bytes": 41396
+    },
+    "assets/index-CdR62uw8.js": {
+      "sha256": "64e215015aa017114c4601d6d9e7d54c4f02d4ef1cf030f35abf08e0c7777bf8",
+      "bytes": 990189
+    },
+    "assets/index-DW7JkC3N.css": {
+      "sha256": "f9af4489196bda9ffc52bbe9fe7ea26482fbb9707f61009cf7dbbe29a5337c2c",
+      "bytes": 123893
+    },
+    "assets/matter-DI9QDUow.js": {
+      "sha256": "0265a1ea4d056d3f78271f91f95677c75b664b897a0a660ba58ad310d3a9cba1",
+      "bytes": 84438
+    },
+    "favicon-16x16.png": {
+      "sha256": "bfbf0d89f45777cd191e9469821d552a6fdd165caed3df063aaaa35069312864",
+      "bytes": 805
+    },
+    "favicon-32x32.png": {
+      "sha256": "346c79ed3891dff343b7ea9ff401095dbe756c97f1c872408f87c242c3ecb597",
+      "bytes": 2038
+    },
+    "favicon.ico": {
+      "sha256": "b1a99af77445241f1676ddbf23fb12b3f7b59f0ca3ccda3158834b0179b31a15",
+      "bytes": 5430
+    },
+    "index.html": {
+      "sha256": "19a821a9cdc782fd5a3194a19600e7e8304dce49e3583bd1588145456985f3fb",
+      "bytes": 686
+    },
+    "logo/logo_color.svg": {
+      "sha256": "471cfbd7f8e6c166e1f034b9a8a859f93b7dd0d4485a692addef37a25119ce23",
+      "bytes": 4302
+    },
+    "logo/logo_dark_pointer.svg": {
+      "sha256": "bfc85a05ebd3a97ea76a282a07ca486c9f2e781f0241fd5306995df6ec5c42cf",
+      "bytes": 4286
+    },
+    "logo/logo_wordmark.svg": {
+      "sha256": "d722e84c19e78e085cd2039c133dddc956263e7bdbfdd126da4afe03e94ba3ef",
+      "bytes": 4886
+    },
+    "screenshots/ZeroBoardAI.gif": {
+      "sha256": "10f5b724226fee0f709f004cc56328d847934a4d22677017f43e1e1430a566da",
+      "bytes": 5338589
+    },
+    "screenshots/ai-assist.png": {
+      "sha256": "8dc1b38f769e288eadd1fa183083b81ac117bd7b9a1761bb24f63cd7d0a21a3e",
+      "bytes": 131175
+    },
+    "screenshots/ai-plan-a-sprint.png": {
+      "sha256": "3dd5b810495f077a2bd15b3d7203638b210ebe064f058636828e374d171584f6",
+      "bytes": 440811
+    },
+    "screenshots/card-editor.png": {
+      "sha256": "61675bb2019e0a35a6b4c260d19cf1b7bb8207576d3635c58ee03f75cbfafca2",
+      "bytes": 41609
+    },
+    "screenshots/choose-background-color.png": {
+      "sha256": "0c89279f420dbd38a8c38543ce878f46281cb1febe274cbf7fddfafb1bff24c3",
+      "bytes": 42821
+    },
+    "screenshots/deploy-with-vercel.png": {
+      "sha256": "d769ff3378e29b68f7f192c841b70b5c6ffba555907bc1d382c1514f3965a62b",
+      "bytes": 39815
+    },
+    "screenshots/export-to-json.png": {
+      "sha256": "86e7c25b6dc869b735ab5cf872f2fd59c0d8b178a475f9b7535705906ecba9ff",
+      "bytes": 19055
+    },
+    "screenshots/kanban.png": {
+      "sha256": "88d485f1d44566b0a8c15a510d0908faaaaac76d377815a8a441eec6787660ad",
+      "bytes": 254898
+    },
+    "screenshots/save-as-template.png": {
+      "sha256": "79b4c2c514e3e5337c0e548ea3182fb943335890032a9781fd2d239b879ba4c4",
+      "bytes": 19689
+    },
+    "screenshots/sharing.png": {
+      "sha256": "a1ecc503709eb34cdec2e56d5eff68499f27181a03d8e42225f699ec3499f8f2",
+      "bytes": 36980
+    },
+    "screenshots/sign-in-auth.png": {
+      "sha256": "f37d071428675266004e3567b546ebd6038c734e1c3a17554f33b5680e8895f8",
+      "bytes": 42269
+    },
+    "screenshots/timeline.png": {
+      "sha256": "9196b6a6bb5dc771e75e14eb92d77f850cb908911be409cb4c2856ffd0d09317",
+      "bytes": 275660
+    },
+    "zeroboard-mcp-commercial.en.vtt": {
+      "sha256": "0bae4a9b69406072773a28b19a7d4eb67c07a5bf4c2143dbc934e89f76542b09",
+      "bytes": 1313
+    }
+  }
+}

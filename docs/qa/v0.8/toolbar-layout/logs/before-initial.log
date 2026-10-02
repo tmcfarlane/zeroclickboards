@@ -1,0 +1,44 @@
+[WebServer] (node:85591) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+  ✘  1 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-1280-open (1.6s)
+  ✓  2 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › mobile-390-closed (1.3s)
+
+
+  1) [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-1280-open 
+
+    Error: Ask AI text stays on one line
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 2
+
+      48 |   expect(body.documentWidth,'no document-level horizontal overflow').toBeLessThanOrEqual(body.viewport);
+      49 |   expect(body.bodyWidth,'no body-level horizontal overflow').toBeLessThanOrEqual(body.viewport);
+    > 50 |   if(scenario.width>=640) expect(askLines,'Ask AI text stays on one line').toBe(1);
+         |                                                                            ^
+      51 |   for(let i=0;i<metrics.length;i++) {
+      52 |     const a=metrics[i];expect(a.x).toBeGreaterThanOrEqual(-0.5);expect(a.x+a.width).toBeLessThanOrEqual(scenario.width+0.5);
+      53 |     expect(a.y).toBeGreaterThanOrEqual(0);expect(a.y+a.height).toBeLessThanOrEqual(scenario.height);
+        at /private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:50:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/before-results/toolbar-desktop-1280-open-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/before-results/toolbar-desktop-1280-open-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/before-results/toolbar-desktop-1280-open-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/before-results/toolbar-desktop-1280-open-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-1280-open 
+  1 passed (6.1s)
