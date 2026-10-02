@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › ../../outputs/gauntlet/twelfth-mcp-final-integration/browser-toolbar/toolbar.spec.ts:13:39 › desktop-1280-open (3.7s)
+  ✓  2 [chromium] › ../../outputs/gauntlet/twelfth-mcp-final-integration/browser-toolbar/toolbar.spec.ts:13:39 › desktop-640-open (2.0s)
+  ✓  3 [chromium] › ../../outputs/gauntlet/twelfth-mcp-final-integration/browser-toolbar/toolbar.spec.ts:13:39 › mobile-390-closed (2.7s)
+
+  3 passed (9.8s)
