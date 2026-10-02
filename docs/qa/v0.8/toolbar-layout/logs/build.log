@@ -1,0 +1,33 @@
+vite v7.3.0 building client environment for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 2403 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/index.html                                               0.69 kB │ gzip:   0.39 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2     5.46 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-mono-latin-ext-400-normal-Cgks_Qgx.woff2    6.42 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff      7.16 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-mono-latin-ext-400-normal-CxNRRMGd.woff     8.74 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-mono-latin-400-normal-LC9RFr9I.woff2       14.71 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-mono-latin-400-normal-CoULgQGM.woff        19.17 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-400-normal-gapTbOY8.woff2       33.40 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-500-normal-uokXdC-Q.woff2       34.72 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-600-normal-DFOURf8L.woff2       35.29 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-700-normal-BmN9tIp5.woff2       35.48 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-400-normal-BOaIZNA2.woff        38.91 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-500-normal-CN2lyvyL.woff        40.52 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-600-normal-CA1yjETN.woff        41.20 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/geist-sans-latin-700-normal-CjScfYeH.woff        41.40 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/index-DW7JkC3N.css                              123.89 kB │ gzip:  20.94 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/matter-BOy0jgR-.js                               84.44 kB │ gzip:  26.81 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/AppShell-D4jebQVw.js                            354.25 kB │ gzip:  92.40 kB
+../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/dist/assets/index-DM1SbyCM.js                               998.53 kB │ gzip: 291.02 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.95s

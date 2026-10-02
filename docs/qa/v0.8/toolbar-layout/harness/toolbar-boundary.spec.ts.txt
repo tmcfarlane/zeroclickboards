@@ -1,0 +1,74 @@
+import {mkdir, writeFile} from 'node:fs/promises';
+import {test, expect, boardRows, json} from '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/tests/connector-ui/fixtures';
+const out = '/private/tmp/zeroboard-toolbar-built-smoke';
+const scenarios = [
+  {label:'desktop-1280-open', width:1280, height:720, open:true},
+  {label:'desktop-1280-closed', width:1280, height:720, open:false},
+  {label:'desktop-1024-open', width:1024, height:720, open:true},
+  {label:'desktop-1024-long-open', width:1024, height:720, open:true, long:true},
+  {label:'desktop-768-open', width:768, height:720, open:true},
+  {label:'desktop-640-open', width:640, height:720, open:true},
+  {label:'mobile-390-closed', width:390, height:664, open:false},
+];
+for (const scenario of scenarios) test(scenario.label, async ({page}) => {
+  await page.setViewportSize({width:scenario.width,height:scenario.height});
+  const phase=process.env.TOOLBAR_PHASE==='before'?'before':'after';
+  const folder=out+'/'+phase+'-screenshots';
+  await mkdir(folder,{recursive:true});
+  if(scenario.long) await page.route('**/rest/v1/boards*', route=>json(route,boardRows.map((row,index)=>({...row,name:index===0?'Product roadmap for the upcoming company-wide launch and release planning':row.name}))));
+  await page.route('**/api/ai/usage',route=>json(route,{used:0,limit:10,remaining:10}));
+  await page.route('**/api/connector*',route=>json(route,{available:false,endpoint:null,connections:[],reason:'Disposable toolbar fixture'}));
+  await page.goto('/account');
+  await page.getByRole('link',{name:'Back to boards'}).click();
+  const title=scenario.long?'Product roadmap for the upcoming company-wide launch and release planning':'Product roadmap';
+  const selector=page.getByRole('button',{name:title,exact:true});
+  await expect(selector).toBeVisible();
+  await page.evaluate(()=>document.fonts.ready);
+  expect(await page.evaluate(()=>Array.from(document.fonts).some(font=>font.family.replace(/^["']|["']$/g,'')==='Geist Sans'&&font.status==='loaded'))).toBe(true);
+  const fontFailures:string[]=[];
+  page.on('response',r=>{if(/\.woff2?(?:\?|$)/.test(r.url())&&!r.ok())fontFailures.push(r.status()+' '+r.url());});
+  if(scenario.open) {
+    await page.getByRole('button',{name:'Ask AI',exact:true}).click();
+    await expect(page.getByPlaceholder('What should we do next?')).toBeVisible();
+  }
+  const controls=scenario.width<640
+    ? [{name:'selector',locator:selector},{name:'board',locator:page.getByRole('button',{name:'Board',exact:true})},{name:'timeline',locator:page.getByRole('button',{name:'Timeline',exact:true})},{name:'actions',locator:page.getByRole('button',{name:'Board actions',exact:true})},{name:'ask-ai',locator:page.getByRole('button',{name:'Ask AI',exact:true})},{name:'add-card',locator:page.getByRole('button',{name:'Add Card',exact:true}).last()}]
+    : [{name:'selector',locator:selector},{name:'board',locator:page.getByRole('button',{name:'Board',exact:true})},{name:'timeline',locator:page.getByRole('button',{name:'Timeline',exact:true})},{name:'ask-ai',locator:page.getByRole('button',{name:'Ask AI',exact:true})},{name:'search',locator:page.getByRole('textbox',{name:'Search cards',exact:true})},{name:'filters',locator:page.getByRole('button',{name:'Filter cards',exact:true})},{name:'share',locator:page.getByRole('button',{name:'Share',exact:true})},{name:'actions',locator:page.getByRole('button',{name:'Board actions',exact:true})}];
+  const metrics:any[]=[];
+  for(const {name,locator}of controls) {
+    await expect(locator).toBeVisible();
+    metrics.push({name,...await locator.evaluate(el=>{
+      const r=el.getBoundingClientRect();const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      return {x:r.x,y:r.y,width:r.width,height:r.height,centerHitsSelf:!!hit&&(el===hit||el.contains(hit))};
+    })});
+  }
+  const body=await page.evaluate(()=>({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth}));
+  const askLines=await page.getByRole('button',{name:'Ask AI',exact:true}).evaluate(el=>{const span=el.querySelector('span');if(!span)return 0;const range=document.createRange();range.selectNodeContents(span);return range.getClientRects().length;});
+  await page.screenshot({path:folder+'/'+scenario.label+'.png',fullPage:true,animations:'disabled',scale:'css'});
+  await writeFile(folder+'/'+scenario.label+'.json',JSON.stringify({scenario,metrics,body,askLines},null,2)+'\n');
+  expect(body.documentWidth,'no document-level horizontal overflow').toBeLessThanOrEqual(body.viewport);
+  expect(body.bodyWidth,'no body-level horizontal overflow').toBeLessThanOrEqual(body.viewport);
+  if(scenario.width>=640) expect(askLines,'Ask AI text stays on one line').toBe(1);
+  if(scenario.width===640) expect(metrics.find(control=>control.name==='search').width,'search shrinks within the available narrow desktop pane').toBeLessThan(256);
+  for(let i=0;i<metrics.length;i++) {
+    const a=metrics[i];expect(a.x).toBeGreaterThanOrEqual(-0.5);expect(a.x+a.width).toBeLessThanOrEqual(scenario.width+0.5);
+    expect(a.y).toBeGreaterThanOrEqual(0);expect(a.y+a.height).toBeLessThanOrEqual(scenario.height);
+    expect(a.centerHitsSelf,a.name+' is reachable at its visible center').toBe(true);
+    for(let j=i+1;j<metrics.length;j++) {
+      const b=metrics[j];const width=Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x);const height=Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y);
+      expect(width>0.5&&height>0.5,a.name+' and '+b.name+' do not overlap').toBe(false);
+    }
+  }
+  for(const {name,locator}of controls) if(name!=='search')await locator.click({trial:true});
+  if(scenario.width>=640) {
+    await page.getByRole('textbox',{name:'Search cards',exact:true}).fill('query');
+    await expect(page.getByRole('textbox',{name:'Search cards',exact:true})).toHaveValue('query');
+    await page.getByRole('button',{name:'Filter cards',exact:true}).click();
+    await expect(page.getByText('Labels',{exact:true})).toBeVisible();
+    await page.keyboard.press('Escape');
+  }
+  await page.getByRole('button',{name:'Board actions',exact:true}).click();
+  await expect(page.getByRole('menuitem',{name:'Add Column',exact:true})).toBeVisible();
+  await page.keyboard.press('Escape');
+  expect(fontFailures).toEqual([]);
+});
