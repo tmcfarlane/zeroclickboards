@@ -1,0 +1,21 @@
+[WebServer] (node:1271) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 1 worker
+
+(node:1278) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [desktop] › tests/connector-ui/ai-drafts.spec.ts:99:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly (2.0s)
+  ✓   2 [desktop] › tests/connector-ui/ai-drafts.spec.ts:119:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning (2.3s)
+  ✓   3 [desktop] › tests/connector-ui/ai-drafts.spec.ts:138:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry (3.9s)
+  ✓   4 [desktop] › tests/connector-ui/ai-drafts.spec.ts:157:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent (2.3s)
+  ✓   5 [desktop] › tests/connector-ui/ai-drafts.spec.ts:171:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (2.1s)
+(node:1461) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [mobile] › tests/connector-ui/ai-drafts.spec.ts:99:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly (2.0s)
+  ✓   7 [mobile] › tests/connector-ui/ai-drafts.spec.ts:119:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning (1.8s)
+  ✓   8 [mobile] › tests/connector-ui/ai-drafts.spec.ts:138:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry (7.2s)
+  ✓   9 [mobile] › tests/connector-ui/ai-drafts.spec.ts:157:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent (1.9s)
+  ✓  10 [mobile] › tests/connector-ui/ai-drafts.spec.ts:171:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (2.0s)
+
+  10 passed (31.9s)

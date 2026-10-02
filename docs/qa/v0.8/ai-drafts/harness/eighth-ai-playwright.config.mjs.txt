@@ -1,0 +1,25 @@
+import { defineConfig, devices } from '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/node_modules/@playwright/test/index.mjs';
+const compiled = process.env.AI_DRAFT_COMPILED === '1';
+const port = compiled ? 4261 : 4253;
+export default defineConfig({
+  testDir: '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui',
+  testMatch: process.env.AI_DRAFT_FULL === '1' ? '*.spec.ts' : 'ai-drafts.spec.ts',
+  outputDir: process.env.AI_DRAFT_RESULTS_DIR || '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-browser-results',
+  fullyParallel: false,
+  workers: 1,
+  retries: 0,
+  reporter: [['list']],
+  use: { baseURL: `http://127.0.0.1:${port}`, screenshot: 'only-on-failure', trace: 'retain-on-failure', permissions: ['clipboard-read', 'clipboard-write'] },
+  projects: [
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile', use: { ...devices['iPhone 13'], defaultBrowserType: 'chromium' } },
+  ],
+  webServer: {
+    command: compiled ? `npm run preview -- --host 127.0.0.1 --port ${port} --strictPort` : `npm run dev -- --config /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-vite.config.mjs --host 127.0.0.1 --port ${port} --strictPort`,
+    cwd: '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts',
+    url: `http://127.0.0.1:${port}`,
+    reuseExistingServer: false,
+    timeout: 60000,
+    env: { VITE_SUPABASE_URL: 'https://connector-fixture.invalid', VITE_SUPABASE_ANON_KEY: 'disposable-fixture-public-key' },
+  },
+});
