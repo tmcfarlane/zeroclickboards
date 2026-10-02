@@ -1,0 +1,205 @@
+{
+  "baseCommit": "a507cd0d68c7e880089d350dc026988b3ce24cfc",
+  "branch": "codex/gauntlet-consent",
+  "fixtureOnly": true,
+  "sources": {
+    "src/pages/ConnectorConsentPage.tsx": "3bdde7b8b4786f37ede2d77711494553815f32827f74b476c9ebf9b10d6f65b6",
+    "src/components/connectors/ConnectorSettings.tsx": "61c997d231f0cd0ec1f6b45ea9e3fac41d8882db4f76462059164e472c49d3bf",
+    "src/components/connectors/__tests__/connector-ui.test.tsx": "d9eaf25e7a232c0e97d665dae44136611aa07137c3e29292211a6531823fbfb9",
+    "src/components/connectors/__tests__/connector-ownership.test.tsx": "c1d247164d4384bb7d84d9fa81290f6aae1b2b60e1e2be8caa1d0d2f335fb080",
+    "tests/connector-ui/connector.spec.ts": "a12a2c0da60ca65bc56dc7dbf763a24a5e9ec06c7991e89bdf72efbb832fcc4a",
+    "tests/connector-ui/connector-ownership.spec.ts": "afe593b2412deed97627a1fbe2731a9d2e0ba8f8d5547193685fd1d97d426f23",
+    "tests/connector-ui/fixtures.ts": "f2b9ed7075bd7bfc5b76b6709473f23fa1319760ab04ac5baded8a3911e563f4",
+    "api/connector.ts": "b38719fa05e779d32b33f934466ebb8b67f6133896eb18f512ebf1389cac3562",
+    "mcp-server/src/oauth.ts": "7fb75edb0c68d6508ce763aa70d10fc74c31a05556d81b0d0c7d19ad1006e575"
+  },
+  "screenshots": {
+    "docs/qa/v0.8/consent/screenshots/approval-pending-fixture-desktop.png": {
+      "sha256": "e83147222d7fa6726f36769711464db721cfde3895e771b1252d9aec962747ba",
+      "bytes": 61212,
+      "width": 1280,
+      "height": 747,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/approval-pending-fixture-mobile.png": {
+      "sha256": "810eb36d591fa7712252a9cc48b3cb6c0e895e6144addf88469ba65014a56522",
+      "bytes": 55815,
+      "width": 390,
+      "height": 769,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/departed-approval-fixture-desktop.png": {
+      "sha256": "4ed1edc026190a854fa094c55de14ed0c828163d1f584d0245e3b1633b4c0517",
+      "bytes": 38655,
+      "width": 1280,
+      "height": 720,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/departed-approval-fixture-mobile.png": {
+      "sha256": "99425eef3e43ad8fcfc1afbafced9535234d84e0f140b46ad55939e9c0a6a177",
+      "bytes": 22749,
+      "width": 390,
+      "height": 664,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/fresh-after-cancellation-fixture-desktop.png": {
+      "sha256": "a48a497a2f0508f64f2396df1ee95cc2fe47cac8bc86a46a2bba7abc62de1f66",
+      "bytes": 57194,
+      "width": 1280,
+      "height": 731,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/fresh-after-cancellation-fixture-mobile.png": {
+      "sha256": "829915f3909dce70f09aa7cd8f08811cce329bc09f7a6a1c69492c234eee0f2d",
+      "bytes": 52073,
+      "width": 390,
+      "height": 753,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/partial-revoke-reconciled-fixture-desktop.png": {
+      "sha256": "42155f745696d1d238ac569bafd98289fa5898e2246cfe6d5b85f18b8f1230cf",
+      "bytes": 111416,
+      "width": 1280,
+      "height": 1286,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/partial-revoke-reconciled-fixture-mobile.png": {
+      "sha256": "1bd006a3c00e38124ffd45c1483dfe9efc9b45adb53ef4d0941f952035e70595",
+      "bytes": 102864,
+      "width": 390,
+      "height": 1498,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/replacement-account-fixture-desktop.png": {
+      "sha256": "ef4f6fb0b7b9a0f8409dcc648b5682c06edcfd25cf7e76f3e6837202118998a3",
+      "bytes": 110966,
+      "width": 1280,
+      "height": 1336,
+      "captureKind": "dev app actual public SDK fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/replacement-account-fixture-mobile.png": {
+      "sha256": "d3c4315a18b5d363efe490bcae8a93c97aeffcf78f6297753bc5afe501e66689",
+      "bytes": 101603,
+      "width": 390,
+      "height": 1524,
+      "captureKind": "dev app actual public SDK fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/successor-request-fixture-desktop.png": {
+      "sha256": "e60e764de894c8b6a5dd0ae8bfb80ea78bce902b2221567e7fd29cf8893b7fc9",
+      "bytes": 57234,
+      "width": 1280,
+      "height": 731,
+      "captureKind": "copied working compiled app fixture"
+    },
+    "docs/qa/v0.8/consent/screenshots/successor-request-fixture-mobile.png": {
+      "sha256": "347df0f51f5f91b13b0e7ac85d8e0df8160bc074fd24e27184cbbd0c8e30e02c",
+      "bytes": 52100,
+      "width": 390,
+      "height": 753,
+      "captureKind": "copied working compiled app fixture"
+    }
+  },
+  "checks": {
+    "newControlledUnitsCapturedBaseline": {
+      "failed": 26,
+      "passed": 4,
+      "total": 30
+    },
+    "focusedConnectorUnits": {
+      "passed": 87,
+      "files": 4
+    },
+    "focusedBrowser": {
+      "passed": 10,
+      "projects": [
+        "desktop",
+        "mobile"
+      ]
+    },
+    "workingFixtureBuild": "passed TypeScript and Vite",
+    "scopedLint": "passed",
+    "broaderBrowser": {
+      "passed": 208,
+      "skipped": 2,
+      "total": 210,
+      "duration": "3.9 minutes",
+      "retries": 0
+    },
+    "sourceHashesAfterBroaderBrowser": "all 9 matched frozen before-run hashes",
+    "isolatedNativeFixture": {
+      "passed": 3,
+      "maxWorkers": 1
+    },
+    "boundedFullAppApi": {
+      "passed": 961,
+      "files": 45,
+      "maxWorkers": 2,
+      "unhandledErrors": 0
+    },
+    "postReviewRetryStrengthening": {
+      "passed": 30,
+      "files": 1,
+      "actualSecondPost": true,
+      "renewedToken": true
+    },
+    "compiledBrowser": {
+      "passed": 8,
+      "excluded": 2,
+      "reason": "account replacement uses dev-only public /src/lib/supabase.ts import; its two dev app cases passed separately",
+      "retries": 0
+    }
+  },
+  "postReviewAt": "2026-10-02T11:31:10.917087+00:00",
+  "artifactHashes": {
+    "android-chrome-192x192.png": "50117c38991d1f05eb547aa9fdd5310ddbc1c3c3191074974178cedba6f67b88",
+    "android-chrome-512x512.png": "8372cbeffa825e3add85147f032f25f27c394bdec8f25765ca172b904d1e26d8",
+    "apple-touch-icon.png": "bc8585046099cb1b4ed0def79c5c8965be7503da6abd47b2bb266d896b210cdc",
+    "assets/AppShell-DwWBdY2T.js": "6d4eca85914b3d317ff3e14451b9675bc2719761e625f06e1b1b3d9fa72b8dd7",
+    "assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff": "9e97905f0663eab927bcaa72b4e5b844bfa980ada3f894ff92052ec7ed2d8c03",
+    "assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2": "259b63d9a2dcdf449b73f46624e409de1d62a51134e884d3f4af1242736cde10",
+    "assets/geist-mono-latin-400-normal-CoULgQGM.woff": "af2a06fc6940abff35305a96ce4e2f69c2934106339b488b8cb85ca6f136dfff",
+    "assets/geist-mono-latin-400-normal-LC9RFr9I.woff2": "616e37ca59a2afebe306751773a538b93f5a2d9a90fd3fc97ce73321cb93af51",
+    "assets/geist-mono-latin-ext-400-normal-Cgks_Qgx.woff2": "7f4a5d3c1cdf8a5bc8deb47b85606a5486d5159d42eba048bae9583c4d085cd0",
+    "assets/geist-mono-latin-ext-400-normal-CxNRRMGd.woff": "9f73a257660b9605fd3fae18eec73f1813da5d4e06638f5f7d2b155750530185",
+    "assets/geist-sans-latin-400-normal-BOaIZNA2.woff": "b2f5931f1a903bcc64af96ee41b3fed53a8ce74e9261181931a680a50560485b",
+    "assets/geist-sans-latin-400-normal-gapTbOY8.woff2": "e6ef6abb39c762ed2259cc814e6f16888c540cd84835962227b56ab2354f27f1",
+    "assets/geist-sans-latin-500-normal-CN2lyvyL.woff": "5d679b8796eed440d6e7e2e94c37390b82f9db77aa92cfc21e96a1cdeecfba3d",
+    "assets/geist-sans-latin-500-normal-uokXdC-Q.woff2": "40073e90816315c92e4f4381bd50b6fdc950b22b0dd010a4179046cf588d4f12",
+    "assets/geist-sans-latin-600-normal-CA1yjETN.woff": "3903ed7633d563de34bbbf609e869a878e4b4081a25011a195b7a80043ecafe9",
+    "assets/geist-sans-latin-600-normal-DFOURf8L.woff2": "9d99fbd791968493fa507ac846de561cee47b00f8100c23cad333b3cb78392d6",
+    "assets/geist-sans-latin-700-normal-BmN9tIp5.woff2": "3d59addfafec3452d44717aa0a18911d5c3812487ed06af47f2ef27192ea1eed",
+    "assets/geist-sans-latin-700-normal-CjScfYeH.woff": "a25e16202a8cd74d4a149b97d69262582e23ae59abfde1cee1a051ba5c41622a",
+    "assets/index-CHEpaECk.css": "263e79f76a1b7eea90ef1464343a1cde2748db1ae45e75881816b9f83fe9cf05",
+    "assets/index-DV72y5EC.js": "5a7232a12b4724012e5faf6ac2dd29aef6018d266cc107e8570094b469cb3ee9",
+    "assets/matter-Cb-s8b67.js": "92f0513373229c0f50b710db07420046a574a8d0e81499b99d7e9df6b40be05d",
+    "favicon-16x16.png": "bfbf0d89f45777cd191e9469821d552a6fdd165caed3df063aaaa35069312864",
+    "favicon-32x32.png": "346c79ed3891dff343b7ea9ff401095dbe756c97f1c872408f87c242c3ecb597",
+    "favicon.ico": "b1a99af77445241f1676ddbf23fb12b3f7b59f0ca3ccda3158834b0179b31a15",
+    "index.html": "03d13a3e54b1d4b6a6d51af81e00de32816492f61d3555d76aa9250bcc6f5870",
+    "logo/logo_color.svg": "471cfbd7f8e6c166e1f034b9a8a859f93b7dd0d4485a692addef37a25119ce23",
+    "logo/logo_dark_pointer.svg": "bfc85a05ebd3a97ea76a282a07ca486c9f2e781f0241fd5306995df6ec5c42cf",
+    "logo/logo_wordmark.svg": "d722e84c19e78e085cd2039c133dddc956263e7bdbfdd126da4afe03e94ba3ef",
+    "screenshots/ZeroBoardAI.gif": "10f5b724226fee0f709f004cc56328d847934a4d22677017f43e1e1430a566da",
+    "screenshots/ai-assist.png": "8dc1b38f769e288eadd1fa183083b81ac117bd7b9a1761bb24f63cd7d0a21a3e",
+    "screenshots/ai-plan-a-sprint.png": "3dd5b810495f077a2bd15b3d7203638b210ebe064f058636828e374d171584f6",
+    "screenshots/card-editor.png": "61675bb2019e0a35a6b4c260d19cf1b7bb8207576d3635c58ee03f75cbfafca2",
+    "screenshots/choose-background-color.png": "0c89279f420dbd38a8c38543ce878f46281cb1febe274cbf7fddfafb1bff24c3",
+    "screenshots/deploy-with-vercel.png": "d769ff3378e29b68f7f192c841b70b5c6ffba555907bc1d382c1514f3965a62b",
+    "screenshots/export-to-json.png": "86e7c25b6dc869b735ab5cf872f2fd59c0d8b178a475f9b7535705906ecba9ff",
+    "screenshots/kanban.png": "88d485f1d44566b0a8c15a510d0908faaaaac76d377815a8a441eec6787660ad",
+    "screenshots/save-as-template.png": "79b4c2c514e3e5337c0e548ea3182fb943335890032a9781fd2d239b879ba4c4",
+    "screenshots/sharing.png": "a1ecc503709eb34cdec2e56d5eff68499f27181a03d8e42225f699ec3499f8f2",
+    "screenshots/sign-in-auth.png": "f37d071428675266004e3567b546ebd6038c734e1c3a17554f33b5680e8895f8",
+    "screenshots/timeline.png": "9196b6a6bb5dc771e75e14eb92d77f850cb908911be409cb4c2856ffd0d09317",
+    "zeroboard-mcp-commercial.en.vtt": "0bae4a9b69406072773a28b19a7d4eb67c07a5bf4c2143dbc934e89f76542b09"
+  },
+  "resultScope": "The full app/API961 run preceded only the later test-only deliberate-revoke-retry strengthening; all30 ownership units passed afterward. Product hashes remained unchanged. The full browser208/2 run preceded this test-only edit and compiled recapture; final-head CI repeats the complete gates before merge.",
+  "newLogHashes": {
+    "zeroboard-consent-app-full.log": "e802bb6126cbf77d61af63266965b4d8402c783966a416e7f90e2dc8e2bc7a97",
+    "zeroboard-consent-sql-isolated.log": "08ed61a517a0680c6fd43155657d8dc68b1db61753f50689b94eb9d972b8ed90",
+    "zeroboard-consent-app-bounded.log": "8d4391efec3d9a9e2b7e0a73b8cec9cd060f788df5c58a0594e32d77ed88b655",
+    "zeroboard-consent-retry-strengthened.log": "5ed5ce7c1ab2017205d5b7a1e7ca05618a6642cfb2f8be7331ef6f5bce3fe564",
+    "zeroboard-consent-retry-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "zeroboard-consent-built-browser.log": "a424ac8bc1301dcd52dba509ef2b76d045f2630d9fec2d07eb85a7d94eb66993"
+  }
+}
