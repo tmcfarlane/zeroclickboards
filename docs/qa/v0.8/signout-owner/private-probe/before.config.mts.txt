@@ -1,0 +1,27 @@
+export default {
+  "esbuild": { "jsx": "automatic" },
+  "root": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/private-before",
+  "cacheDir": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/cache-before",
+  "resolve": {
+    "alias": {
+      "react": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/react",
+      "react-dom": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/react-dom",
+      "vitest": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/vitest",
+      "sonner": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/sonner",
+      "@testing-library/react": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/@testing-library/react",
+      "@testing-library/jest-dom": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/@testing-library/jest-dom",
+      "@": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci/src"
+    }
+  },
+  "test": {
+    "globals": true,
+    "environment": "jsdom",
+    "setupFiles": [
+      "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/private-before/setup.ts"
+    ],
+    "css": false,
+    "include": [
+      "src/hooks/__tests__/*.test.tsx"
+    ]
+  }
+};

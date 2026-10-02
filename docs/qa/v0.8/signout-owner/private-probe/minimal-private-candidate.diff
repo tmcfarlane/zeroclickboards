@@ -1,0 +1,17 @@
+--- before/useSignOutAction.ts
++++ private-candidate/useSignOutAction.ts
+@@ -1,4 +1,4 @@
+-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
++import { useLayoutEffect, useRef, useState } from 'react';
+ import { toast } from 'sonner';
+ import { useAuthContext } from '@/components/auth/AuthProvider';
+ 
+@@ -15,7 +15,7 @@
+     return () => { mountedRef.current = false; attemptRef.current = null; };
+   }, []);
+ 
+-  useEffect(() => {
++  useLayoutEffect(() => {
+     attemptRef.current = null;
+     setIsSigningOut(false);
+   }, [user?.id]);

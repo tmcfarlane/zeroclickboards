@@ -1,0 +1,56 @@
+{
+  "sourceHead": "a26da88bf3768cc9bbe54f0c8cb8ddb7deb6cdcf",
+  "nodeBinary": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+  "nodeVersion": "20.20.2",
+  "nodeBinarySha256": "38de4fc456c0c439bac48c727d378f749abb4e31f4116703bb1ee9a746fccbb6",
+  "unchangedSourceAndOriginalFailure": true,
+  "before": {
+    "passed": 7,
+    "failed": 7,
+    "total": 14,
+    "exitCode": 1
+  },
+  "privateAfter": {
+    "passed": 14,
+    "failed": 0,
+    "total": 14,
+    "exitCode": 0
+  },
+  "testBytesIdenticalBeforeAfter": true,
+  "originalFullGate": {
+    "passed": 981,
+    "failed": 1,
+    "total": 982,
+    "json": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-integration/full-test.json",
+    "log": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-integration/full-test.log"
+  },
+  "productEdits": false,
+  "harnessFailureRetained": true,
+  "artifactsSha256": {
+    "before.json": "52d67f7ec803b11df000ccfc55ec51162d9161f8fa90c65d54ee5cdd18cca4c8",
+    "minimal-private-candidate.diff": "97b788b86e80e2193807b5ce5b3cb61277c2ba3045ce522354d7fc97e8743f8c",
+    "vitest-before.config.mts": "f6bf176eb79fb36c33e30442caab42a0c7747be660f9e90e51abf5668c7f2366",
+    "harness-jsx-failed-before-execution.json": "7812f48aa2a1229b42f9dc4f3b606ca3d6bf5decbc136e1388e437b4d418e86b",
+    "harness-jsx-failed-before.json": "d15935a4f535a44f66169aa39e1b24def7160b871b9d507d259b3a13b8200afb",
+    "source-before.json": "887b4a5b3b3d9c4c5d00bc56674a9b7765be525bb44b43db93f21902b11414bc",
+    "source-after.json": "bf53733b6cfee190c9c0f5656d037de39adb7bccf78a3eb747008d8dd243f997",
+    "after-execution.json": "b3fb8287441049f12a964ccbe2cfdd49b2d8c80026172e4f8d44fba14c154b82",
+    "before-execution.json": "04809c8fe4ff594293790d54b0abf5a96ed9c3e0ca1b70a2b796d52d49806d11",
+    "after.json": "1bbaa39622d739c76a60b8625244b7cc39259bdb48d3b778de16c7390333aa84",
+    "README.md": "fe175104ddcd996bd727ea707963ff74cee5f8d4433c491a291128497d0b5c44",
+    "harness-jsx-failed-before.log": "c4be7328c57a4be6f2f987477441c4b7d830948889a0ddf127a8f9ec4d077efc",
+    "vitest-after.config.mts": "e7f6f812a5655e738b10977db16ca86cf69b8da328995025c74b1de1ffb43e8f",
+    "before.log": "44286c309104db1a1626a212ce5f4e647e9229b612e0ee03c71a628719c0cdb7",
+    "after.log": "15aef1e4f89c54f627245eb23561e63fd81211e17a14642dfb75fa42d36c1a98",
+    "private-before/setup.ts": "7501a568d23a7ff22d887900ecd9fc87ce1c21adc0c919bf7b861e2c4df2eb8a",
+    "private-before/package.json": "89c47db7851f89caec72da4f215ebc21cf1e294aeef3b45d2583562d846ab035",
+    "private-after/setup.ts": "7501a568d23a7ff22d887900ecd9fc87ce1c21adc0c919bf7b861e2c4df2eb8a",
+    "private-after/package.json": "89c47db7851f89caec72da4f215ebc21cf1e294aeef3b45d2583562d846ab035",
+    "private-after/src/hooks/useSignOutAction.ts": "002734c4cded40d44a9d35d495a0e2ab61a809859d9b722137c7615ce767fd52",
+    "private-after/src/hooks/__tests__/useSignOutAction.test.tsx": "10f23bb1cd16009400895e4b824cf1cd7d34703ad5dbf4bae89dc509f2bb144a",
+    "private-after/src/hooks/__tests__/commit-order.test.tsx": "808250c1583f158fde5145d64be8efc32aaf6a9aef81c4c8898165e5c2249fbe",
+    "private-before/src/hooks/useSignOutAction.ts": "231422491ffc6d09bf9f2a1c28737122d47136b6e0383a270f022e749c780025",
+    "private-before/src/hooks/__tests__/useSignOutAction.test.tsx": "10f23bb1cd16009400895e4b824cf1cd7d34703ad5dbf4bae89dc509f2bb144a",
+    "private-before/src/hooks/__tests__/commit-order.test.tsx": "808250c1583f158fde5145d64be8efc32aaf6a9aef81c4c8898165e5c2249fbe"
+  }
+}

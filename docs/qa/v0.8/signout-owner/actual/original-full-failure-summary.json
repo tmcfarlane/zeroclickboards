@@ -1,0 +1,20 @@
+{
+  "sourceHead": "a26da88bf3768cc9bbe54f0c8cb8ddb7deb6cdcf",
+  "nodeVersion": "20.20.2",
+  "passed": 981,
+  "failed": 1,
+  "total": 982,
+  "originalSha256": {
+    "originalFullTestJson": "ae44be9e5e17ca0eb2233c781b2f1131808ee745cc428eeefea4f3c5cc7fe321",
+    "originalFullTestLog": "e7965a0ae3cfdf0194ff050eba15b8046afcdfcfb15f2b2ae4ccec9bd599684e"
+  },
+  "failures": [
+    {
+      "file": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci/src/components/auth/__tests__/signOut.test.tsx",
+      "title": "keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry",
+      "durationMs": 1231.8697089999998,
+      "errorFirstLine": "Error: Unable to find role=\"button\" and name \"Signing out...\""
+    }
+  ],
+  "scopeNote": "Original combined full app gate was retained, never retried by this diagnosis. The hook race is causally established by the separate controlled phase probe; original failure phase ordering was not instrumented."
+}

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 
@@ -15,7 +15,7 @@ export function useSignOutAction() {
     return () => { mountedRef.current = false; attemptRef.current = null; };
   }, []);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     attemptRef.current = null;
     setIsSigningOut(false);
   }, [user?.id]);
