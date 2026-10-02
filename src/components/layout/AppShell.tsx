@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker, useSearchParams, type Blocker } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { TimelineView } from '@/components/timeline/TimelineView';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
+import { useAuthContext } from '@/components/auth/AuthProvider';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { Button } from '@/components/ui/button';
 import { Plus, Layout, Github } from 'lucide-react';
@@ -28,6 +29,7 @@ import { CreateBoardDialog } from '@/components/board/CreateBoardDialog';
 import { Footer } from './Footer';
 import { AIUpgradePrompt } from '@/components/billing/AIUpgradePrompt';
 import { UpgradeToProBanner } from '@/components/billing/UpgradeToProBanner';
+import { LeaveBoardDialog } from './LeaveBoardDialog';
 
 
 export function AppShell() {
@@ -59,11 +61,33 @@ export function AppShell() {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
   const { isSignedIn, isLoaded, userId } = useAuth();
+  const { signOut } = useAuthContext();
+  const [signOutIntent, setSignOutIntent] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const accountRef = useRef(userId);
+  accountRef.current = userId;
+  const draftOwnerRef = useRef(userId);
+  const signOutAttemptRef = useRef<{ userId: string } | null>(null);
+  const focusBeforeLeaveRef = useRef<HTMLElement | null>(null);
+  const accountMenuTriggerRef = useRef<HTMLButtonElement>(null);
+  const blockerRef = useRef<Blocker | null>(null);
 
 
   const activeBoard = getActiveBoard();
   const userBoards = getBoardsForUser();
-  const hasUnsavedChanges = !!cardEditorSession || !!newCardTarget || isCreateDialogOpen || !!textDialogRequest || hasShareDraft || Object.values(boardSyncStates).some((state) => state.status !== 'saved');
+  const hasOpenForms = !!cardEditorSession || !!newCardTarget || isCreateDialogOpen || !!textDialogRequest || hasShareDraft;
+  const syncStates = Object.values(boardSyncStates);
+  const hasUnsavedChanges = hasOpenForms || syncStates.some((state) => state.status !== 'saved');
+  const saveState = syncStates.some((state) => ['error', 'conflict', 'deleted', 'readonly'].includes(state.status)) ? 'attention' : syncStates.some((state) => state.status !== 'saved') ? 'saving' : null;
+  const sameDraftAccount = isLoaded && isSignedIn && userId === draftOwnerRef.current;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (!sameDraftAccount || !hasUnsavedChanges || currentLocation.pathname === nextLocation.pathname) return false;
+    if (blockerRef.current?.state !== 'blocked' && !signOutIntent) {
+      focusBeforeLeaveRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+    return true;
+  });
+  blockerRef.current = blocker;
   const repoUrl = import.meta.env.VITE_GITHUB_REPO_URL as string | undefined;
   const canEditActiveBoard = !!activeBoard && useBoardStore.getState().canEditBoard(activeBoard.id);
   const sharedBoard = shareDialogRequest ? useBoardStore.getState().boards.find((board) => board.id === shareDialogRequest.boardId) : undefined;
@@ -116,14 +140,67 @@ export function AppShell() {
     }
   }, [searchBoardId, activeBoard?.id, canEditActiveBoard, viewMode]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isLoaded) {
       setCurrentUserId(userId);
+      draftOwnerRef.current = userId;
+      if (blockerRef.current?.state === 'blocked') blockerRef.current.reset();
+      signOutAttemptRef.current = null;
+      setSignOutIntent(null);
+      setIsSigningOut(false);
+      setIsCreateDialogOpen(false);
+      setNewCardTarget(null);
       setTextDialogRequest(null);
       setShareDialogRequest(null);
       setHasShareDraft(false);
+      setSearchBoardId(null);
+      setViewerSearch('');
+      setIsAIOpen(false);
+      setIsShortcutsOpen(false);
+      setIsSignInModalOpen(false);
+      setIsUpgradePromptOpen(false);
     }
   }, [isLoaded, userId, setCurrentUserId]);
+
+  useEffect(() => () => { signOutAttemptRef.current = null; }, []);
+
+  const performSignOut = async (expectedAccount: string) => {
+    if (accountRef.current !== expectedAccount || signOutAttemptRef.current) return;
+    const attempt = { userId: expectedAccount };
+    signOutAttemptRef.current = attempt;
+    setIsSigningOut(true);
+    try {
+      const result = await signOut();
+      if (signOutAttemptRef.current === attempt && accountRef.current === expectedAccount && result.error) toast.error('Could not sign out. Try again.');
+    } catch {
+      if (signOutAttemptRef.current === attempt && accountRef.current === expectedAccount) toast.error('Could not sign out. Try again.');
+    } finally {
+      if (signOutAttemptRef.current === attempt) {
+        signOutAttemptRef.current = null;
+        setIsSigningOut(false);
+        setSignOutIntent(null);
+      }
+    }
+  };
+  const requestSignOut = () => {
+    if (!userId || isSigningOut || signOutAttemptRef.current) return;
+    if (hasUnsavedChanges && sameDraftAccount) {
+      focusBeforeLeaveRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setSignOutIntent(userId);
+    } else void performSignOut(userId);
+  };
+  const stayHere = () => {
+    if (isSigningOut) return;
+    if (blocker.state === 'blocked') blocker.reset();
+    setSignOutIntent(null);
+  };
+  const leavePage = () => {
+    if (!sameDraftAccount || isSigningOut) return;
+    if (blocker.state === 'blocked') {
+      setSignOutIntent(null);
+      blocker.proceed();
+    } else if (signOutIntent === userId && signOutIntent) void performSignOut(signOutIntent);
+  };
 
   useEffect(() => {
     if (!isSignedIn) return;
@@ -135,14 +212,14 @@ export function AppShell() {
   }, [isSignedIn, refreshFromRemote]);
 
   useEffect(() => {
-    if (!hasUnsavedChanges) return;
+    if (!hasUnsavedChanges || !sameDraftAccount) return;
     const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', warnBeforeLeaving);
     return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, sameDraftAccount]);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -243,8 +320,10 @@ export function AppShell() {
 
             <div className="ml-1">
               <UserProfile
+                triggerRef={accountMenuTriggerRef}
                 onSignInClick={() => setIsSignInModalOpen(true)}
                 onPricingClick={() => setIsUpgradePromptOpen(true)}
+                onSignOutClick={requestSignOut}
               />
             </div>
           </div>
@@ -256,7 +335,7 @@ export function AppShell() {
 
       {/* Main Content Area with AI Side Panel */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} onUpgrade={() => setIsUpgradePromptOpen(true)} />
+        <AIAssistant key={userId ?? 'signed-out'} isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} onUpgrade={() => setIsUpgradePromptOpen(true)} />
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {activeBoard ? <BoardSyncNotice boardId={activeBoard.id} /> : null}
           <main className="flex-1 min-h-0 overflow-hidden">
@@ -331,7 +410,7 @@ export function AppShell() {
         />
       )}
       {newCardTarget && (
-        <CardEditor isOpen onClose={() => setNewCardTarget(null)} onSave={handleKeyboardAddCard} mode="create" accessMessage={!useBoardStore.getState().canEditBoard(newCardTarget.boardId) ? 'You no longer have editing access to this board. Your form is kept here; copy anything you need before closing it.' : undefined} />
+        <CardEditor key={userId ?? 'signed-out'} isOpen onClose={() => setNewCardTarget(null)} onSave={handleKeyboardAddCard} mode="create" accessMessage={!useBoardStore.getState().canEditBoard(newCardTarget.boardId) ? 'You no longer have editing access to this board. Your form is kept here; copy anything you need before closing it.' : undefined} />
       )}
       <AIUpgradePrompt isOpen={isUpgradePromptOpen} onOpenChange={setIsUpgradePromptOpen} />
       <KeyboardShortcutsHelp isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
@@ -355,6 +434,19 @@ export function AppShell() {
         onOpenChange={setIsCreateDialogOpen}
         onOpenSignIn={() => setIsSignInModalOpen(true)}
         onUpgrade={() => setIsUpgradePromptOpen(true)}
+      />
+      <LeaveBoardDialog
+        open={sameDraftAccount && (blocker.state === 'blocked' || signOutIntent === userId && signOutIntent !== null)}
+        signingOut={blocker.state !== 'blocked' && signOutIntent !== null}
+        busy={isSigningOut}
+        hasForms={hasOpenForms}
+        saveState={saveState}
+        onStay={stayHere}
+        onLeave={leavePage}
+        restoreFocus={() => {
+          const target = focusBeforeLeaveRef.current?.isConnected ? focusBeforeLeaveRef.current : accountMenuTriggerRef.current;
+          target?.focus({ preventScroll: true });
+        }}
       />
     </div>
     </BoardDialogContext.Provider>

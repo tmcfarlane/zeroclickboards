@@ -4,6 +4,7 @@ import { mcpAuthRouter, createOAuthMetadata, getOAuthProtectedResourceMetadataUr
 import { buildServer } from './server.js';
 import { ZeroBoardOAuth, SCOPES } from './oauth.js';
 import { oauthCallbackMatches } from './oauth-callback.js';
+import { hasPreparsedBody, readMcpJsonBody } from './http-body.js';
 
 /** Mount behind TLS on the canonical origin. No shared MCP sessions or local credential files. */
 export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: string; allowedOrigins: string[] }) {
@@ -61,8 +62,15 @@ export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: s
     next();
   });
   app.use(mcpAuthRouter({ provider: oauth, issuerUrl: oauth.options.issuer, resourceServerUrl: oauth.options.resource, scopesSupported: SCOPES }));
+  // Match the same case-insensitive, optional-trailing-slash routes as Express.
+  const isMcpPath = (path: string) => /^\/mcp\/?$/i.test(path);
+  const preparsedRequests = new WeakSet<express.Request>();
+  app.use((req, _res, next) => {
+    if (isMcpPath(req.path) && req.method === 'POST' && hasPreparsedBody(req)) preparsedRequests.add(req);
+    next();
+  });
   app.use(express.json({ limit: '1mb' }));
-  app.all('/mcp', async (req, res) => {
+  app.all('/mcp', async (req, res, next) => {
     const token = /^Bearer ([A-Za-z0-9_-]+)$/.exec(req.headers.authorization ?? '')?.[1];
     let context;
     try {
@@ -73,17 +81,20 @@ export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: s
       res.setHeader('WWW-Authenticate', `Bearer resource_metadata="${getOAuthProtectedResourceMetadataUrl(oauth.options.resource)}", scope="boards:read", error="invalid_token"`);
       res.status(401).json({ error: 'Authentication required' }); return;
     }
-    if (req.method !== 'POST') { res.status(405).end(); return; }
+    if (req.method !== 'POST') { res.setHeader('Allow', 'POST, OPTIONS'); res.status(405).end(); return; }
+    let body: unknown;
+    try { body = readMcpJsonBody(req, preparsedRequests.has(req)); }
+    catch (error) { next(error); return; }
     // Fresh RLS user client and fresh server per HTTP request: no session id can impersonate another account.
     const server = buildServer(context.client, context.user, { plugin: true, boardIds: context.grant.boardIds,
       readOnly: !context.grant.scopes.includes('cards:add'), proposalKey: options.proposalKey });
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     res.on('close', () => { void server.close(); });
-    try { await server.connect(transport); await transport.handleRequest(req, res, req.body); }
+    try { await server.connect(transport); await transport.handleRequest(req, res, body); }
     catch { if (!res.headersSent) res.status(500).json({ error: 'MCP request failed' }); }
   });
   const requestError: ErrorRequestHandler = (error: unknown, req, res, next) => {
-    if (req.path !== '/mcp' || res.headersSent) { next(error); return; }
+    if (!isMcpPath(req.path) || res.headersSent) { next(error); return; }
     const failure = error as { type?: string; status?: number };
     const status = failure.type === 'entity.too.large' ? 413 : failure.type === 'entity.parse.failed' ? 400 :
       (failure.status && failure.status >= 400 && failure.status < 600 ? failure.status : 500);

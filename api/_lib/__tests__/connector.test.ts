@@ -1,7 +1,10 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Request as ExpressRequest, Response as ExpressResponse } from 'express'
 import { PGlite } from '@electric-sql/pglite'
 import { readFile, readdir } from 'node:fs/promises'
+import { PassThrough } from 'node:stream'
+import { brotliCompressSync, deflateSync, gzipSync } from 'node:zlib'
 import { createHash, randomBytes } from 'node:crypto'
 import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http'
 import { createConnectorHandler } from '../../connector.js'
@@ -63,7 +66,7 @@ beforeEach(() => {
   }))
 })
 
-async function setup(preparsed = false, connectorConfig = config()) {
+async function setup(preparsed: boolean | 'restored' | 'raw-buffer' = false, connectorConfig = config()) {
   const pg = await database(); cleanup.push(() => pg.close())
   await pg.exec('set role zeroboard_connector')
   const runtime = createConnectorRuntime(connectorConfig, pg)
@@ -74,18 +77,52 @@ async function setup(preparsed = false, connectorConfig = config()) {
     const { data, error } = await client.auth.getUser(token)
     return error || !data.user ? null : { token, userId: data.user.id, email: '' }
   } })
+  const bodyObservations: { path: string; getterReads: number; recoveredBytes: number[] }[] = []
   const server = createServer(async (req, res) => {
-    if (preparsed && req.method === 'POST') {
+    const observation = { path: req.url!, getterReads: 0, recoveredBytes: [] as number[] }
+    bodyObservations.push(observation)
+    if (preparsed && req.method !== 'GET' && req.method !== 'HEAD') {
       const buffers: Buffer[] = []; for await (const chunk of req) buffers.push(Buffer.from(chunk))
-      const body = Buffer.concat(buffers).toString()
-      ;(req as IncomingMessage & { body?: unknown }).body = req.headers['content-type']?.includes('json') ? JSON.parse(body) : Object.fromEntries(new URLSearchParams(body))
+      const bytes = Buffer.concat(buffers)
+      if (preparsed === 'raw-buffer') Object.defineProperty(req, 'rawBody', { value: bytes })
+      const mediaType = req.headers['content-type']?.split(';', 1)[0].trim().toLowerCase()
+      if (preparsed === 'restored') {
+        // Vercel's helper consumes the original IncomingMessage, then restores
+        // read/data/end on a PassThrough while the original ended flags remain.
+        const replica = new PassThrough()
+        const originalOn = req.on.bind(req)
+        req.read = replica.read.bind(replica)
+        req.on = req.addListener = ((event: string, callback: (...args: unknown[]) => void) =>
+          event === 'data' || event === 'end' ? replica.on(event, callback) : originalOn(event, callback)) as typeof req.on
+        replica.write(bytes); replica.end()
+      }
+      const property = { configurable: true, enumerable: true }
+      Object.defineProperty(req, 'body', { ...property, get: () => {
+        observation.getterReads++
+        const text = bytes.toString()
+        const value: unknown = mediaType === 'application/json' ? (text ? JSON.parse(text) : {}) :
+          mediaType === 'application/x-www-form-urlencoded' ? Object.fromEntries(new URLSearchParams(text)) :
+          mediaType === 'application/octet-stream' ? bytes : mediaType === 'text/plain' ? text : undefined
+        Object.defineProperty(req, 'body', { ...property, writable: true, value })
+        return value
+      }, set: (value: unknown) => { Object.defineProperty(req, 'body', { ...property, writable: true, value }) } })
     }
-    await handler(req, res)
+    const originalRead = req.read.bind(req)
+    req.read = (size?: number) => {
+      const bytes: unknown = originalRead(size)
+      if (size === 1024 * 1024 + 1) observation.recoveredBytes.push(Buffer.isBuffer(bytes) ? bytes.length : 0)
+      return bytes
+    }
+    // Exercise accepted Express aliases directly as well as canonical API rewrites.
+    if (req.url?.startsWith('/direct/')) {
+      req.url = req.url.slice('/direct'.length)
+      runtime.app(req as ExpressRequest, res as ExpressResponse)
+    } else await handler(req, res)
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   cleanup.push(() => new Promise<void>(resolve => server.close(() => resolve())))
   const address = server.address() as { port: number }
-  const request = (path: string, init: { method?: string; headers?: Record<string,string>; body?: string } = {}) => new Promise<{ status: number; headers: IncomingMessage['headers']; body: string; json(): Record<string,unknown> }>((resolve, reject) => {
+  const request = (path: string, init: { method?: string; headers?: Record<string,string | string[]>; body?: string | Buffer } = {}) => new Promise<{ status: number; headers: IncomingMessage['headers']; body: string; json(): Record<string,unknown> }>((resolve, reject) => {
     const req = httpRequest(`http://127.0.0.1:${address.port}${path}`, { method: init.method ?? 'GET', headers: { host: 'connector.test', ...init.headers } }, res => {
       const buffers: Buffer[] = []; res.on('data', chunk => buffers.push(Buffer.from(chunk))); res.on('end', () => {
         const body = Buffer.concat(buffers).toString(); resolve({ status: res.statusCode!, headers: res.headers, body, json: () => JSON.parse(body) })
@@ -102,7 +139,7 @@ async function setup(preparsed = false, connectorConfig = config()) {
     expect(response.status).toBe(302)
     return { request: new URL(response.headers.location!).searchParams.get('request')!, verifier }
   }
-  return { pg, runtime, request, post, authorize }
+  return { pg, runtime, request, post, authorize, bodyObservations }
 }
 
 describe('connector configuration and encrypted account vault', () => {
@@ -325,4 +362,127 @@ describe('account connector API and durable OAuth flow', () => {
     await expect(reconfigured.oauth.challengeForAuthorizationCode(changedClient, code)).rejects.toThrow(/callback/)
     await expect(moved.oauth.challengeForAuthorizationCode(client, code)).rejects.toThrow(/resource/)
   })
+})
+
+describe('authenticated MCP JSON adapter boundaries', () => {
+  it.each([false, true, 'restored', 'raw-buffer'] as const)('bounds valid SDK payloads and preserves OAuth forms (preparsed=%s)', async preparsed => {
+    const { runtime, request, post, bodyObservations } = await setup(preparsed)
+    const verifier = randomBytes(32).toString('base64url')
+    const params = new URLSearchParams({ client_id: client.client_id, redirect_uri: client.redirect_uris[0], response_type: 'code',
+      state: 'body-boundary-state', code_challenge: createHash('sha256').update(verifier).digest('base64url'), code_challenge_method: 'S256',
+      resource: runtime.config.resource.href, scope: 'boards:read' })
+    const authorized = await request('/api/connector?route=authorize', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: params.toString() })
+    expect(authorized.status).toBe(302)
+    const pending = new URL(authorized.headers.location!).searchParams.get('request')!
+    const approved = await post({ action: 'approve', request: pending, boardIds: ['owned'] })
+    expect(approved.status).toBe(200)
+    const callback = new URL(approved.json().redirectUrl as string)
+    expect(callback.searchParams.get('state')).toBe('body-boundary-state')
+    const tokenResponse = await request('/api/connector?route=token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: client.client_id, grant_type: 'authorization_code', code: callback.searchParams.get('code')!,
+        code_verifier: verifier, redirect_uri: client.redirect_uris[0], resource: runtime.config.resource.href }).toString() })
+    expect(tokenResponse.status).toBe(200)
+    const access = tokenResponse.json().access_token as string
+    const headers = { authorization: `Bearer ${access}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream' }
+    const rpc = (body: string | Buffer, extras: Record<string, string> = {}, path = '/api/connector?route=mcp') => request(path, { method: 'POST', headers: { ...headers, ...extras }, body })
+    expect((await rpc(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
+      protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'body-boundary-fixture', version: '1' } } }))).status).toBe(200)
+    const ping = (padding: string) => JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'ping', params: { _meta: { padding } } })
+    const limit = 1024 * 1024
+    const remaining = limit - Buffer.byteLength(ping(''))
+    const padding = '🙂'.repeat(Math.floor(remaining / 4)) + 'x'.repeat(remaining % 4)
+    const exact = ping(padding)
+    expect(Buffer.byteLength(exact)).toBe(limit)
+    expect(exact.length).toBeLessThan(limit)
+    const small = ping('fixture')
+    const whitespace = ' '.repeat(1_200_000) + small
+    const escaped = ping('a'.repeat(210_000)).replace(/a/g, '\\u0061')
+    expect(Buffer.byteLength(escaped)).toBeGreaterThan(limit)
+    expect(Buffer.byteLength(JSON.stringify(JSON.parse(escaped)))).toBeLessThan(limit)
+    const cases: [string, string, number, Record<string, string>?][] = [
+      ['small', small, 200], ['exact UTF-8 limit', exact, 200], ['one UTF-8 byte over limit', ping(padding + 'x'), 413],
+      ['large metadata', ping('x'.repeat(1_200_000)), 413], ['large multi-byte metadata', ping('🙂'.repeat(300_000)), 413],
+      ['chunked whitespace', whitespace, preparsed === true ? 200 : 413],
+      ['chunked Unicode escapes', escaped, preparsed === true ? 200 : 413],
+      ['declared whitespace bytes', whitespace, 413, { 'content-length': String(Buffer.byteLength(whitespace)) }],
+      ['normal JSON parameters', small, 200, { 'content-type': 'application/json; charset=utf-8' }],
+      ['normalized JSON media type', small, 200, { 'content-type': 'Application/JSON; charset=UTF-8' }],
+      ['JSON-looking media type', small, 415, { 'content-type': 'application/jsonp' }],
+      ['large JSON-looking media type', ping('x'.repeat(1_200_000)), 415, { 'content-type': 'text/application/json' }],
+      ['wrong Accept', small, 406, { accept: 'application/json' }],
+    ]
+    for (const [label, body, status, extras] of cases) {
+      const response = await rpc(body, extras)
+      expect(response.status, label).toBe(status)
+      if (status === 200) expect(response.json().result, label).toEqual({})
+      if (status === 413) expect(response.json(), label).toEqual({ jsonrpc: '2.0', error: { code: -32600, message: 'MCP request exceeds the 1 MiB JSON limit' }, id: null })
+      if (status === 415) expect(response.json(), label).toEqual({ jsonrpc: '2.0', error: { code: -32600, message: 'Invalid MCP request' }, id: null })
+    }
+    const duplicateType = await request('/api/connector?route=mcp', { method: 'POST',
+      headers: { ...headers, 'content-type': ['application/json', 'application/jsonp'] }, body: small })
+    expect(duplicateType.status).toBe(415)
+    const malformed = await rpc('{fixture-private-malformed-body')
+    expect(malformed.status).toBe(400)
+    expect(malformed.json()).toEqual({ jsonrpc: '2.0', error: { code: -32700, message: 'Invalid JSON request' }, id: null })
+    expect(malformed.body).not.toMatch(/fixture-private|SyntaxError|node_modules|DOCTYPE/)
+    for (const [encoding, compress] of [['gzip', gzipSync], ['deflate', deflateSync], ['br', brotliCompressSync]] as const) {
+      const compressed = await rpc(compress(small), { 'content-encoding': encoding })
+      expect(compressed.status, encoding).toBe(preparsed ? 415 : 200)
+      if (!preparsed) expect(compressed.json().result).toEqual({})
+      const expanded = await rpc(compress(ping('x'.repeat(1_200_000))), { 'content-encoding': encoding })
+      expect(expanded.status, encoding).toBe(preparsed ? 415 : 413)
+      if (preparsed) expect(bodyObservations.at(-1)?.getterReads, encoding).toBe(0)
+    }
+    expect((await rpc(small, { 'content-encoding': 'identity' })).status).toBe(200)
+    if (preparsed) {
+      // Even a supplied decoded object is ambiguous when an encoding header remains.
+      expect((await rpc(small, { 'content-encoding': 'gzip' })).status).toBe(415)
+      expect(bodyObservations.at(-1)?.getterReads).toBe(0)
+    }
+    for (const path of ['/direct/mcp/', '/direct/MCP', '/direct/MCP/']) {
+      expect((await rpc(small, {}, path)).status, path).toBe(200)
+      expect((await rpc(whitespace, {}, path)).status, path).toBe(preparsed === true ? 200 : 413)
+      expect((await rpc(whitespace, { 'content-length': String(Buffer.byteLength(whitespace)) }, path)).status, path).toBe(413)
+      expect((await rpc(gzipSync(small), { 'content-encoding': 'gzip' }, path)).status, path).toBe(preparsed ? 415 : 200)
+      const malformedAlias = await rpc('{alias-private-malformed-body', {}, path)
+      expect(malformedAlias.status, path).toBe(400)
+      expect(malformedAlias.json(), path).toEqual({ jsonrpc: '2.0', error: { code: -32700, message: 'Invalid JSON request' }, id: null })
+      expect(malformedAlias.body).not.toMatch(/alias-private|SyntaxError|node_modules|DOCTYPE/)
+    }
+    for (const method of ['GET', 'POST']) {
+      const response = await request('/api/connector?route=mcp', { method, headers: { 'content-type': 'application/json' }, ...(method === 'POST' ? { body: small } : {}) })
+      expect(response.status).toBe(401)
+      expect(response.headers['www-authenticate']).toContain('oauth-protected-resource/mcp')
+      expect(bodyObservations.at(-1)?.getterReads).toBe(0)
+    }
+    for (const method of ['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE']) {
+      const methodBody = preparsed && method !== 'GET' && method !== 'HEAD' ? '{method-must-not-read-lazy-body' : undefined
+      const response = await request('/api/connector?route=mcp', { method,
+        headers: methodBody ? { ...headers, 'content-length': String(Buffer.byteLength(methodBody)) } : headers, body: methodBody })
+      expect(response.status, method).toBe(405)
+      expect(response.headers.allow, method).toBe('POST, OPTIONS')
+      expect(bodyObservations.at(-1)?.getterReads, method).toBe(0)
+    }
+    const unauthenticatedMalformed = await request('/api/connector?route=mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{fixture-private-malformed-body' })
+    expect(unauthenticatedMalformed.status).toBe(preparsed ? 401 : 400)
+    expect(bodyObservations.at(-1)?.getterReads).toBe(0)
+    const deniedHeaders: Record<string, string>[] = [{ host: 'evil.test' }, { origin: 'https://evil.test' }]
+    for (const extras of deniedHeaders) {
+      const response = await rpc('{fixture-private-malformed-body', extras)
+      expect(response.status).toBe('host' in extras ? 421 : 403)
+      expect(bodyObservations.at(-1)?.getterReads).toBe(0)
+    }
+    expect((await request('/api/connector?route=mcp', { method: 'OPTIONS', headers: { origin: 'https://chatgpt.test' } })).status).toBe(204)
+    const isMcpObservation = (observation: { path: string }) => observation.path === '/api/connector?route=mcp' || /^\/direct\/mcp\/?$/i.test(observation.path)
+    const mcpObservations = bodyObservations.filter(isMcpObservation)
+    if (preparsed === 'restored') {
+      expect(mcpObservations.some(observation => observation.recoveredBytes.includes(limit + 1))).toBe(true)
+      expect(mcpObservations.flatMap(observation => observation.recoveredBytes).every(bytes => bytes <= limit + 1)).toBe(true)
+    } else if (!preparsed || preparsed === 'raw-buffer') expect(mcpObservations.flatMap(observation => observation.recoveredBytes)).toEqual([])
+    expect(bodyObservations.filter(observation => !isMcpObservation(observation)).flatMap(observation => observation.recoveredBytes)).toEqual([])
+    const revoked = await request('/api/connector?route=revoke', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: client.client_id, token: access }).toString() })
+    expect(revoked.status).toBe(200)
+    expect((await rpc(small)).status).toBe(401)
+  }, 15_000)
 })

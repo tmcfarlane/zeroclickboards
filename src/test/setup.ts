@@ -10,7 +10,8 @@ if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
 }
 
 // Mock @supabase/supabase-js so no real network calls are made
-vi.mock('@supabase/supabase-js', () => {
+vi.mock('@supabase/supabase-js', async () => {
+  const { navigatorLock, processLock } = await vi.importActual<typeof import('@supabase/supabase-js')>('@supabase/supabase-js');
   const mockChannel = {
     on: () => mockChannel,
     subscribe: () => mockChannel,
@@ -51,6 +52,7 @@ vi.mock('@supabase/supabase-js', () => {
     channel: () => mockChannel,
     removeChannel: vi.fn(),
     auth: {
+      initialize: () => Promise.resolve({ error: null }),
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
       getUser: () => Promise.resolve({ data: { user: null }, error: null }),
@@ -63,6 +65,8 @@ vi.mock('@supabase/supabase-js', () => {
 
   return {
     createClient: () => mockClient,
+    navigatorLock,
+    processLock,
   };
 });
 

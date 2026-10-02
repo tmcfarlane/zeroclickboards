@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { createContext, useContext, type ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, Route, RouterProvider, Routes } from 'react-router-dom';
+import { toast } from 'sonner';
 import type { Board } from '@/types';
 import type { BoardSyncState } from '@/lib/board-sync';
 import { boardAccessFor, editableAccess, type BoardAccess } from '@/lib/board-access';
@@ -11,9 +13,11 @@ import { useBoardDialogs } from '@/hooks/useBoardDialogs';
 
 const state = vi.hoisted(() => ({
   auth: { isSignedIn: true, isLoaded: true, userId: 'current-user' as string | null },
+  signOut: vi.fn(),
   activeBoard: null as Board | null,
   boards: [] as Board[],
   store: {
+    currentUserId: 'current-user' as string | null,
     boards: [] as Board[],
     boardAccess: {} as Record<string, BoardAccess>,
     activeBoardId: 'current-board',
@@ -52,6 +56,7 @@ vi.mock('@/store/useBoardStore', () => ({
   ),
 }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => state.auth }));
+vi.mock('@/components/auth/AuthProvider', () => ({ useAuthContext: () => ({ signOut: state.signOut }) }));
 vi.mock('@/hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('@/components/KeyboardShortcutsHelp', () => ({ KeyboardShortcutsHelp: () => null }));
 vi.mock('@/components/board/KanbanBoard', () => ({
@@ -63,16 +68,26 @@ vi.mock('@/components/board/KanbanBoard', () => ({
 vi.mock('@/components/board/BoardSkeleton', () => ({ BoardSkeleton: () => <p>Loading board content</p> }));
 vi.mock('@/components/timeline/TimelineView', () => ({ TimelineView: () => <p>Timeline board content</p> }));
 vi.mock('@/components/ai/AIAssistant', () => ({ AIAssistant: () => null }));
-vi.mock('@/components/auth/UserProfile', () => ({ UserProfile: () => null }));
+vi.mock('@/components/auth/UserProfile', () => ({ UserProfile: ({ onSignOutClick }: { onSignOutClick: () => void }) => <button onClick={onSignOutClick}>Request sign out</button> }));
 vi.mock('@/components/auth/SignInModal', () => ({ SignInModal: () => null }));
 vi.mock('@/components/board/CreateBoardDialog', () => ({ CreateBoardDialog: () => null }));
 vi.mock('@/components/billing/AIUpgradePrompt', () => ({ AIUpgradePrompt: () => null }));
 vi.mock('@/components/billing/UpgradeToProBanner', () => ({ UpgradeToProBanner: () => null }));
 vi.mock('../Footer', () => ({ Footer: () => null }));
 
-function renderAppShell() {
-  return render(<AppShell />, { wrapper: MemoryRouter });
+const RoutedChildren = createContext<ReactNode>(null);
+function FixtureRoutes() {
+  const children = useContext(RoutedChildren);
+  return <Routes><Route path="/app" element={children} /><Route path="/account" element={<h1>Account route</h1>} /><Route path="/terms" element={<h1>Terms route</h1>} /></Routes>;
 }
+const routers: ReturnType<typeof createMemoryRouter>[] = [];
+function renderAppShell() {
+  const router = createMemoryRouter([{ path: '*', element: <FixtureRoutes /> }], { initialEntries: ['/terms', '/app', '/account'], initialIndex: 1 });
+  routers.push(router);
+  function Wrapper({ children }: { children: ReactNode }) { return <RoutedChildren.Provider value={children}><RouterProvider router={router} /></RoutedChildren.Provider>; }
+  return { ...render(<AppShell />, { wrapper: Wrapper }), router };
+}
+afterEach(() => { routers.splice(0).forEach(router => router.dispose()); vi.restoreAllMocks(); });
 
 function attemptToLeave() {
   const event = new Event('beforeunload', { cancelable: true });
@@ -83,6 +98,11 @@ function attemptToLeave() {
 beforeEach(() => {
   vi.clearAllMocks();
   state.auth = { isSignedIn: true, isLoaded: true, userId: 'current-user' };
+  state.signOut.mockResolvedValue({ error: null });
+  state.store.currentUserId = 'current-user';
+  state.store.setCurrentUserId.mockImplementation((userId: string | null) => {
+    if (state.store.currentUserId !== userId) { state.store.currentUserId = userId; state.store.boardSyncStates = {}; state.store.cardEditorSession = null; }
+  });
   state.activeBoard = {
     id: 'current-board',
     name: 'Current board',
@@ -100,6 +120,7 @@ beforeEach(() => {
   state.store.remoteStatus = 'ready';
   state.store.boardSyncStates = {};
   state.store.getActiveBoard.mockImplementation(() => state.activeBoard);
+  state.store.setActiveBoard.mockImplementation((id: string) => { state.store.activeBoardId = id; state.activeBoard = state.boards.find(board => board.id === id) ?? null; });
   state.store.getBoardsForUser.mockImplementation(() => state.boards);
   state.store.getBoardAccess.mockImplementation((id: string) => boardAccessFor(state.boards.find((board) => board.id === id), state.auth.userId, state.store.boardAccess));
   state.store.canEditBoard.mockImplementation((id: string) => editableAccess(state.store.getBoardAccess(id)));
@@ -234,5 +255,81 @@ describe('AppShell board synchronization', () => {
     expect(screen.queryByRole('dialog', { name: 'Rename Board' })).not.toBeInTheDocument();
     expect(attemptToLeave().defaultPrevented).toBe(false);
     expect(state.store.renameBoard).not.toHaveBeenCalled();
+  });
+
+  it('keeps an entered rename and its focus after a blocked route is cancelled, then leaves once explicitly allowed', async () => {
+    const user = userEvent.setup(); const { router } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open board rename' }));
+    const input = screen.getByRole('textbox', { name: 'Board Name' });
+    await user.clear(input); await user.type(input, 'Keep my original draft');
+    await act(async () => { await router.navigate('/account'); });
+    expect(screen.getByRole('alertdialog', { name: 'Leave this page?' })).toHaveTextContent('Unsaved form text');
+    expect(screen.getByRole('button', { name: 'Stay' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Stay' }));
+    await waitFor(() => expect(input).toHaveFocus()); expect(input).toHaveValue('Keep my original draft');
+    expect(state.store.renameBoard).not.toHaveBeenCalled();
+    await act(async () => { await router.navigate('/account'); });
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    expect(await screen.findByRole('heading', { name: 'Account route' })).toBeVisible();
+    expect(state.store.renameBoard).not.toHaveBeenCalled();
+  });
+
+  it('describes pending saves truthfully and allows their same-account route continuation', async () => {
+    state.store.boardSyncStates['current-board'] = { status: 'saving' };
+    const user = userEvent.setup(); const { router } = renderAppShell();
+    await act(async () => { await router.navigate('/account'); });
+    const alert = screen.getByRole('alertdialog');
+    expect(alert).toHaveTextContent('Saving can continue while you stay signed in');
+    expect(alert).not.toHaveTextContent('discarded');
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    expect(await screen.findByRole('heading', { name: 'Account route' })).toBeVisible();
+    expect(state.store.currentUserId).toBe('current-user'); expect(state.store.boardSyncStates['current-board'].status).toBe('saving');
+  });
+
+  it('requires a sign-out decision before changing authentication and does not sign out on Stay', async () => {
+    state.store.boardSyncStates['current-board'] = { status: 'pending' };
+    const user = userEvent.setup(); renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Request sign out' }));
+    expect(screen.getByRole('alertdialog', { name: 'Sign out with unfinished work?' })).toHaveTextContent('before signing out');
+    expect(state.signOut).not.toHaveBeenCalled(); await user.click(screen.getByRole('button', { name: 'Stay' }));
+    expect(state.signOut).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Request sign out' }));
+    await user.click(screen.getByRole('button', { name: /^Sign out$/ }));
+    expect(state.signOut).toHaveBeenCalledOnce();
+  });
+
+  it('clears private local forms and an old blocked navigation when the account changes', async () => {
+    const user = userEvent.setup(); const { router, rerender } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open board rename' }));
+    await user.type(screen.getByRole('textbox', { name: 'Board Name' }), ' private text');
+    await act(async () => { await router.navigate('/account'); });
+    state.auth = { isSignedIn: true, isLoaded: true, userId: 'another-user' }; rerender(<AppShell />);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(); expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/app'); expect(state.store.renameBoard).not.toHaveBeenCalled();
+    await act(async () => { await router.navigate('/account'); });
+    expect(await screen.findByRole('heading', { name: 'Account route' })).toBeVisible();
+  });
+
+  it('ignores a superseded sign-out completion rather than resetting or notifying the new account', async () => {
+    let resolve!: (value: { error: string }) => void;
+    state.signOut.mockReturnValue(new Promise(done => { resolve = done; }));
+    const errorToast = vi.spyOn(toast, 'error'); const user = userEvent.setup(); const { rerender } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Request sign out' }));
+    state.auth = { isSignedIn: true, isLoaded: true, userId: 'another-user' }; rerender(<AppShell />);
+    await act(async () => { resolve({ error: 'Old sign-out failed' }); });
+    expect(errorToast).not.toHaveBeenCalled(); expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(state.store.currentUserId).toBe('another-user');
+  });
+
+  it('allows board query cleanup while retaining the entered text and original save target', async () => {
+    const other = { ...state.activeBoard!, id: 'other-board', name: 'Other board' }; state.boards.push(other);
+    const user = userEvent.setup(); const { router } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open board rename' }));
+    const input = screen.getByRole('textbox', { name: 'Board Name' }); await user.clear(input); await user.type(input, 'Original board renamed');
+    await act(async () => { await router.navigate('/app?board=other-board'); });
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(state.store.activeBoardId).toBe('other-board'); expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(); expect(input).toHaveValue('Original board renamed');
+    await user.click(screen.getByRole('button', { name: /^Rename$/ }));
+    expect(state.store.renameBoard).toHaveBeenCalledExactlyOnceWith('current-board', 'Original board renamed');
   });
 });

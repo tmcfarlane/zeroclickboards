@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { apiFetch } from '../apiFetch';
 import type { Session } from '@supabase/supabase-js';
+import { advanceAuthSessionRevision } from '../auth-session';
 
 const mockSignOut = vi.fn();
+const mockGetSession = vi.fn();
 
 vi.mock('../supabase', () => ({
   supabase: {
     auth: {
       signOut: (...args: unknown[]) => mockSignOut(...args),
+      getSession: (...args: unknown[]) => mockGetSession(...args),
     },
   },
 }));
@@ -36,6 +39,8 @@ describe('apiFetch', () => {
     vi.restoreAllMocks();
     mockSignOut.mockClear();
     mockSignOut.mockResolvedValue({ error: null });
+    mockGetSession.mockReset();
+    mockGetSession.mockResolvedValue({ data: { session: makeSession('expired-token') }, error: null });
   });
 
   it('makes a fetch call and returns the response', async () => {
@@ -99,6 +104,56 @@ describe('apiFetch', () => {
 
     await apiFetch('/api/test');
 
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('ignores an old account response after an authentication change', async () => {
+    let reply!: (value: Response) => void;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { reply = resolve; })));
+    const pending = apiFetch('/api/test', { session: makeSession('old-token') });
+    advanceAuthSessionRevision();
+    reply(new Response('', { status: 401 }));
+    expect((await pending).status).toBe(401);
+    expect(mockGetSession).not.toHaveBeenCalled();
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('preserves a renewed token even before its auth notification is accepted', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })));
+    mockGetSession.mockResolvedValue({ data: { session: makeSession('renewed-token') }, error: null });
+    await apiFetch('/api/test', { session: makeSession('old-token') });
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('ignores a logout/reconnect response even when the fixture token is reused', async () => {
+    let reply!: (value: Response) => void;
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((resolve) => { reply = resolve; })));
+    const pending = apiFetch('/api/test', { session: makeSession('same-token') });
+    advanceAuthSessionRevision();
+    advanceAuthSessionRevision();
+    mockGetSession.mockResolvedValue({ data: { session: makeSession('same-token') }, error: null });
+    reply(new Response('', { status: 401 }));
+    await pending;
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('rechecks the auth revision after a held current-session lookup', async () => {
+    let reply!: (value: { data: { session: Session }; error: null }) => void;
+    mockGetSession.mockImplementation(() => new Promise((resolve) => { reply = resolve; }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })));
+    const pending = apiFetch('/api/test', { session: makeSession('expired-token') });
+    await vi.waitFor(() => expect(mockGetSession).toHaveBeenCalledOnce());
+    advanceAuthSessionRevision();
+    reply({ data: { session: makeSession('expired-token') }, error: null });
+    await pending;
+    expect(mockSignOut).not.toHaveBeenCalled();
+  });
+
+  it('keeps the original401 available when current-session lookup fails', async () => {
+    const response = new Response('', { status: 401 });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response));
+    mockGetSession.mockRejectedValue(new Error('Fixture lookup unavailable'));
+    expect(await apiFetch('/api/test', { session: makeSession('expired-token') })).toBe(response);
     expect(mockSignOut).not.toHaveBeenCalled();
   });
 

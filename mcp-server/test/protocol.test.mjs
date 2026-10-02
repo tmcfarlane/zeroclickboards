@@ -21,6 +21,30 @@ function payload(result) {
   return JSON.parse(result.content[0].text);
 }
 
+for (const columnId of ['', '   ', 'removed-column', 'column-from-another-board']) {
+  test(`list_cards rejects an invalid explicit column filter ${JSON.stringify(columnId)}`, async (t) => {
+    const { mcp, state } = await connect(t, { readOnly: true });
+    const result = await mcp.callTool({ name: 'list_cards', arguments: { boardId: 'board-1', columnId } });
+    assert.equal(result.isError, true);
+    assert.match(result.content[0].text, /column.*blank|column.*not found/i);
+    assert.ok(state.requests.every(request => request.method === 'GET'));
+  });
+}
+
+test('list_cards preserves omitted, existing and empty-column filters and archive selection', async (t) => {
+  const { mcp, state } = await connect(t, { readOnly: true });
+  state.row.data.columns[1].cards[0].isArchived = true;
+  state.row.data.columns.push({ id: 'empty-column', title: 'Empty', order: 2, cards: [] });
+  const list = async arguments_ => payload(await mcp.callTool({ name: 'list_cards', arguments: { boardId: 'board-1', ...arguments_ } }));
+  assert.deepEqual((await list({})).map(card => card.id), ['card-a']);
+  assert.deepEqual((await list({ includeArchived: true })).map(card => card.id), ['card-a', 'card-b']);
+  assert.deepEqual((await list({ columnId: 'column-a' })).map(card => card.id), ['card-a']);
+  assert.deepEqual(await list({ columnId: 'empty-column' }), []);
+  assert.deepEqual(await list({ columnId: 'column-b' }), []);
+  assert.deepEqual((await list({ columnId: 'column-b', includeArchived: true })).map(card => card.id), ['card-b']);
+  assert.ok(state.requests.every(request => request.method === 'GET'));
+});
+
 test('read-only MCP advertises reads and resources and rejects mutation calls', async (t) => {
   const { mcp, state } = await connect(t, { readOnly: true });
   const { tools } = await mcp.listTools();
