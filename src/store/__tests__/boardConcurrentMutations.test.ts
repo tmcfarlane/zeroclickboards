@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Board, Card } from '@/types';
+import { documentsEqual } from '@/lib/board-merge';
 import { useBoardStore } from '../useBoardStore';
 import { useUndoStore } from '../useUndoStore';
 
@@ -12,6 +13,7 @@ vi.mock('uuid', async (importOriginal) => {
 const boardId = 'board';
 const card = (id: string): Card => ({ id, title: id, labels: ['red'], content: { type: 'text', text: '' }, createdAt: '2026-09-06T00:00:00Z', updatedAt: '2026-09-06T00:00:00Z' });
 const current = (): Board => useBoardStore.getState().boards[0];
+const document = (board: Board) => ({ name: board.name, description: board.description ?? null, data: { columns: board.columns } });
 const cards = (): Card[] => current().columns.flatMap((column) => column.cards);
 const cardIds = (columnId: string): string[] => current().columns.find((column) => column.id === columnId)!.cards.map((entry) => entry.id);
 function externalChange(change: (board: Board) => void) {
@@ -235,15 +237,11 @@ describe('recurring archive transactions', () => {
       ['a', rearchivedAt],
       [successor.id, successor.updatedAt],
     ];
-    const contentColumns = (board: Board) => board.columns.map((column) => ({
-      ...column,
-      cards: column.cards.map((entry) => ({ ...entry, updatedAt: undefined })),
-    }));
     // Undo/redo restore content but retain the latest card timestamps, even
     // when replay happens later than the original archive.
     vi.setSystemTime(new Date('2026-09-06T12:00:02.000Z'));
     useUndoStore.getState().undo();
-    expect(contentColumns(current())).toEqual(contentColumns(before));
+    expect(documentsEqual(document(current()), document(before))).toBe(true);
     expect(cards().map((entry) => [entry.id, entry.updatedAt])).toEqual(expectedTimestamps);
     vi.setSystemTime(new Date('2026-09-06T12:00:03.000Z'));
     useUndoStore.getState().redo();

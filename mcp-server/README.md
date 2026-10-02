@@ -4,6 +4,12 @@ An [MCP](https://modelcontextprotocol.io) server for **ZeroBoard** — manage yo
 
 > Status: **v1 core** (issue #9). Read/write tools + resources over stdio, authenticated with your ZeroBoard (Supabase) account. See [Roadmap](#roadmap) for what's next.
 
+## Release 0.2.0
+
+This release adds the `set_recurrence` tool and recurring-card schedules to `add_card`, bringing the server to 28 tools. Concurrent browser and MCP edits preserve independent card changes, body edits retain checklists and metadata, recurring archives create only one successor, and date inputs are validated as real calendar dates. Cover images and attachment flags stay consistent.
+
+Node.js 20 or newer is now required. Install the current release with `npx -y @zeroclickdev/zeroboard-mcp@latest`; the saved ZeroBoard login is reused.
+
 ## Quick start
 
 Requires Node.js 20 or newer, matching the Supabase client's minimum version. The server supplies its own WebSocket transport, so Node 20 works without a global WebSocket implementation. CI checks Node 20 and 22.

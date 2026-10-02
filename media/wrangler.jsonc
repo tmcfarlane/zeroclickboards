@@ -1,0 +1,9 @@
+{
+  "name": "zeroboard-media",
+  "account_id": "a607058a36824ab70af9da48d001a546",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./assets"
+  }
+}

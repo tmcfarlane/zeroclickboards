@@ -1,7 +1,7 @@
 {
   "name": "@zeroclickdev/zeroboard-mcp",
   "version": "0.2.0",
-  "description": "MCP server for ZeroBoard \u2014 manage your boards, columns, and cards from any MCP-compatible agent (Claude Code, Cursor, Zed, Windsurf).",
+  "description": "MCP server for ZeroBoard — manage your boards, columns, and cards from any MCP-compatible agent (Claude Code, Cursor, Zed, Windsurf).",
   "type": "module",
   "bin": {
     "zeroboard-mcp": "dist/index.js"
