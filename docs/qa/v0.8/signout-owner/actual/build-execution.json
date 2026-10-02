@@ -1,0 +1,19 @@
+{
+  "gate": "build",
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/vite/bin/vite.js",
+    "build",
+    "--config",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/vite-build.config.mts"
+  ],
+  "nodeVersion": "20.20.2",
+  "startedAt": "2026-10-02T13:43:35.747777+00:00",
+  "elapsedSeconds": 8.43130087503232,
+  "exitCode": 0,
+  "explicitEnvironment": {
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "hashes": {
+    "src/hooks/useSignOutAction.ts": "231422491ffc6d09bf9f2a1c28737122d47136b6e0383a270f022e749c780025",
+    "src/hooks/__tests__/useSignOutAction.test.tsx": "10f23bb1cd16009400895e4b824cf1cd7d34703ad5dbf4bae89dc509f2bb144a",
+    "src/components/auth/AuthProvider.tsx": "6e0b56f9549421ba7e0a2bcb5ca93d723f4e21e3f68fe50be8c5f2d363327c11",
+    "src/pages/AccountPage.tsx": "c390563555e5cb0445e4326a55f75cfead8d8316011dda5972a0c1ad3307c0ed",
+    "src/components/auth/__tests__/signOut.test.tsx": "bd6566761bdae412fb6cf717b1f6bad76bc4bdc6d080a9512a5cf7a2c68e7273",
+    "package-lock.json": "9c79e68c03958a2c5d40fda9a180ee705024295e1f8ccfc1acc9a77d7999ea95",
+    "vite.config.ts": "3b313be8b240dc5c5a4aef9bf20634ddec444eefc577a332931c9eab76326545",
+    "originalFullTestJson": "ae44be9e5e17ca0eb2233c781b2f1131808ee745cc428eeefea4f3c5cc7fe321",
+    "originalFullTestLog": "e7965a0ae3cfdf0194ff050eba15b8046afcdfcfb15f2b2ae4ccec9bd599684e"
+  },
+  "unchanged": true
+}
