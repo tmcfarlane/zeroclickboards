@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
 import postgres from 'postgres'
 import { readFile, readdir } from 'node:fs/promises'
-import { createConnection, createServer, type Socket } from 'node:net'
-import { once } from 'node:events'
+import { createServer, type Socket } from 'node:net'
 import { setImmediate as nextTurn } from 'node:timers/promises'
 import { createConnectorSqlExecutor } from '../connector-sql.js'
 import { createConnectorRuntime } from '../connector-runtime.js'
@@ -38,47 +37,21 @@ async function catalogFixture(pg: PGlite) {
 }
 
 /** Only the startup handshake is synthetic; statement packets execute in real PG. */
-async function wireFixture(max = 1, beforeStartup?: (pg: PGlite) => Promise<void>) {
+async function wireFixture() {
   const engines = new Set<PGlite>()
-  const prepared: PGlite[] = []
-  try {
-    // Database/WASM/catalog setup is not part of a network connect deadline.
-    for (let index = 0; index < max; index++) {
-      const pg = new PGlite()
-      engines.add(pg)
-      await catalogFixture(pg)
-      prepared.push(pg)
-    }
-  } catch (error) {
-    await Promise.allSettled([...engines].map(pg => pg.close()))
-    throw error
-  }
   const sockets = new Set<Socket>()
   const pending = new Set<Promise<unknown>>()
   const errors: unknown[] = []
   const stats = { overlaps: 0, started: 0, completed: 0, active: 0, maximumActive: 0 }
-  let closing = false
   const server = createServer(socket => {
-    if (closing) { socket.destroy(); return }
     sockets.add(socket)
-    const pg = prepared.shift()
-    if (!pg) {
-      errors.push(new Error('Socket exceeded the prepared fixture capacity'))
-      socket.destroy()
-      return
-    }
-    let chain = Promise.resolve()
-    const enqueue = (task: () => Promise<void>) => {
-      chain = chain.then(task).catch(error => { errors.push(error); socket.destroy() })
-      const current = chain
-      pending.add(current)
-      void current.then(() => { pending.delete(current) })
-    }
+    const pg = new PGlite()
+    engines.add(pg)
+    let chain: Promise<unknown> = catalogFixture(pg)
     let buffer = Buffer.alloc(0)
     let startup = true
     let active = 0
     socket.on('data', chunk => {
-      if (closing) return
       buffer = Buffer.concat([buffer, chunk])
       while (buffer.length >= 5) {
         const length = startup ? buffer.readInt32BE(0) : buffer.readInt32BE(1) + 1
@@ -87,10 +60,7 @@ async function wireFixture(max = 1, beforeStartup?: (pg: PGlite) => Promise<void
         buffer = buffer.subarray(length)
         if (startup) {
           startup = false
-          enqueue(async () => {
-            await beforeStartup?.(pg)
-            if (!socket.destroyed) socket.write(handshake)
-          })
+          chain = chain.then(() => { socket.write(handshake) })
           continue
         }
         const type = String.fromCharCode(message[0])
@@ -104,7 +74,7 @@ async function wireFixture(max = 1, beforeStartup?: (pg: PGlite) => Promise<void
           stats.active++
           stats.maximumActive = Math.max(stats.maximumActive, stats.active)
         }
-        enqueue(async () => {
+        chain = chain.then(async () => {
           const answer = Buffer.from(await pg.execProtocolRaw(message))
           // Let another socket make progress before sending the reply, as a
           // real network can do. Do not change or fabricate statement results.
@@ -118,26 +88,23 @@ async function wireFixture(max = 1, beforeStartup?: (pg: PGlite) => Promise<void
             offset += answer.readInt32BE(offset + 1) + 1
           }
           if (answer.length) socket.write(answer)
-        })
+        }).catch(error => { errors.push(error); socket.destroy() })
+        const current = chain
+        pending.add(current)
+        void current.finally(() => { pending.delete(current) })
       }
     })
     socket.on('error', error => { errors.push(error) })
     socket.on('close', () => { sockets.delete(socket) })
   })
-  try {
-    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
-  } catch (error) {
-    await Promise.allSettled([...engines].map(pg => pg.close()))
-    throw error
-  }
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
   const address = server.address()
   if (!address || typeof address === 'string') throw new Error('Expected a TCP fixture')
   return { port: address.port, stats, errors, async close() {
-    closing = true
     for (const socket of sockets) socket.destroy()
     await new Promise<void>(resolve => server.close(() => resolve()))
     await Promise.all(pending)
-    await Promise.all([...engines].map(pg => pg.close()))
+    for (const pg of engines) await pg.close()
   } }
 }
 
@@ -151,59 +118,6 @@ function config() {
 }
 
 describe('connector executor with the actual postgres.js wire protocol', () => {
-  it('drains startup work when a socket disconnects before any query', async () => {
-    let release!: () => void
-    let reached!: () => void
-    let checkpointEngine!: PGlite
-    let completed!: (result: { rows: { value: number }[]; error: string | null }) => void
-    const held = new Promise<void>(resolve => { release = resolve })
-    const started = new Promise<void>(resolve => { reached = resolve })
-    const checkpoint = new Promise<{ rows: { value: number }[]; error: string | null }>(resolve => { completed = resolve })
-    const fixture = await wireFixture(1, async pg => {
-      checkpointEngine = pg
-      reached()
-      await held
-      // This is a real PostgreSQL query, not a fabricated driver response.
-      // Observe its failure in the old helper without leaking a test rejection.
-      try { completed({ rows: (await pg.query<{ value: number }>('select 42::integer as value')).rows, error: null }) }
-      catch (error) { completed({ rows: [], error: error instanceof Error ? error.message : String(error) }) }
-    })
-    const client = createConnection({ host: '127.0.0.1', port: fixture.port })
-    let shutdown: Promise<void> | undefined
-    try {
-      await once(client, 'connect')
-      const parameters = Buffer.from('user\x00connector_fixture\x00database\x00fixture\x00\x00')
-      const packet = Buffer.alloc(8 + parameters.length)
-      packet.writeInt32BE(packet.length, 0)
-      packet.writeInt32BE(196608, 4)
-      parameters.copy(packet, 8)
-      client.write(packet)
-      await started
-      const disconnected = once(client, 'close')
-      client.destroy()
-      await disconnected
-      let closedWhileHeld = false
-      shutdown = fixture.close().then(() => { closedWhileHeld = true })
-      await nextTurn()
-      await nextTurn()
-      const prematurelyClosed = closedWhileHeld
-      release()
-      const result = await checkpoint
-      await shutdown
-      expect({ prematurelyClosed, ...result }).toEqual({ prematurelyClosed: false, rows: [{ value: 42 }], error: null })
-      expect(fixture.stats.started).toBe(0)
-      expect(fixture.errors).toEqual([])
-      await expect(checkpointEngine.query('select 1')).rejects.toThrow('PGlite is closed')
-      const retired = createConnection({ host: '127.0.0.1', port: fixture.port })
-      try { await expect(once(retired, 'connect')).rejects.toMatchObject({ code: 'ECONNREFUSED' }) }
-      finally { retired.destroy() }
-    } finally {
-      release()
-      client.destroy()
-      await (shutdown ?? fixture.close())
-    }
-  }, 15_000)
-
   it('detects the same-socket pipelining made by the unreserved driver', async () => {
     const fixture = await wireFixture()
     const sql = postgres({ host: '127.0.0.1', port: fixture.port, username: 'connector_fixture', database: 'fixture',
@@ -217,13 +131,13 @@ describe('connector executor with the actual postgres.js wire protocol', () => {
       expect(fixture.stats.completed).toBe(fixture.stats.started)
       expect(fixture.errors).toEqual([])
     } finally {
-      try { await sql.end({ timeout: 1 }) }
-      finally { await fixture.close() }
+      await sql.end({ timeout: 1 })
+      await fixture.close()
     }
   }, 15_000)
 
   it.each([1, 2])('does not pipeline on either socket with max=%s and releases errors', async max => {
-    const fixture = await wireFixture(max)
+    const fixture = await wireFixture()
     const sql = postgres({ host: '127.0.0.1', port: fixture.port, username: 'connector_fixture', database: 'fixture',
       ssl: false, max, prepare: false, connect_timeout: 5, onnotice() {} })
     const executor = createConnectorSqlExecutor(sql)
@@ -248,8 +162,8 @@ describe('connector executor with the actual postgres.js wire protocol', () => {
       expect(fixture.stats.active).toBe(0)
       expect(fixture.stats.maximumActive).toBe(max)
     } finally {
-      try { await sql.end({ timeout: 1 }) }
-      finally { await fixture.close() }
+      await sql.end({ timeout: 1 })
+      await fixture.close()
     }
   }, 15_000)
 })
