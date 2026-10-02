@@ -1,0 +1,20 @@
+{
+  "README.md": "ffcbcf3a45fac0f1ee56873c572155c564f8d74722798ce52af2294c09014528",
+  "artifact-sha256.json": "8767e38c4aaf9c971274bd25e3d6fafdc869c60f62ffcba6fbb2ae248456e853",
+  "harness/private-vite.config.mjs.txt": "d602bbe98b95366ba78e383b8142b4eddb20489752edb3c9c8712f3f3b3422a1",
+  "integration/README-before-integration.md": "7a07a511621b8c35ce0402c065f85a8d43cc2b2a9dbe78514a1b2b4d165f0756",
+  "integration/full-unit-node20.log": "b8c018689348527804a2bd20b14343a90cfd55af345f478d01f7cd315df3e4c8",
+  "integration/runtime-capabilities.json": "d389d9e8070ecc3e274b2205f181c50f8c1fdbf343b6436538b7d81110e08866",
+  "integration/tracked-source-before.json": "b6cd5365b1cb77bf20c7905f846e934c3c8d9dc0f02a55abb8131030d72cd141",
+  "integration/verification.json": "27ef8c5950fe2e2643b669a8f4483017dd8cda7852b98e49e0d7cec19d0f00b9",
+  "logs/lifecycle-before.log": "4059947d10945e9a3df65a176502a0673f94566965a98aed1acfdc51f8f84a46",
+  "logs/lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "logs/native-after.log": "6d832e9e80192308ca7ac68c612771d1d3dbc22214db0812808af9a96c6c5465",
+  "logs/types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source/historical-review.md": "c93ef24d50b4aab2fd61085bf747bc363a71e16239cb8763f613075fb919d54e",
+  "source/instrumented-before.ts.txt": "098b3001b13cb14d3b8cd3c0be079544b000d6724babfb857a3fbe91b060f449",
+  "source/plan.md": "9a92b0e5c03d45e3dd10681683c4abd76381f27c6a7db2b33edef2e089b29f0d",
+  "source/pristine-before.ts.txt": "af9b0599f80f2aecee1d51ae9f42938182058b8b99fd649a00d57ce598b3ac9f",
+  "source/repaired.ts.txt": "ee4fa4666c11c04071fa4fb73fde21cbd767eea65391290cd17733690f7781e8",
+  "verification.json": "359007f1dff93d8991bb6adfff3e1c1d8a17eafa3eb77fdf2489fe1c5b7b7278"
+}

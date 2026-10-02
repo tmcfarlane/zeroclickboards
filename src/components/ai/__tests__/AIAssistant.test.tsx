@@ -1,13 +1,19 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ComponentProps, ComponentType } from 'react';
 import type { Card } from '@/types';
 import { useBoardStore } from '@/store/useBoardStore';
 import { useUndoStore } from '@/store/useUndoStore';
 import { AIAssistant } from '../AIAssistant';
 
 vi.mock('@/components/auth/AuthProvider', () => ({ useAuthContext: () => ({ session: null }) }));
-vi.mock('@/hooks/useAIUsage', () => ({ useAIUsage: () => ({ isPaid: true, isLimitReached: false, updateUsage: vi.fn() }) }));
+const usage = vi.hoisted(() => ({
+  isPaid: true, isLimitReached: false,
+  limit: null as number | null, remaining: null as number | null,
+  updateUsage: vi.fn(),
+}));
+vi.mock('@/hooks/useAIUsage', () => ({ useAIUsage: () => usage }));
 
 const task = { id: 'task-1', text: 'Existing task', completed: true, source: 'imported' };
 const originalContent = {
@@ -18,6 +24,8 @@ const savedCard = () => useBoardStore.getState().boards[0].columns[0].cards[0];
 const originalActions = { addCard: useBoardStore.getState().addCard, createBoard: useBoardStore.getState().createBoard };
 
 beforeEach(() => {
+  Object.assign(usage, { isPaid: true, isLimitReached: false, limit: null, remaining: null });
+  usage.updateUsage.mockClear();
   useBoardStore.getState().setCurrentUserId(null);
   const card: Card = { id: 'card-1', title: 'Review card', description: 'Independent summary', content: structuredClone(originalContent), createdAt: '2026-09-06', updatedAt: '2026-09-06' };
   useBoardStore.setState({
@@ -27,6 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   useBoardStore.setState(originalActions);
   useUndoStore.getState().clearHistory();
 });
@@ -173,5 +182,165 @@ describe('AI card content commands', () => {
     await waitFor(() => expect(savedCard().content.checklist).toHaveLength(2));
     expect(savedCard().content).toMatchObject({ ...originalContent, checklist: [task, { text: 'New task', completed: false }] });
     expect(savedCard().content.checklist?.[1].id).not.toBe(task.id);
+  });
+});
+
+// The cast lets these runtime regressions execute against the pre-contract baseline.
+const DraftAssistant = AIAssistant as ComponentType<ComponentProps<typeof AIAssistant> & {
+  onDraftChange?: (hasDraft: boolean) => void;
+}>;
+const composerPlaceholder = 'What should we do next?';
+function summaryResponse() {
+  return new Response(JSON.stringify({ commands: [{
+    type: 'count_cards', params: {}, originalText: 'How many cards total?',
+  }] }), { status: 200 });
+}
+function heldResponse() {
+  let resolve!: (response: Response) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<Response>((complete, fail) => { resolve = complete; reject = fail; });
+  return { promise, resolve, reject };
+}
+
+describe('AI unsent draft reporting', () => {
+  it('reports retained input through Clear chat, hidden panels, quota changes and a newly bound hidden callback', async () => {
+    const onDraftChange = vi.fn<(hasDraft: boolean) => void>();
+    const onClose = vi.fn();
+    const view = render(<DraftAssistant isOpen onClose={onClose} onDraftChange={onDraftChange} />);
+    const signals = [onDraftChange.mock.lastCall?.[0]];
+    const text = 'Keep this private prompt — 計画 🗓️';
+    fireEvent.change(screen.getByPlaceholderText(composerPlaceholder), { target: { value: text } });
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+    await userEvent.click(screen.getByTitle('Clear chat'));
+    expect(screen.getByPlaceholderText(composerPlaceholder)).toHaveValue(text);
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+
+    view.rerender(<DraftAssistant isOpen={false} onClose={onClose} onDraftChange={onDraftChange} />);
+    expect(screen.queryByPlaceholderText(composerPlaceholder)).not.toBeInTheDocument();
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+    Object.assign(usage, { isPaid: false, isLimitReached: true, limit: 5, remaining: 0 });
+    view.rerender(<DraftAssistant isOpen onClose={onClose} onDraftChange={onDraftChange} />);
+    expect(screen.getByText('Daily limit reached — resets at midnight PT')).toBeVisible();
+    expect(screen.queryByPlaceholderText(composerPlaceholder)).not.toBeInTheDocument();
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+
+    const rebound = vi.fn<(hasDraft: boolean) => void>();
+    view.rerender(<DraftAssistant isOpen={false} onClose={onClose} onDraftChange={rebound} />);
+    const reboundWhileHidden = rebound.mock.lastCall?.[0];
+    Object.assign(usage, { isPaid: true, isLimitReached: false });
+    view.rerender(<DraftAssistant isOpen onClose={onClose} onDraftChange={rebound} />);
+    expect(screen.getByPlaceholderText(composerPlaceholder)).toHaveValue(text);
+    expect(signals).toEqual([false, true, true, true, true]);
+    expect(reboundWhileHidden).toBe(true);
+    expect(rebound).toHaveBeenLastCalledWith(true);
+  });
+
+  it('keeps whitespace and composing text dirty without submitting, and reports an actual input clear', () => {
+    const fetch = vi.fn().mockResolvedValue(summaryResponse());
+    vi.stubGlobal('fetch', fetch);
+    const onDraftChange = vi.fn<(hasDraft: boolean) => void>();
+    render(<DraftAssistant isOpen onClose={() => {}} onDraftChange={onDraftChange} />);
+    const input = screen.getByPlaceholderText(composerPlaceholder);
+    const send = within(input.parentElement!).getByRole('button');
+    const signals: Array<boolean | undefined> = [];
+    fireEvent.change(input, { target: { value: '   ' } });
+    expect(send).toBeDisabled();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(input).toHaveValue('   ');
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+
+    fireEvent.change(input, { target: { value: '未完成の入力 🗓️' } });
+    fireEvent.compositionStart(input);
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: false, keyCode: 229 });
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+    expect(input).toHaveValue('未完成の入力 🗓️');
+    expect(fetch).not.toHaveBeenCalled();
+    fireEvent.compositionEnd(input);
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input).toHaveValue('');
+    signals.push(onDraftChange.mock.lastCall?.[0]);
+    expect(signals).toEqual([true, true, true, false]);
+  });
+
+  it.each(['success', 'network failure'] as const)('clears an accepted draft before HTTP settles and does not restore it after %s', async outcome => {
+    const request = heldResponse();
+    const onDraftChange = vi.fn<(hasDraft: boolean) => void>();
+    const atRequestStart: Array<boolean | undefined> = [];
+    const fetch = vi.fn<typeof globalThis.fetch>(() => {
+      atRequestStart.push(onDraftChange.mock.lastCall?.[0]);
+      return request.promise;
+    });
+    vi.stubGlobal('fetch', fetch);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(<DraftAssistant isOpen onClose={() => {}} onDraftChange={onDraftChange} />);
+    const input = screen.getByPlaceholderText(composerPlaceholder);
+    fireEvent.change(input, { target: { value: 'How many cards total?' } });
+    try {
+      await userEvent.click(within(input.parentElement!).getByRole('button'));
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(input).toHaveValue('');
+      expect(input).toBeDisabled();
+      const whileHeld = onDraftChange.mock.lastCall?.[0];
+      await act(async () => {
+        if (outcome === 'network failure') request.reject(new Error('Disposable AI transport failure'));
+        else request.resolve(summaryResponse());
+      });
+      await screen.findByText('1 total card (To Do: 1)');
+      expect(input).toHaveValue('');
+      expect(input).toBeEnabled();
+      expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).text).toBe('How many cards total?');
+      expect(atRequestStart).toEqual([false]);
+      expect(whileHeld).toBe(false);
+      expect(onDraftChange).toHaveBeenLastCalledWith(false);
+    } finally {
+      await act(async () => { request.resolve(summaryResponse()); });
+    }
+  });
+
+  it('reports the actual composer after idle and processing quick actions, including completion while hidden', async () => {
+    setSharedAccess('viewer');
+    const request = heldResponse();
+    const fetch = vi.fn<typeof globalThis.fetch>(() => request.promise);
+    vi.stubGlobal('fetch', fetch);
+    const onDraftChange = vi.fn<(hasDraft: boolean) => void>();
+    const onClose = vi.fn();
+    const view = render(<DraftAssistant isOpen onClose={onClose} onDraftChange={onDraftChange} />);
+    fireEvent.change(screen.getByPlaceholderText(composerPlaceholder), { target: { value: 'My unsent prompt' } });
+    try {
+      await userEvent.click(screen.getByRole('button', { name: 'Board summary' }));
+      const input = screen.getByPlaceholderText(composerPlaceholder);
+      expect(input).toHaveValue('');
+      expect(input).toBeDisabled();
+      const idleAccepted = onDraftChange.mock.lastCall?.[0];
+      await userEvent.click(screen.getByRole('button', { name: 'Timeline view' }));
+      expect(input).toHaveValue('Timeline view');
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).text).toBe('How many cards total?');
+      const processingAssigned = onDraftChange.mock.lastCall?.[0];
+      view.rerender(<DraftAssistant isOpen={false} onClose={onClose} onDraftChange={onDraftChange} />);
+      await act(async () => { request.resolve(summaryResponse()); });
+      view.rerender(<DraftAssistant isOpen onClose={onClose} onDraftChange={onDraftChange} />);
+      expect(screen.getByPlaceholderText(composerPlaceholder)).toHaveValue('Timeline view');
+      expect(screen.getByPlaceholderText(composerPlaceholder)).toBeEnabled();
+      expect([idleAccepted, processingAssigned, onDraftChange.mock.lastCall?.[0]]).toEqual([false, true, true]);
+      expect(fetch).toHaveBeenCalledOnce();
+    } finally {
+      await act(async () => { request.resolve(summaryResponse()); });
+    }
+  });
+
+  it('preserves standalone submission when the optional reporting callback is omitted', async () => {
+    const fetch = vi.fn().mockResolvedValue(summaryResponse());
+    vi.stubGlobal('fetch', fetch);
+    const view = render(<AIAssistant isOpen onClose={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText(composerPlaceholder), { target: { value: 'How many cards total?' } });
+    fireEvent.keyDown(screen.getByPlaceholderText(composerPlaceholder), { key: 'Enter' });
+    await screen.findByText('1 total card (To Do: 1)');
+    view.rerender(<AIAssistant isOpen={false} onClose={() => {}} />);
+    view.rerender(<AIAssistant isOpen onClose={() => {}} />);
+    expect(screen.getByPlaceholderText(composerPlaceholder)).toHaveValue('');
+    expect(fetch).toHaveBeenCalledOnce();
   });
 });

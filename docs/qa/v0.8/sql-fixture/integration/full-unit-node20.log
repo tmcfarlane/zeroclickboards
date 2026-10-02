@@ -1,0 +1,9 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts
+
+
+ Test Files  45 passed (45)
+      Tests  958 passed (958)
+   Start at  05:43:30
+   Duration  101.15s (transform 7.61s, setup 6.57s, import 23.87s, tests 110.61s, environment 48.71s)
+

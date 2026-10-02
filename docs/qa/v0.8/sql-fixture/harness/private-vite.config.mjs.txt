@@ -1,0 +1,5 @@
+import { mergeConfig } from '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/node_modules/vite/dist/node/index.js';
+import base from '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/vite.config.ts';
+// The isolated worktree deliberately shares dependencies; permit only its source
+// and the actual shared dependency directory so bundled local fonts can load.
+export default mergeConfig(base, { cacheDir: '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-vite-cache', server: { fs: { allow: ['/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts', '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroclickboards/node_modules'] } } });
