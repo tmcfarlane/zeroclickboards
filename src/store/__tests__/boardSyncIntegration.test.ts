@@ -24,6 +24,7 @@ const transport = vi.hoisted(() => ({
   callbacks: [] as Array<(payload: Change) => void>,
   removeChannel: vi.fn(),
   authCallback: null as ((event: string, session: Session | null) => void) | null,
+  initialize: vi.fn(),
   getSession: vi.fn(),
   getUser: vi.fn(),
   signOut: vi.fn(),
@@ -56,6 +57,7 @@ vi.mock('@/lib/supabase', () => {
     authSignInWithOAuth: transport.oauthSignIn,
     supabase: {
     auth: {
+      initialize: transport.initialize,
       getSession: transport.getSession,
       getUser: transport.getUser,
       signOut: transport.signOut,
@@ -175,6 +177,7 @@ describe('signed-in board sync integration', () => {
     transport.callbacks.length = 0;
     transport.removeChannel.mockClear();
     transport.authCallback = null;
+    transport.initialize.mockReset().mockResolvedValue({ error: null });
     transport.getSession.mockReset().mockResolvedValue({ data: { session: null }, error: null });
     transport.getUser.mockReset().mockResolvedValue({ data: { user: null }, error: null });
     transport.signOut.mockReset().mockResolvedValue({ error: null });

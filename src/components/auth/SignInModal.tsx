@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuthContext } from './AuthProvider';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Mail, Lock, Chrome, Loader2 } from 'lucide-react';
 
 interface SignInModalProps {
@@ -16,13 +16,32 @@ const inputClasses =
   'pl-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50';
 
 export function SignInModal({ isOpen, onOpenChange }: SignInModalProps) {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuthContext();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, isChatGPTSignInEnabled, signInWithChatGPT } = useAuthContext();
   const [tab, setTab] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [oauthError, setOAuthError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingOAuth, setPendingOAuth] = useState<'google' | 'chatgpt' | null>(null);
+  const attemptRef = useRef<object | null>(null);
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
+
+  useEffect(() => () => { attemptRef.current = null; }, []);
+  useEffect(() => {
+    if (!isOpen) {
+      attemptRef.current = null;
+      setEmail('');
+      setPassword('');
+      setError(null);
+      setOAuthError(null);
+      setNotice(null);
+      setIsSubmitting(false);
+      setPendingOAuth(null);
+    }
+  }, [isOpen]);
 
   const canSubmit = useMemo(() => {
     if (email.trim().length === 0 || password.length === 0) return false;
@@ -32,11 +51,14 @@ export function SignInModal({ isOpen, onOpenChange }: SignInModalProps) {
   }, [email, password, tab]);
 
   const resetState = () => {
+    attemptRef.current = null;
     setEmail('');
     setPassword('');
     setError(null);
+    setOAuthError(null);
     setNotice(null);
     setIsSubmitting(false);
+    setPendingOAuth(null);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -50,40 +72,66 @@ export function SignInModal({ isOpen, onOpenChange }: SignInModalProps) {
     setNotice(null);
   };
 
-  const handleGoogle = async () => {
+  const handleOAuth = async (provider: 'google' | 'chatgpt') => {
+    if (attemptRef.current || !isOpenRef.current || provider === 'chatgpt' && !isChatGPTSignInEnabled) return;
+    const attempt = {};
+    attemptRef.current = attempt;
     setError(null);
+    setOAuthError(null);
     setNotice(null);
     setIsSubmitting(true);
-    const result = await signInWithGoogle();
-    setIsSubmitting(false);
-    if (result.error) setError(result.error);
+    setPendingOAuth(provider);
+    try {
+      const result = await (provider === 'chatgpt' ? signInWithChatGPT() : signInWithGoogle());
+      if (attemptRef.current === attempt && isOpenRef.current && result.error) setOAuthError(result.error);
+    } catch {
+      if (attemptRef.current === attempt && isOpenRef.current) setOAuthError('Could not start sign-in. Try again.');
+    } finally {
+      if (attemptRef.current === attempt && isOpenRef.current) {
+        attemptRef.current = null;
+        setIsSubmitting(false);
+        setPendingOAuth(null);
+      }
+    }
   };
 
   const handleEmail = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!canSubmit || isSubmitting) return;
+    if (!canSubmit || attemptRef.current || !isOpenRef.current) return;
+    const attempt = {};
+    attemptRef.current = attempt;
     setError(null);
+    setOAuthError(null);
     setNotice(null);
     setIsSubmitting(true);
 
-    if (tab === 'signin') {
-      const result = await signInWithEmail(email.trim(), password);
-      setIsSubmitting(false);
-      if (result.error) setError(result.error);
-      else handleOpenChange(false);
-      return;
-    }
+    try {
+      if (tab === 'signin') {
+        const result = await signInWithEmail(email.trim(), password);
+        if (attemptRef.current !== attempt || !isOpenRef.current) return;
+        if (result.error) setError(result.error);
+        else handleOpenChange(false);
+        return;
+      }
 
-    const result = await signUpWithEmail(email.trim(), password);
-    setIsSubmitting(false);
-    if (result.error) {
-      setError(result.error);
-    } else if (result.needsEmailConfirmation) {
-      // Account created but no session yet — keep the modal open and tell the
-      // user to confirm, instead of silently closing as if they were signed in.
-      setNotice('Account created. Check your email to confirm your account, then sign in.');
-    } else {
-      handleOpenChange(false);
+      const result = await signUpWithEmail(email.trim(), password);
+      if (attemptRef.current !== attempt || !isOpenRef.current) return;
+      if (result.error) {
+        setError(result.error);
+      } else if (result.needsEmailConfirmation) {
+        // Account created but no session yet — keep the modal open and tell the
+        // user to confirm, instead of silently closing as if they were signed in.
+        setNotice('Account created. Check your email to confirm your account, then sign in.');
+      } else {
+        handleOpenChange(false);
+      }
+    } catch {
+      if (attemptRef.current === attempt && isOpenRef.current) setError(tab === 'signup' ? 'Could not create your account. Try again.' : 'Could not sign in. Try again.');
+    } finally {
+      if (attemptRef.current === attempt && isOpenRef.current) {
+        attemptRef.current = null;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -107,17 +155,33 @@ export function SignInModal({ isOpen, onOpenChange }: SignInModalProps) {
         <div className="space-y-4 pt-2">
           <Button
             type="button"
-            onClick={handleGoogle}
+            onClick={() => void handleOAuth('google')}
             disabled={isSubmitting}
+            aria-busy={pendingOAuth === 'google'}
             className="w-full h-11 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-xl"
           >
-            {isSubmitting ? (
+            {pendingOAuth === 'google' ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
             ) : (
               <Chrome className="w-4 h-4 mr-2" aria-hidden="true" />
             )}
             Continue with Google
           </Button>
+
+          {isChatGPTSignInEnabled && (
+            <Button
+              type="button"
+              onClick={() => void handleOAuth('chatgpt')}
+              disabled={isSubmitting}
+              aria-busy={pendingOAuth === 'chatgpt'}
+              className="w-full h-11 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-xl"
+            >
+              {pendingOAuth === 'chatgpt' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" /> : <img src="/chatgpt-logo-white.svg" alt="" aria-hidden="true" className="w-4 h-4 mr-2" />}
+              Continue with ChatGPT
+            </Button>
+          )}
+
+          {oauthError && <p role="alert" className="text-sm text-red-400">{oauthError}</p>}
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-white/10" />
@@ -182,8 +246,8 @@ export function SignInModal({ isOpen, onOpenChange }: SignInModalProps) {
                   disabled={!canSubmit || isSubmitting}
                   className="w-full h-11 gradient-cyan text-[#0B0F0F] hover:opacity-90 rounded-xl font-semibold"
                 >
-                  {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />}
-                  {isSubmitting ? 'Signing in…' : 'Sign in'}
+                  {isSubmitting && !pendingOAuth && <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />}
+                  {isSubmitting && !pendingOAuth ? 'Signing in…' : 'Sign in'}
                 </Button>
               </form>
             </TabsContent>
@@ -232,8 +296,8 @@ export function SignInModal({ isOpen, onOpenChange }: SignInModalProps) {
                   disabled={!canSubmit || isSubmitting}
                   className="w-full h-11 gradient-cyan text-[#0B0F0F] hover:opacity-90 rounded-xl font-semibold"
                 >
-                  {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />}
-                  {isSubmitting ? 'Creating account…' : 'Create account'}
+                  {isSubmitting && !pendingOAuth && <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />}
+                  {isSubmitting && !pendingOAuth ? 'Creating account…' : 'Create account'}
                 </Button>
                 <p className="text-xs text-[#A8B2B2]">
                   You may need to confirm your email depending on your Supabase Auth settings.

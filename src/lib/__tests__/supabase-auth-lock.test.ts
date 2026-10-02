@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash, webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthChangeEvent, LockFunc, Session, SupabaseClientOptions } from '@supabase/supabase-js';
 
@@ -111,6 +112,249 @@ afterEach(() => {
 describe.each(lockModes)('SDK auth mutation serialization with %s locks', (mode) => {
   beforeEach(() => {
     if (mode === 'native') vi.stubGlobal('navigator', { locks: nativeLocks });
+  });
+
+  describe('ChatGPT identity links', () => {
+    async function linkCredentials() {
+      const auth = await import('../chatgpt-auth');
+      const credentials = auth.chatGPTProviderCredentials('https://board.example.invalid/auth/connector?request=opaque-request&state=original-flow');
+      return { ...credentials, options: { ...credentials.options, skipBrowserRedirect: true } };
+    }
+
+    it.each(['implicit', 'pkce'] as const)('initiates an authenticated %s link without replacing the current account', async (flowType) => {
+      fixture.flowType = flowType;
+      vi.stubGlobal('crypto', webcrypto);
+      let requestedUrl: URL | undefined;
+      fixture.fetch.mockImplementation(async (url, init) => {
+        requestedUrl = new URL(String(url));
+        expect(requestedUrl.pathname).toBe('/auth/v1/user/identities/authorize');
+        expect(init?.method).toBe('GET');
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer disposable-old-account');
+        return json({ url: 'https://provider.example.invalid/link-authorize' });
+      });
+      const api = await initialize();
+      const stored = fixture.storage.get(storageKey);
+      const events = observeEvents(api.supabase);
+      const writes = vi.spyOn(fixture.storage, 'set');
+      try {
+        const result = await api.authLinkIdentity(await linkCredentials());
+        expect(result.error).toBeNull();
+        expect(result.data).toEqual({ provider: 'custom:chatgpt', url: 'https://provider.example.invalid/link-authorize' });
+        expect(requestedUrl!.searchParams.get('provider')).toBe('custom:chatgpt');
+        expect(requestedUrl!.searchParams.get('scopes')).toBe('openid profile');
+        expect(requestedUrl!.searchParams.get('scopes')!.split(/\s+/)).not.toContain('email');
+        expect(requestedUrl!.searchParams.get('redirect_to')).toBe('https://board.example.invalid/auth/connector?request=opaque-request&state=original-flow');
+        expect(requestedUrl!.searchParams.get('skip_http_redirect')).toBe('true');
+        expect(fixture.fetch).toHaveBeenCalledTimes(1);
+        expect(fixture.storage.get(storageKey)).toBe(stored);
+        expect(writes.mock.calls.filter(([key]) => key === storageKey)).toEqual([]);
+        expect(events.filter(({ event }) => event !== 'INITIAL_SESSION')).toEqual([]);
+        if (flowType === 'pkce') {
+          const verifier: string = JSON.parse(fixture.storage.get(`${storageKey}-code-verifier`)!);
+          expect(verifier).toBeTruthy();
+          expect(requestedUrl!.searchParams.get('code_challenge_method')).toBe('s256');
+          expect(requestedUrl!.searchParams.get('code_challenge')).toBe(createHash('sha256').update(verifier).digest('base64url'));
+        } else {
+          expect(requestedUrl!.searchParams.has('code_challenge')).toBe(false);
+          expect(fixture.storage.has(`${storageKey}-code-verifier`)).toBe(false);
+        }
+      } finally {
+        writes.mockRestore();
+      }
+    });
+
+    it('queues a link behind current-session validation before sending its existing bearer', async () => {
+      const validationStarted = deferred<void>();
+      const validationReply = deferred<Response>();
+      const trace: string[] = [];
+      fixture.fetch.mockImplementation(async (url, init) => {
+        if (String(url).endsWith('/user')) {
+          trace.push('validation'); validationStarted.resolve(); return validationReply.promise;
+        }
+        trace.push('link');
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer disposable-old-account');
+        return json({ url: 'https://provider.example.invalid/link-authorize' });
+      });
+      const api = await initialize();
+      const credentials = await linkCredentials();
+      const validation = api.supabase.auth.getUser();
+      let link: ReturnType<Subject['authLinkIdentity']> | undefined;
+      try {
+        await validationStarted.promise;
+        link = api.authLinkIdentity(credentials);
+        expect(trace).toEqual(['validation']);
+        validationReply.resolve(json(session('old-account').user));
+        expect((await validation).data.user?.id).toBe('old-account');
+        expect((await link).error).toBeNull();
+        expect(trace).toEqual(['validation', 'link']);
+        expect(JSON.parse(fixture.storage.get(storageKey)!).user.id).toBe('old-account');
+      } finally {
+        validationReply.resolve(json(session('old-account').user));
+        await Promise.allSettled([validation, ...(link ? [link] : [])]);
+      }
+    });
+
+    it('cancels a queued link when validation revokes its account', async () => {
+      const validationStarted = deferred<void>();
+      const validationReply = deferred<Response>();
+      fixture.fetch.mockImplementation(async (url) => {
+        expect(String(url).endsWith('/user')).toBe(true);
+        validationStarted.resolve(); return validationReply.promise;
+      });
+      const api = await initialize();
+      const revisions = await import('../auth-session');
+      const { data: subscription } = api.supabase.auth.onAuthStateChange(event => {
+        if (event === 'SIGNED_OUT') revisions.advanceAuthSessionRevision();
+      });
+      unsubscribe.push(() => subscription.subscription.unsubscribe());
+      const credentials = await linkCredentials();
+      const validation = api.supabase.auth.getUser();
+      let link: ReturnType<Subject['authLinkIdentity']> | undefined;
+      try {
+        await validationStarted.promise;
+        link = api.authLinkIdentity(credentials);
+        validationReply.resolve(json({ error_code: 'session_not_found' }, 403));
+        expect((await validation).error?.name).toBe('AuthSessionMissingError');
+        expect((await link).error?.name).toBe('AuthSessionMissingError');
+        expect(fixture.fetch).toHaveBeenCalledTimes(1);
+        expect(fixture.storage.has(storageKey)).toBe(false);
+        expect(fixture.storage.has(`${storageKey}-code-verifier`)).toBe(false);
+      } finally {
+        validationReply.resolve(json({ error_code: 'session_not_found' }, 403));
+        await Promise.allSettled([validation, ...(link ? [link] : [])]);
+      }
+    });
+
+    it('does not attach a queued old-account link to a subsequent password-login account', async () => {
+      const validationStarted = deferred<void>();
+      const validationReply = deferred<Response>();
+      fixture.fetch.mockImplementation(async (url) => {
+        if (String(url).endsWith('/user')) { validationStarted.resolve(); return validationReply.promise; }
+        expect(String(url)).toContain('/token?grant_type=password');
+        return json(session('successor-account'));
+      });
+      const api = await initialize();
+      const credentials = await linkCredentials();
+      const validation = api.supabase.auth.getUser();
+      let link: ReturnType<Subject['authLinkIdentity']> | undefined;
+      let login: ReturnType<Subject['authSignInWithPassword']> | undefined;
+      try {
+        await validationStarted.promise;
+        link = api.authLinkIdentity(credentials);
+        login = api.authSignInWithPassword({ email: 'successor@example.invalid', password: 'disposable-fixture-password' });
+        validationReply.resolve(json(session('old-account').user));
+        expect((await link).error?.name).toBe('AuthSessionMissingError');
+        expect((await login).data.user?.id).toBe('successor-account');
+        expect(fixture.fetch).toHaveBeenCalledTimes(2);
+        expect(fixture.fetch.mock.calls.some(([url]) => String(url).includes('/identities/authorize'))).toBe(false);
+        expect(JSON.parse(fixture.storage.get(storageKey)!).user.id).toBe('successor-account');
+      } finally {
+        validationReply.resolve(json(session('old-account').user));
+        await Promise.allSettled([validation, ...(link ? [link] : []), ...(login ? [login] : [])]);
+      }
+    });
+
+    it.each(['held HTTP', 'before HTTP dispatch'] as const)('queues behind logout (%s) and sends no authorized link afterward', async (phase) => {
+      fixture.flowType = 'pkce';
+      const logoutStarted = deferred<void>();
+      const logoutReply = deferred<Response>();
+      fixture.fetch.mockImplementation(async (url) => {
+        expect(String(url)).toContain('/logout');
+        logoutStarted.resolve(); return logoutReply.promise;
+      });
+      const api = await initialize();
+      const revisions = await import('../auth-session');
+      const { data: subscription } = api.supabase.auth.onAuthStateChange(event => {
+        if (event === 'SIGNED_OUT') revisions.advanceAuthSessionRevision();
+      });
+      unsubscribe.push(() => subscription.subscription.unsubscribe());
+      const credentials = await linkCredentials();
+      await fixture.options!.auth!.lock!(`lock:${storageKey}`, -1, async () => {});
+      const logout = api.supabase.auth.signOut({ scope: 'local' });
+      let link: ReturnType<Subject['authLinkIdentity']> | undefined;
+      try {
+        if (phase === 'held HTTP') await logoutStarted.promise;
+        link = api.authLinkIdentity(credentials);
+        await logoutStarted.promise;
+        expect(fixture.fetch).toHaveBeenCalledTimes(1);
+        logoutReply.resolve(new Response(null, { status: 204 }));
+        expect((await logout).error).toBeNull();
+        expect((await link).error?.name).toBe('AuthSessionMissingError');
+        expect(fixture.fetch).toHaveBeenCalledTimes(1);
+        expect(fixture.storage.has(storageKey)).toBe(false);
+        expect(fixture.storage.has(`${storageKey}-code-verifier`)).toBe(false);
+      } finally {
+        logoutReply.resolve(new Response(null, { status: 204 }));
+        await Promise.allSettled([logout, ...(link ? [link] : [])]);
+      }
+    });
+
+    it('preserves the installed SDK missing-session server rejection without using an old bearer', async () => {
+      fixture.storage.delete(storageKey);
+      fixture.fetch.mockImplementation(async (url, init) => {
+        expect(new URL(String(url)).pathname).toBe('/auth/v1/user/identities/authorize');
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer disposable-fixture-public-key');
+        return json({ error_code: 'bad_jwt', message: 'Fixture identity linking requires an authenticated session' }, 401);
+      });
+      const api = await initialize();
+      const result = await api.authLinkIdentity(await linkCredentials());
+      expect(result.error?.status).toBe(401);
+      expect(result.data.url).toBeNull();
+      expect(fixture.fetch).toHaveBeenCalledTimes(1);
+      expect(fixture.storage.has(storageKey)).toBe(false);
+    });
+
+    it('cancels a held link result after a signout intent before queued logout acknowledges', async () => {
+      const linkStarted = deferred<void>();
+      const linkReply = deferred<Response>();
+      const logoutStarted = deferred<void>();
+      const logoutReply = deferred<Response>();
+      fixture.fetch.mockImplementation(async (url, init) => {
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer disposable-old-account');
+        if (String(url).includes('/identities/authorize')) { linkStarted.resolve(); return linkReply.promise; }
+        expect(String(url)).toContain('/logout');
+        logoutStarted.resolve(); return logoutReply.promise;
+      });
+      const api = await initialize();
+      const revisions = await import('../auth-session');
+      const link = api.authLinkIdentity(await linkCredentials());
+      let logout: ReturnType<Subject['supabase']['auth']['signOut']> | undefined;
+      try {
+        await linkStarted.promise;
+        revisions.advanceAuthSessionRevision();
+        logout = api.supabase.auth.signOut({ scope: 'local' });
+        expect(fixture.fetch).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(fixture.storage.get(storageKey)!).user.id).toBe('old-account');
+        linkReply.resolve(json({ url: 'https://provider.example.invalid/stale-link-authorize' }));
+        const result = await link;
+        expect(result.error?.name).toBe('AuthSessionMissingError');
+        expect(result.data.url).toBeNull();
+        await logoutStarted.promise;
+        expect(JSON.parse(fixture.storage.get(storageKey)!).user.id).toBe('old-account');
+        logoutReply.resolve(new Response(null, { status: 204 }));
+        expect((await logout).error).toBeNull();
+        expect(fixture.storage.has(storageKey)).toBe(false);
+      } finally {
+        linkReply.resolve(json({ url: 'https://provider.example.invalid/stale-link-authorize' }));
+        logoutReply.resolve(new Response(null, { status: 204 }));
+        await Promise.allSettled([link, ...(logout ? [logout] : [])]);
+      }
+    });
+
+    it('releases a rejected link for deliberate retry without changing session ownership', async () => {
+      fixture.fetch.mockResolvedValueOnce(json({ error_code: 'identity_already_exists', message: 'Fixture identity already linked' }, 400))
+        .mockResolvedValueOnce(json({ url: 'https://provider.example.invalid/retry-authorize' }));
+      const api = await initialize();
+      const credentials = await linkCredentials();
+      const first = await api.authLinkIdentity(credentials);
+      expect(first.error?.code).toBe('identity_already_exists');
+      expect(first.data.url).toBeNull();
+      const second = await api.authLinkIdentity(credentials);
+      expect(second.error).toBeNull();
+      expect(second.data.url).toBe('https://provider.example.invalid/retry-authorize');
+      expect(fixture.fetch).toHaveBeenCalledTimes(2);
+      expect(JSON.parse(fixture.storage.get(storageKey)!).user.id).toBe('old-account');
+    });
   });
   it.each(['password', 'signup'] as const)('queues %s behind revoked-session validation and preserves the successor', async (method) => {
     const validationStarted = deferred<void>();
