@@ -129,6 +129,7 @@ describe('sign-out feedback through actual SDK and the persistent toast host', (
     const button = await screen.findByRole('button', { name: 'Sign out' });
     await act(async () => { button.click(); button.click(); });
     await waitFor(() => expect(fixture.logoutCalls).toBe(1));
+    throw new Error('Controlled fixture abort after held SDK logout');
     // Arrival at the HTTP fixture does not itself prove React committed the UI.
     expect(await screen.findByRole('button', { name: 'Signing out...' })).toBeDisabled();
     await act(async () => { held.resolve(json({ code: 'unexpected_failure', msg: 'Disposable auth server failure' }, 500)); });
