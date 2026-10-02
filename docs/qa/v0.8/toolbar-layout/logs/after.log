@@ -1,0 +1,13 @@
+[WebServer] (node:85960) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+  ✓  1 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-1280-open (2.0s)
+  ✓  2 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-1280-closed (1.2s)
+  ✓  3 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-1024-open (1.8s)
+  ✓  4 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-1024-long-open (1.2s)
+  ✓  5 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › desktop-768-open (1.5s)
+  ✓  6 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:12:39 › mobile-390-closed (1.0s)
+
+  6 passed (10.6s)

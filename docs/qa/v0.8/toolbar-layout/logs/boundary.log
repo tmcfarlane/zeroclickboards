@@ -1,0 +1,8 @@
+[WebServer] (node:86725) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › ../../../../../../../../private/tmp/zeroboard-toolbar-built-smoke/probe/toolbar.spec.ts:13:39 › desktop-640-open (2.1s)
+
+  1 passed (4.3s)

@@ -1,0 +1,120 @@
+{
+  "recordedAt": "2026-10-02T13:45:11.529746+00:00",
+  "branch": "codex/gauntlet-toolbar-layout",
+  "base": "022803b0760749f12489bcb2c0a6ef017fbc9a6c",
+  "runtime": {
+    "binary": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "version": "v20.20.2",
+    "sha256": "38de4fc456c0c439bac48c727d378f749abb4e31f4116703bb1ee9a746fccbb6"
+  },
+  "source": {
+    "path": "src/components/board/KanbanBoard.tsx",
+    "baselineSha256": "6dbde3cc7299915f76a8c14b5080d27f23f4ab33d35a5405466cdde2d17602a8",
+    "candidateSha256": "cc6a4b31dd3b59f97b2719cee61bae56de44ac43a045f40e35bb08497e56ae63",
+    "diff": {
+      "removedLines": 7,
+      "addedLines": 7,
+      "semantics": "classes only; desktop toolbar, shared components and mobile header unchanged"
+    }
+  },
+  "configuration": {
+    "package.json": {
+      "candidateSha256": "d861c93b64a2d769a403d93ad1601d83e82bb31c01ea4e53cfb8b328b69ec18b",
+      "matchesBase": true
+    },
+    "package-lock.json": {
+      "candidateSha256": "9c79e68c03958a2c5d40fda9a180ee705024295e1f8ccfc1acc9a77d7999ea95",
+      "matchesBase": true
+    },
+    "vite.config.ts": {
+      "candidateSha256": "3b313be8b240dc5c5a4aef9bf20634ddec444eefc577a332931c9eab76326545",
+      "matchesBase": true
+    },
+    "playwright.connector.config.ts": {
+      "candidateSha256": "274868ff19062170051b7a722c507e5dfa91fed28b2b94324c5b863c1e07ada9",
+      "matchesBase": true
+    }
+  },
+  "dependencies": {
+    "@playwright/test/package.json": "9d8556509e073169efec663b7f71c13f17d7002b307d00d48bf88ee91c387f3e",
+    "vite/package.json": "267723454e82eb367ff2dcf71315953ea1b8ade6c0aa6b072421056c53e6cebe",
+    "typescript/package.json": "822ef7ca6452205657b6288b066481ecf508bfbf43455d715cf7d3ec457561e6",
+    "react/package.json": "c383aced6a67c8d06f02996015c0a163e78532a330a96dff1ccfd107b00ab326",
+    "react-router-dom/package.json": "7073fcc36f198ba14b309963428d27fe9dcdf06b38b54bb27d04de8cbea8b8c9",
+    "@supabase/supabase-js/package.json": "09d856af30b54ac36dc58ce1032f816b3d6f78adac4a076f8cb13e9cd99b1f43"
+  },
+  "build": {
+    "path": "/private/tmp/zeroboard-toolbar-built-smoke/dist",
+    "originalSettings": "Original vite.config.ts imported; only private cacheDir and build.outDir/emptyOutDir overridden",
+    "fixtureEnvironment": {
+      "VITE_SUPABASE_URL": "https://connector-fixture.invalid",
+      "VITE_SUPABASE_ANON_KEY": "disposable-fixture-public-key"
+    },
+    "exitCode": 0,
+    "elapsedSeconds": 6.95,
+    "artifacts": 41,
+    "manifestSha256": "b2a19ab9e9a80473fd44d972f82aa68a3c1b64a1342f8bb061c56a45a2e8e100",
+    "indexHtmlSha256": "1c6be92f9a40ca8d4919714c1ec94b940dc458e27d938f54243f2c47ffbc79cb",
+    "knownWarnings": [
+      "inherited chunk size warning"
+    ]
+  },
+  "baseline": {
+    "artifactPath": "/private/tmp/zeroboard-sdk-integrated-built-smoke/dist",
+    "sourceSnapshot": "outputs/gauntlet/thirteenth-sdk-integration/before-browser-source.json",
+    "sourceSnapshotSha256": "3c35d5d53fe465c0ecbdbec6d8a7767957e68a144488b5770ff44503631c12e9",
+    "indexHtmlSha256": "98c17efb8c749189642f6f755f2c08c6bc517fafbbc3c66c3b95c02e6519b17f",
+    "finalProbeSha256": "04bbb41094ec739266656fa8981cadaf4268cdb5f7130c5ce28eca9013e65928",
+    "cases": 2,
+    "expectedFailure": "desktop1280 AI-open text has two lines; Timeline/AskAI rectangle overlap36.984375px",
+    "controlsPass": 1,
+    "failures": 1,
+    "exitCode": 1,
+    "pageHorizontalOverflow": false
+  },
+  "verification": [
+    {
+      "gate": "layout",
+      "cases": 6,
+      "passed": 6,
+      "elapsedSeconds": 10.6,
+      "probeSha256": "04bbb41094ec739266656fa8981cadaf4268cdb5f7130c5ce28eca9013e65928",
+      "logSha256": "57a90858c23c370a264b4739cfb4bc16d07e8884c9c98c5afd47bb90d3017f6d"
+    },
+    {
+      "gate": "640px desktop boundary",
+      "cases": 1,
+      "passed": 1,
+      "elapsedSeconds": 4.3,
+      "probeSha256": "6ead85c1d8c8b7474028f11ee1f004aa9d62198f8a9f71a593466f6c499d60c4",
+      "logSha256": "140fb45b28cbfc24ab318ed79a494f8898fa2017ac10df88e6987b288cbd8755",
+      "actualSearchWidth": 248
+    },
+    {
+      "gate": "existing AI draft compiled desktop/mobile",
+      "cases": 6,
+      "passed": 6,
+      "elapsedSeconds": 15.2,
+      "testSourceSha256": "bd9ae2009b4a9b8830eee93fbb584ffca0a7abaa2e1b61a8434c545440ede274",
+      "fixtureSourceSha256": "f2b9ed7075bd7bfc5b76b6709473f23fa1319760ab04ac5baded8a3911e563f4",
+      "logSha256": "42aa13894dc7d45fc691e28d1c28c0508b323210192574a811afb6994840cbbd"
+    },
+    {
+      "gate": "scoped ESLint",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "gate": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "scopeLimits": [
+    "Disposable intercepted auth/API transports only; no live grants/services",
+    "No full app/API/MCP suite or deployment gate",
+    "No browser hit-test claim for historical screenshot alone; new metrics and trial clicks provide current evidence",
+    "The separate640 case was added after the original6 passed to directly prove the search field shrinks below256px"
+  ],
+  "initialHarnessCorrection": "Initial baseline log preserved. Unreachable desktop post-assertion popover title locator changed from absent Filter Cards to actual Labels. Final baseline repeated against identical compiled baseline using the same six-case probe as the6-case AFTER run; desktop failed at the intended two-line assertion and mobile control passed.",
+  "sealedMcpHarness": "Preserved /private/tmp/zeroboard-mcp-lifecycle-candidate-20261002 without reading secrets, running or rebuilding it."
+}
