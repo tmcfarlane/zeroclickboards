@@ -7,6 +7,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ConnectorSettings } from '@/components/connectors/ConnectorSettings';
+import { useSignOutAction } from '@/hooks/useSignOutAction';
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
@@ -19,7 +20,8 @@ function formatDate(dateStr: string | null | undefined): string {
 
 export function AccountPage() {
   const { hash } = useLocation();
-  const { user, session, signOut } = useAuthContext();
+  const { user, session } = useAuthContext();
+  const { isSigningOut, runSignOut } = useSignOutAction();
   const { hasSubscription, subscription, isLoading } = useSubscription();
   const { isAdmin } = useAdmin();
   const [portalLoading, setPortalLoading] = useState(false);
@@ -271,13 +273,11 @@ export function AccountPage() {
         <section className="rounded-xl border border-white/10 bg-[#111515] p-6">
           <Button
             variant="outline"
-            onClick={async () => {
-              await signOut();
-              window.location.href = '/';
-            }}
+            disabled={isSigningOut}
+            onClick={() => { void runSignOut(); }}
             className="border-white/10 text-[#A8B2B2] hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/5"
           >
-            Sign out
+            {isSigningOut ? 'Signing out...' : 'Sign out'}
           </Button>
         </section>
       </div>

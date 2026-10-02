@@ -7,6 +7,7 @@ import { AppRoutes } from './routes'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AppToaster } from '@/components/layout/AppToaster'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <RouterProvider router={router} />
         </AuthProvider>
+        <AppToaster />
         <Analytics />
       </QueryClientProvider>
     </ErrorBoundary>

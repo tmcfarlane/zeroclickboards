@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useSearchParams, type Blocker } from 'react-router-dom';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
@@ -415,19 +415,6 @@ export function AppShell() {
       <AIUpgradePrompt isOpen={isUpgradePromptOpen} onOpenChange={setIsUpgradePromptOpen} />
       <KeyboardShortcutsHelp isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <SignInModal isOpen={isSignInModalOpen} onOpenChange={setIsSignInModalOpen} />
-
-      <Toaster
-        theme="dark"
-        position="bottom-right"
-        offset={{ bottom: 80 }}
-        toastOptions={{
-          style: {
-            background: '#111515',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#F2F7F7',
-          },
-        }}
-      />
 
       <CreateBoardDialog
         isOpen={isCreateDialogOpen}

@@ -141,8 +141,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         advanceAuthSessionRevision();
         // Local scope only: a routine sign-out should not revoke the user's
         // sessions on their other devices (the default 'global' scope would).
-        const { error } = await supabase.auth.signOut({ scope: 'local' });
-        return { error: error?.message ?? null };
+        try {
+          const { error } = await supabase.auth.signOut({ scope: 'local' });
+          return { error: error?.message ?? null };
+        } catch {
+          return { error: 'Could not sign out. Try again.' };
+        }
       },
     };
   }, [isLoaded, session]);
