@@ -1,0 +1,17 @@
+[WebServer] (node:25210) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:25214) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (1.9s)
+  ✓  2 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (1.6s)
+  ✓  3 [desktop] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it (1.4s)
+(node:25238) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  4 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (1.9s)
+  ✓  5 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (1.6s)
+  ✓  6 [mobile] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it (1.5s)
+
+  6 passed (15.2s)
