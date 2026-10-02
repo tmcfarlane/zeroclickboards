@@ -7,6 +7,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ConnectorSettings } from '@/components/connectors/ConnectorSettings';
+import { ChatGPTSignInSettings } from '@/components/auth/ChatGPTSignInSettings';
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
@@ -120,6 +121,8 @@ export function AccountPage() {
             </div>
           </div>
         </section>
+
+        <ChatGPTSignInSettings key={user?.id ?? 'signed-out'} />
 
         {/* Subscription section */}
         <section className="rounded-xl border border-white/10 bg-[#111515] p-6 mb-6">

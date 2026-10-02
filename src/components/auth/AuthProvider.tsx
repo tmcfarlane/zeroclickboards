@@ -1,15 +1,20 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { authSignInWithOAuth, authSignInWithPassword, authSignUp, supabase } from '@/lib/supabase';
+import { authLinkIdentity, authSignInWithOAuth, authSignInWithPassword, authSignUp, supabase } from '@/lib/supabase';
 import { useBoardStore } from '@/store/useBoardStore';
 import { advanceAuthSessionRevision, getAuthSessionRevision } from '@/lib/auth-session';
+import { chatGPTProviderCredentials, getChatGPTAuthRedirectUrl, getOAuthCallbackErrorMessage, isChatGPTSignInEnabled } from '@/lib/chatgpt-auth';
+import { toast } from 'sonner';
 
 export interface AuthContextValue {
   isLoaded: boolean;
   isSignedIn: boolean;
   session: Session | null;
   user: User | null;
+  isChatGPTSignInEnabled: boolean;
+  signInWithChatGPT: () => Promise<{ error: string | null }>;
+  linkChatGPTIdentity: () => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (
@@ -43,6 +48,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let receivedNonInitialEvent = false;
     let validationRevision: number | undefined;
     let validationTimer: number | undefined;
+    // The SDK verifies and consumes the native Supabase callback. Surface its
+    // failure without reflecting upstream descriptions or credentials in UI.
+    void supabase.auth.initialize().then(({ error }) => {
+      if (!mounted || !error) return;
+      window.history.replaceState(window.history.state, '', getChatGPTAuthRedirectUrl(window.location.href));
+      toast.error(getOAuthCallbackErrorMessage(error), { id: 'auth-callback-error' });
+    }).catch(() => {
+      if (mounted) toast.error('Could not restore your session. Reload and try again.', { id: 'auth-callback-error' });
+    });
     const acceptSession = (nextSession: Session | null) => {
       if (acceptedSession === undefined || acceptedSession?.user.id !== nextSession?.user.id ||
         acceptedSession?.access_token !== nextSession?.access_token) {
@@ -106,6 +120,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isSignedIn: !!user,
       session,
       user,
+      isChatGPTSignInEnabled: isChatGPTSignInEnabled(),
+      signInWithChatGPT: async () => {
+        if (!isChatGPTSignInEnabled()) return { error: 'ChatGPT sign-in is not available yet. Use another sign-in method.' };
+        if (useBoardStore.getState().currentUserId) return { error: 'Link ChatGPT from your account settings while signed in.' };
+        try {
+          const { error } = await authSignInWithOAuth(chatGPTProviderCredentials(window.location.href));
+          return { error: error ? getOAuthCallbackErrorMessage(error) : null };
+        } catch {
+          return { error: 'Could not start ChatGPT sign-in. Please try again.' };
+        }
+      },
+      linkChatGPTIdentity: async () => {
+        if (!isChatGPTSignInEnabled()) return { error: 'ChatGPT sign-in is not available yet.' };
+        if (!user || useBoardStore.getState().currentUserId !== user.id) {
+          return { error: 'Your account changed. Sign in again before linking ChatGPT.' };
+        }
+        try {
+          const { error } = await authLinkIdentity(chatGPTProviderCredentials(window.location.href));
+          return { error: error ? getOAuthCallbackErrorMessage(error) : null };
+        } catch {
+          return { error: 'Could not link ChatGPT. Please try again.' };
+        }
+      },
       signInWithGoogle: async () => {
         advanceAuthSessionRevision();
         try {
