@@ -35,3 +35,7 @@ After these gates, the candidate fast-forwarded to PR41’s README-only merge `6
 This protects actual nonempty unsent input in the existing single-line composer. Accepted Send still records the user message and clears the composer before HTTP completion. Submitted chat history and in-flight commands are outside this draft contract, and no automatic restoration or resubmission was added. Timeline editing is unchanged.
 
 The synthetic beforeunload assertion proves the handler prevents a cancelable event for the current account. It does not promise that every browser displays a native prompt. The SDK identity checks use intercepted transports and disposable unsigned sessions rather than a live account.
+
+## Initial committed CI repair
+
+The first PR42 exact-head CI gate failed six existing sign-out fixture cases; its SQL tests passed. [The test-only repair evidence](ci-signout-repair/README.md) preserves that failed log and a controlled before/after cleanup reproduction. Awaiting actual pending UI and draining held SDK transports retains the pending/duplicate/retry assertions. This repair changes no compiled product source or screenshots. The earlier full local SQL failure and this CI auth fixture failure remain separate, accurately recorded gates.

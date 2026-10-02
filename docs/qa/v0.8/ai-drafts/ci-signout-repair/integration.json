@@ -1,0 +1,20 @@
+{
+  "baseHead": "fa6476c70cbd25ba32dcb677bfc7ff5ee94c8025",
+  "at": "2026-10-02T12:32:59.338112+00:00",
+  "runtime": "Node20.20.2 macOSarm64 CI=true",
+  "result": "4 files,60tests PASS; scopedlint/diffpass",
+  "files": [
+    "signOut.test.tsx",
+    "useSignOutAction.test.tsx",
+    "AIAssistant.test.tsx",
+    "AppShell.test.tsx"
+  ],
+  "testSha256": "bd6566761bdae412fb6cf717b1f6bad76bc4bdc6d080a9512a5cf7a2c68e7273",
+  "productChanges": "none",
+  "compiledEvidence": "Existing AI product and screenshot hashes unchanged; no rebuilt artifact attributed to this test-only change.",
+  "logs": {
+    "integration-focused.log": "52adc172a3199f6112914e3adef04a9ea8f2b9448b177644a88a0838874ea68b",
+    "integration-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "gate": "Full exact-head Linux CI is required before merge."
+}

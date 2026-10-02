@@ -1,0 +1,44 @@
+{
+  "baseCommit": "fa6476c70cbd25ba32dcb677bfc7ff5ee94c8025",
+  "ownedFile": "src/components/auth/__tests__/signOut.test.tsx",
+  "beforeSha256": "7c5b7b1a5fe9c2dd170879122aa0c0933c52144af6b6f83bbf6c85fdbcfcae31",
+  "afterSha256": "bd6566761bdae412fb6cf717b1f6bad76bc4bdc6d080a9512a5cf7a2c68e7273",
+  "actualCiFailedLogSha256": "480fdde266cd1b8f2556c8520059763a1677fe7c7f2d2807bd428173165300ef",
+  "runtime": {
+    "node": "20.20.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "nativeLocks": false,
+    "ciPlatform": "linux x64; not reproduced as an OS/architecture match"
+  },
+  "environment": {
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://placeholder.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "placeholder-key"
+  },
+  "results": {
+    "unchangedAccount": "1 passed, 5 filtered skips; original pending-state failure not reproduced",
+    "beforeControlledAbort": "1 deliberate abort + 5 setup timeouts; 6 failed in 57.27s",
+    "afterSameControlledAbort": "1 deliberate abort + 5 passed; no setup timeouts, 5.58s",
+    "finalIntactSuite": "6 passed in 7.16s",
+    "scopedLint": "passed; empty log",
+    "diffCheck": "passed"
+  },
+  "temporaryProbeRemoved": true,
+  "evidenceHashes": {
+    "pr42-signout-before.test.tsx.txt": "7c5b7b1a5fe9c2dd170879122aa0c0933c52144af6b6f83bbf6c85fdbcfcae31",
+    "pr42-signout-before-abort-probe.test.tsx.txt": "12b26e6b7eb622d0865c35046d5c1210ab51bc2e4b93fb69ff116af6ce6a73a0",
+    "pr42-signout-after-abort-probe.test.tsx.txt": "22ff691cfb5ca38df6992e88b7f37c635ae81f91c6609c745f1a260cc43cf2b7",
+    "pr42-signout-before-account.log": "7b0475595d2c44d9c083abf8725e0e906644d3390ef20d3b596191b99ca9ed34",
+    "pr42-signout-before-abort-probe.log": "d32b276d3fd40dd273b937a81fea9b2d9a266b0279035c6c5755bf5221436260",
+    "pr42-signout-after-abort-probe.log": "ecb3eb14bea93794e1a04f74f46e8d4478a7dd85afa22beb7c9b802421b1e9a5",
+    "pr42-signout-after.log": "271c0ece27613f06dfd5745609836fb0100525257adae68611bafc98eead324f",
+    "pr42-signout-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr42-signout-vite.config.mjs": "7a9884bc51427f3d2be54da5151dfcb1a7bdb515dc6afdc7b5bd0d47902b154b"
+  },
+  "limits": [
+    "No product change or founded product defect. Original Linux pending DOM lookup cause remains unproven.",
+    "Exact committed-head CI and combined checks remain root-owned.",
+    "No full suite, build, browser, service request, timeout increase, assertions removed, or shared dependency install."
+  ]
+}
