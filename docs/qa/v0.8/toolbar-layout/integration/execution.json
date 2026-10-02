@@ -1,0 +1,19 @@
+{
+  "gate": "toolbar",
+  "start": "2026-10-02T14:03:28.063771+00:00",
+  "end": "2026-10-02T14:03:38.485903+00:00",
+  "elapsedSeconds": 10.42192754196003,
+  "exitCode": 0,
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/@playwright/test/cli.js",
+    "test",
+    "--config",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-toolbar/playwright.config.mts"
+  ],
+  "explicitEnvironment": {
+    "CI": "true",
+    "TOOLBAR_PHASE": "after"
+  },
+  "retries": 0
+}

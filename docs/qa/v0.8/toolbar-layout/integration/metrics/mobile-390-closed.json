@@ -1,0 +1,64 @@
+{
+  "scenario": {
+    "label": "mobile-390-closed",
+    "width": 390,
+    "height": 664,
+    "open": false
+  },
+  "metrics": [
+    {
+      "name": "selector",
+      "x": 4,
+      "y": 58,
+      "width": 198.734375,
+      "height": 40,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "board",
+      "x": 254,
+      "y": 60,
+      "width": 36,
+      "height": 36,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "timeline",
+      "x": 294,
+      "y": 60,
+      "width": 36,
+      "height": 36,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "actions",
+      "x": 338,
+      "y": 60,
+      "width": 36,
+      "height": 36,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "ask-ai",
+      "x": 12,
+      "y": 587,
+      "width": 179,
+      "height": 44,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "add-card",
+      "x": 199,
+      "y": 587,
+      "width": 179,
+      "height": 44,
+      "centerHitsSelf": true
+    }
+  ],
+  "body": {
+    "viewport": 390,
+    "documentWidth": 390,
+    "bodyWidth": 390
+  },
+  "askLines": 0
+}
