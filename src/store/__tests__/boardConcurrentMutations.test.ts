@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Board, Card } from '@/types';
 import { useBoardStore } from '../useBoardStore';
 import { useUndoStore } from '../useUndoStore';
@@ -40,6 +40,10 @@ beforeEach(() => {
     }],
   });
   useUndoStore.setState({ undoStack: [], redoStack: [], _skipRecord: false });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('board mutations after concurrent updates', () => {
@@ -207,6 +211,8 @@ describe('recurring archive transactions', () => {
   });
 
   it.each(['single', 'bulk'] as const)('a %s rearchive reuses a moved, already archived successor and undo leaves it intact', (scope) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-06T12:00:00.000Z'));
     recurringSources();
     useBoardStore.getState().archiveCard(boardId, 'source', 'a');
     const successor = cards().find((entry) => !['a', 'b'].includes(entry.id))!;
@@ -217,15 +223,33 @@ describe('recurring archive transactions', () => {
     });
     const before = structuredClone(current());
     useUndoStore.getState().clearHistory();
+    const rearchivedAt = '2026-09-06T12:00:01.000Z';
+    vi.setSystemTime(new Date(rearchivedAt));
     if (scope === 'single') useBoardStore.getState().archiveCard(boardId, 'source', 'a');
     else useBoardStore.getState().archiveAllCards(boardId, 'source');
     expect(cards()).toHaveLength(2);
     expect(cardIds('destination')).toEqual([successor.id]);
+    expect(cards().find((entry) => entry.id === 'a')?.updatedAt).toBe(rearchivedAt);
+    expect(before.columns[0].cards[0].updatedAt).toBe('2026-09-06T12:00:00.000Z');
+    const expectedTimestamps = [
+      ['a', rearchivedAt],
+      [successor.id, successor.updatedAt],
+    ];
+    const contentColumns = (board: Board) => board.columns.map((column) => ({
+      ...column,
+      cards: column.cards.map((entry) => ({ ...entry, updatedAt: undefined })),
+    }));
+    // Undo/redo restore content but retain the latest card timestamps, even
+    // when replay happens later than the original archive.
+    vi.setSystemTime(new Date('2026-09-06T12:00:02.000Z'));
     useUndoStore.getState().undo();
-    expect(current().columns).toEqual(before.columns);
+    expect(contentColumns(current())).toEqual(contentColumns(before));
+    expect(cards().map((entry) => [entry.id, entry.updatedAt])).toEqual(expectedTimestamps);
+    vi.setSystemTime(new Date('2026-09-06T12:00:03.000Z'));
     useUndoStore.getState().redo();
     expect(cards()).toHaveLength(2);
     expect(cards().find((entry) => entry.id === successor.id)).toMatchObject({ title: 'Edited successor', isArchived: true });
+    expect(cards().map((entry) => [entry.id, entry.updatedAt])).toEqual(expectedTimestamps);
   });
 
   it('repeated single archive is a no-op with no extra undo entry or timestamp changes', () => {
