@@ -192,6 +192,34 @@ test('malformed and oversized MCP JSON return protocol errors without HTML, body
   assert.equal(oversized.headers.get('cache-control'), 'no-store');
 });
 
+test('authenticated unsupported MCP methods advertise POST and OPTIONS while discovery remains protected', async (t) => {
+  const { oauth, store, authorize, exchange, connect, request } = await setup(t);
+  const authorization = await authorize('alice', 'boards:read');
+  const tokens = await (await exchange(authorization.code, authorization.verifier)).json();
+  const client = await connect(tokens.access_token);
+  assert.ok((await client.listTools()).tools.some(tool => tool.name === 'list_boards'));
+  for (const method of ['GET', 'HEAD', 'PUT', 'PATCH', 'DELETE']) {
+    const response = await request('/mcp', { method, headers: { authorization: `Bearer ${tokens.access_token}` } });
+    assert.equal(response.status, 405, method);
+    assert.equal(response.headers.get('allow'), 'POST, OPTIONS', method);
+  }
+  for (const method of ['GET', 'POST']) {
+    const response = await request('/mcp', { method });
+    assert.equal(response.status, 401, method);
+    assert.match(response.headers.get('www-authenticate'), /resource_metadata=/);
+    assert.equal(response.headers.get('allow'), null);
+  }
+  assert.equal((await request('/mcp', { method: 'OPTIONS' })).status, 204);
+  const info = await oauth.verifyAccessToken(tokens.access_token);
+  const grant = await store.get('grant', info.extra.grantId);
+  await store.put('grant', grant.id, { ...grant, scopes: ['cards:add'] });
+  const missingReadScope = await request('/mcp', { method: 'POST', headers: {
+    authorization: `Bearer ${tokens.access_token}`, 'content-type': 'application/json', accept: 'application/json, text/event-stream',
+  }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }) });
+  assert.equal(missingReadScope.status, 401);
+  assert.match(missingReadScope.headers.get('www-authenticate'), /scope="boards:read"/);
+});
+
 const nativeClient = { client_id: 'codex-native-test', client_name: 'Test native Codex',
   redirect_uris: ['http://127.0.0.1/callback?native=fixture'], token_endpoint_auth_method: 'none' };
 const nativeParams = (redirectUri, verifier, extras = {}) => new URLSearchParams({ client_id: nativeClient.client_id, redirect_uri: redirectUri,

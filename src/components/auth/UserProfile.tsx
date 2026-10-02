@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import type { Ref } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, LogIn, LogOut, ChevronDown, Sparkles, Settings, Shield, Tag, Link2 } from 'lucide-react';
 import { useAuthContext } from './AuthProvider';
@@ -15,9 +16,11 @@ import {
 interface UserProfileProps {
   onSignInClick: () => void;
   onPricingClick?: () => void;
+  onSignOutClick?: () => void;
+  triggerRef?: Ref<HTMLButtonElement>;
 }
 
-export function UserProfile({ onSignInClick, onPricingClick }: UserProfileProps) {
+export function UserProfile({ onSignInClick, onPricingClick, onSignOutClick, triggerRef }: UserProfileProps) {
   const navigate = useNavigate();
   const { isSignedIn, isLoaded, user, signOut } = useAuthContext();
   const { hasSubscription } = useSubscription();
@@ -49,6 +52,7 @@ export function UserProfile({ onSignInClick, onPricingClick }: UserProfileProps)
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          ref={triggerRef}
           variant="ghost"
           size="sm"
           aria-label="Account menu"
@@ -122,7 +126,8 @@ export function UserProfile({ onSignInClick, onPricingClick }: UserProfileProps)
         )}
         <DropdownMenuItem
           onClick={async () => {
-            await signOut();
+            if (onSignOutClick) onSignOutClick();
+            else await signOut();
           }}
           className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
         >

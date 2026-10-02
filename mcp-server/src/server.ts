@@ -83,8 +83,12 @@ export function buildServer(
     async ({ boardId, columnId, includeArchived }) =>
       safe(async () => {
         const b = await db.getBoard(client, boardId);
+        if (columnId !== undefined) {
+          if (!columnId.trim()) throw new Error('Column id cannot be blank');
+          if (!b.columns.some((column) => column.id === columnId)) throw new Error(`Column ${columnId} not found`);
+        }
         return b.columns
-          .filter((c) => !columnId || c.id === columnId)
+          .filter((c) => columnId === undefined || c.id === columnId)
           .flatMap((c) =>
             c.cards
               .filter((card) => includeArchived || !card.isArchived)

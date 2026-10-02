@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createElement, useEffect } from 'react';
+import { act, cleanup, render } from '@testing-library/react';
+import type { Session } from '@supabase/supabase-js';
+import { AuthProvider, useAuthContext, type AuthContextValue } from '@/components/auth/AuthProvider';
 import type { BoardRow } from '@/types/database';
 import type { Card, Column } from '@/types';
 import { useBoardStore } from '../useBoardStore';
@@ -19,6 +23,13 @@ const transport = vi.hoisted(() => ({
   execute: vi.fn<(request: Request) => Promise<Response>>(),
   callbacks: [] as Array<(payload: Change) => void>,
   removeChannel: vi.fn(),
+  authCallback: null as ((event: string, session: Session | null) => void) | null,
+  getSession: vi.fn(),
+  getUser: vi.fn(),
+  signOut: vi.fn(),
+  passwordSignIn: vi.fn(),
+  signUp: vi.fn(),
+  oauthSignIn: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase', () => {
@@ -39,7 +50,20 @@ vi.mock('@/lib/supabase', () => {
     };
     return chain;
   }
-  return { supabase: {
+  return {
+    authSignInWithPassword: transport.passwordSignIn,
+    authSignUp: transport.signUp,
+    authSignInWithOAuth: transport.oauthSignIn,
+    supabase: {
+    auth: {
+      getSession: transport.getSession,
+      getUser: transport.getUser,
+      signOut: transport.signOut,
+      onAuthStateChange: (callback: (event: string, session: Session | null) => void) => {
+        transport.authCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      },
+    },
     from: query,
     channel: () => {
       const channel = {
@@ -62,6 +86,7 @@ const SECOND_REVISION = '2026-09-06T12:00:00.123002+00:00';
 let rows: Map<string, BoardRow>;
 let memberships: Array<{ user_id: string; board_id: string; role: string }>;
 let serial: number;
+let currentAuth: AuthContextValue | null;
 
 function card(id = 'card-1', title = 'Original card'): Card {
   return { id, title, content: { type: 'text', text: '' }, createdAt: FIRST_REVISION, updatedAt: FIRST_REVISION };
@@ -149,11 +174,176 @@ describe('signed-in board sync integration', () => {
     transport.execute.mockImplementation(async (request) => execute(request));
     transport.callbacks.length = 0;
     transport.removeChannel.mockClear();
+    transport.authCallback = null;
+    transport.getSession.mockReset().mockResolvedValue({ data: { session: null }, error: null });
+    transport.getUser.mockReset().mockResolvedValue({ data: { user: null }, error: null });
+    transport.signOut.mockReset().mockResolvedValue({ error: null });
+    transport.passwordSignIn.mockReset().mockResolvedValue({ error: null });
+    transport.signUp.mockReset().mockResolvedValue({ data: { session: null }, error: null });
+    transport.oauthSignIn.mockReset().mockResolvedValue({ error: null });
+    currentAuth = null;
   });
   afterEach(() => {
+    cleanup();
     useBoardStore.getState().setCurrentUserId(null);
     vi.clearAllTimers();
     vi.useRealTimers();
+  });
+
+  function authSession(userId: string): Session {
+    return { access_token: `fixture-token-${userId}`, user: { id: userId } } as Session;
+  }
+
+  async function mountAuthProvider(userId = USER) {
+    transport.getSession.mockResolvedValue({ data: { session: authSession(userId) }, error: null });
+    function AccountOnly() {
+      const auth = useAuthContext();
+      useEffect(() => { currentAuth = auth; }, [auth]);
+      return createElement('div', null, 'Account page');
+    }
+    render(createElement(AuthProvider, { children: createElement(AccountOnly) }));
+    await act(settle);
+  }
+
+  it('auth provider cancels queued writes on account-page logout without an AppShell', async () => {
+    rows.set('board-1', row());
+    await signIn(); // The board page already initialized this account before navigation.
+    await mountAuthProvider();
+    expect(useBoardStore.getState().currentUserId).toBe(USER);
+    expect(useBoardStore.getState().remoteStatus).toBe('ready');
+    useBoardStore.getState().editCard('board-1', 'column-1', 'card-1', { title: 'Queued account draft' });
+    expect(useUndoStore.getState().canUndo()).toBe(true);
+    act(() => transport.authCallback!('SIGNED_OUT', null));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(updateRequests()).toHaveLength(0);
+    expect(useBoardStore.getState().boards).toEqual([]);
+    expect(useBoardStore.getState().cardEditorSession).toBeNull();
+    expect(useUndoStore.getState().canUndo()).toBe(false);
+  });
+
+  it('auth provider preserves a same-account draft through token refresh', async () => {
+    rows.set('board-1', row());
+    await signIn();
+    await mountAuthProvider();
+    expect(useBoardStore.getState().currentUserId).toBe(USER);
+    useBoardStore.getState().renameBoard('board-1', 'Draft survives refresh');
+    act(() => transport.authCallback!('TOKEN_REFRESHED', authSession(USER)));
+    expect(useBoardStore.getState().boards[0].name).toBe('Draft survives refresh');
+    expect(transport.callbacks).toHaveLength(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(rows.get('board-1')?.name).toBe('Draft survives refresh');
+    expect(updateRequests()).toHaveLength(1);
+  });
+
+  it('auth provider discards old in-flight responses after account replacement outside AppShell', async () => {
+    rows.set('board-1', row());
+    rows.set('new-account-board', row('new-account-board', OTHER_USER));
+    await signIn();
+    await mountAuthProvider();
+    expect(useBoardStore.getState().currentUserId).toBe(USER);
+    const pending = deferred<Response>();
+    let dispatched: Request | undefined;
+    transport.execute.mockImplementation(async (request) => {
+      if (request.action === 'update') { dispatched = request; return pending.promise; }
+      return execute(request);
+    });
+    useBoardStore.getState().renameBoard('board-1', 'Already sent old-account save');
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(dispatched).toBeDefined();
+    useBoardStore.getState().renameBoard('board-1', 'Must not dispatch after replacement');
+    act(() => transport.authCallback!('SIGNED_IN', authSession(OTHER_USER)));
+    pending.resolve(execute(dispatched!));
+    await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+    expect(useBoardStore.getState().currentUserId).toBe(OTHER_USER);
+    expect(useBoardStore.getState().boards.map((board) => board.id)).toEqual(['new-account-board']);
+    expect(updateRequests()).toHaveLength(1);
+    expect(useUndoStore.getState().canUndo()).toBe(false);
+  });
+
+  it('auth provider ignores a late cached session after a newer auth event', async () => {
+    rows.set('board-1', row());
+    rows.set('new-account-board', row('new-account-board', OTHER_USER));
+    const cached = deferred<{ data: { session: Session }; error: null }>();
+    transport.getSession.mockReturnValue(cached.promise);
+    render(createElement(AuthProvider, { children: null }));
+    act(() => transport.authCallback!('SIGNED_IN', authSession(OTHER_USER)));
+    cached.resolve({ data: { session: authSession(USER) }, error: null });
+    await act(settle);
+    expect(useBoardStore.getState().currentUserId).toBe(OTHER_USER);
+    expect(useBoardStore.getState().boards.map((board) => board.id)).toEqual(['new-account-board']);
+    expect(transport.getUser).toHaveBeenCalledOnce(); // Validate the accepted account, never replay the old cache.
+  });
+
+  it('auth provider does not sign out a successor account for an old validation failure', async () => {
+    rows.set('board-1', row());
+    rows.set('new-account-board', row('new-account-board', OTHER_USER));
+    const validation = deferred<{ error: { message: string } }>();
+    transport.getUser.mockReturnValueOnce(validation.promise).mockResolvedValue({ data: { user: null }, error: null });
+    await mountAuthProvider();
+    expect(transport.getUser).toHaveBeenCalledOnce();
+    act(() => transport.authCallback!('SIGNED_IN', authSession(OTHER_USER)));
+    validation.resolve({ error: { message: 'Previous session expired' } });
+    await act(settle);
+    expect(transport.signOut).not.toHaveBeenCalled();
+    expect(useBoardStore.getState().currentUserId).toBe(OTHER_USER);
+    expect(useBoardStore.getState().boards.map((board) => board.id)).toEqual(['new-account-board']);
+  });
+
+  it('auth provider invalidates old validation before a new sign-in has emitted its session', async () => {
+    rows.set('board-1', row());
+    const validation = deferred<{ error: { message: string } }>();
+    const login = deferred<{ error: null }>();
+    transport.getUser.mockReturnValueOnce(validation.promise);
+    transport.passwordSignIn.mockReturnValue(login.promise);
+    await mountAuthProvider();
+    let pendingLogin!: Promise<{ error: string | null }>;
+    act(() => { pendingLogin = currentAuth!.signInWithEmail('fixture@example.invalid', 'fixture-only-password'); });
+    validation.resolve({ error: { message: 'Previous token invalid' } });
+    await act(settle);
+    expect(transport.signOut).not.toHaveBeenCalled();
+    login.resolve({ error: null });
+    await act(async () => { expect(await pendingLogin).toEqual({ error: null }); });
+  });
+
+  it('auth provider returns retryable errors when public auth locks reject', async () => {
+    await mountAuthProvider();
+    transport.passwordSignIn.mockRejectedValue(new Error('fixture lock timeout'));
+    transport.signUp.mockRejectedValue(new Error('fixture lock timeout'));
+    transport.oauthSignIn.mockRejectedValue(new Error('fixture lock timeout'));
+    expect(await currentAuth!.signInWithEmail('fixture@example.invalid', 'fixture-only-password')).toEqual({ error: 'Could not sign in. Try again.' });
+    expect(await currentAuth!.signUpWithEmail('fixture@example.invalid', 'fixture-only-password')).toEqual({ error: 'Could not sign up. Try again.', needsEmailConfirmation: false });
+    expect(await currentAuth!.signInWithGoogle()).toEqual({ error: 'Could not start sign-in. Try again.' });
+  });
+
+  it('auth provider validates INITIAL_SESSION when it arrives before the cached read', async () => {
+    rows.set('board-1', row());
+    const cached = deferred<{ data: { session: Session }; error: null }>();
+    transport.getSession.mockReturnValue(cached.promise);
+    transport.getUser.mockResolvedValue({ error: { message: 'Cached session was revoked' } });
+    render(createElement(AuthProvider, { children: null }));
+    act(() => transport.authCallback!('INITIAL_SESSION', authSession(USER)));
+    cached.resolve({ data: { session: authSession(USER) }, error: null });
+    await act(settle);
+    expect(transport.getUser).toHaveBeenCalledOnce();
+    expect(transport.signOut).toHaveBeenCalledExactlyOnceWith({ scope: 'local' });
+  });
+
+  it('auth provider keeps same-session INITIAL_SESSION validation and rejects stale initial notifications', async () => {
+    rows.set('board-1', row());
+    rows.set('new-account-board', row('new-account-board', OTHER_USER));
+    const validation = deferred<{ error: { message: string } }>();
+    transport.getUser.mockReturnValueOnce(validation.promise).mockResolvedValue({ data: { user: null }, error: null });
+    await mountAuthProvider();
+    act(() => transport.authCallback!('INITIAL_SESSION', authSession(USER)));
+    validation.resolve({ error: { message: 'Cached session was revoked' } });
+    await act(settle);
+    expect(transport.getUser).toHaveBeenCalledOnce();
+    expect(transport.signOut).toHaveBeenCalledExactlyOnceWith({ scope: 'local' });
+    act(() => transport.authCallback!('SIGNED_IN', authSession(OTHER_USER)));
+    act(() => transport.authCallback!('INITIAL_SESSION', authSession(USER)));
+    await act(settle);
+    expect(useBoardStore.getState().currentUserId).toBe(OTHER_USER);
+    expect(useBoardStore.getState().boards.map((board) => board.id)).toEqual(['new-account-board']);
   });
 
   it('guards browser writes by remote revision and retains opaque data plus concurrent MCP cards', async () => {

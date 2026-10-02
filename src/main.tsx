@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import { AppRoutes } from './routes'
@@ -17,14 +17,16 @@ const queryClient = new QueryClient({
   },
 })
 
+const router = createBrowserRouter([
+  { path: '*', element: <ErrorBoundary><AppRoutes /></ErrorBoundary> },
+])
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
+          <RouterProvider router={router} />
         </AuthProvider>
         <Analytics />
       </QueryClientProvider>

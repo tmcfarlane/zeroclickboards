@@ -129,6 +129,9 @@ test('the initial save includes all generated content and its acknowledgement su
     const snapshot = structuredClone(savedBoards[0]);
     // Leave through the actual profile menu while the save response is held.
     await page.getByRole('button', { name: 'Account menu' }).click(); await page.getByRole('menuitem', { name: 'Account', exact: true }).click();
+    const leave = page.getByRole('alertdialog', { name: 'Leave this page?' });
+    await expect(leave).toContainText('Saving can continue while you stay signed in');
+    await leave.getByRole('button', { name: 'Leave', exact: true }).click();
     await expect(page).toHaveURL('/account'); await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
     await pendingCreates[0]();
     expect(rows.find(row => row.id === snapshot.id)).toEqual(snapshot);
@@ -151,7 +154,14 @@ test('an accepted full save acknowledged after sign-out cannot become a successo
     await accepted.getByRole('button', { name: 'Generate with AI' }).click(); await expect.poll(() => pending.length).toBe(1);
     await pending[0](completeTemplate); await expect.poll(() => pendingCreates.length).toBe(1);
     expectCompleteInitialSave(savedBoards[0]); const snapshot = structuredClone(savedBoards[0]);
-    await signInSecondAccount(page);
+    await page.getByRole('button', { name: 'Account menu' }).click(); await page.getByRole('menuitem', { name: 'Sign out', exact: true }).click();
+    const signOut = page.getByRole('alertdialog', { name: 'Sign out with unfinished work?' });
+    await signOut.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await expect(page).toHaveURL('/'); await page.getByRole('button', { name: /Get Started/ }).first().click();
+    const login = page.getByRole('dialog', { name: 'Welcome to ZeroBoard' });
+    await login.getByRole('textbox', { name: 'Email', exact: true }).fill('second-account@example.invalid');
+    await login.getByLabel('Password', { exact: true }).fill('disposable-password'); await login.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Product roadmap', exact: true })).toBeVisible();
     await pendingCreates[0]();
     await expect(page.getByRole('button', { name: 'First account accepted private plan', exact: true })).not.toBeVisible();
     const current = await openGeneration(page, 'Second account accepted plan');
