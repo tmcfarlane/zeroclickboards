@@ -6,6 +6,7 @@ import { useAuthContext } from './AuthProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
 import { ManageSubscription } from '@/components/billing/ManageSubscription';
+import { useSignOutAction } from '@/hooks/useSignOutAction';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,8 @@ interface UserProfileProps {
 
 export function UserProfile({ onSignInClick, onPricingClick, onSignOutClick, triggerRef }: UserProfileProps) {
   const navigate = useNavigate();
-  const { isSignedIn, isLoaded, user, signOut } = useAuthContext();
+  const { isSignedIn, isLoaded, user } = useAuthContext();
+  const { isSigningOut, runSignOut } = useSignOutAction();
   const { hasSubscription } = useSubscription();
   const { isAdmin } = useAdmin();
 
@@ -125,14 +127,15 @@ export function UserProfile({ onSignInClick, onPricingClick, onSignOutClick, tri
           </DropdownMenuItem>
         )}
         <DropdownMenuItem
-          onClick={async () => {
+          disabled={!onSignOutClick && isSigningOut}
+          onSelect={() => {
             if (onSignOutClick) onSignOutClick();
-            else await signOut();
+            else void runSignOut();
           }}
           className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
         >
           <LogOut className="w-4 h-4 mr-2" />
-          Sign out
+          {!onSignOutClick && isSigningOut ? 'Signing out...' : 'Sign out'}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

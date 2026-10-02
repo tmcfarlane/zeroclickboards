@@ -70,7 +70,7 @@ export const test = base.extend<Fixtures>({
     const runtimeErrors: string[] = [];
     page.on('pageerror', (error) => runtimeErrors.push(error.message));
     await page.addInitScript(({ key, value }) => {
-      localStorage.setItem(key, value);
+      if (window.top === window && location.hostname === '127.0.0.1') localStorage.setItem(key, value);
     }, { key: 'sb-connector-fixture-auth-token', value: JSON.stringify(session) });
 
     await page.route('**/*', async (route) => {
