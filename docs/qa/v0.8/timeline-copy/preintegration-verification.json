@@ -1,7 +1,7 @@
 {
-  "baseCommit": "f8cfd718a867e90be26609fd392ec6129d05def9",
+  "baseCommit": "63efb43fe37ddc312a9b76b7ee1f875901389e7f",
   "targetBranch": "v0.8",
-  "capturedAt": "2026-10-02T12:49:59.924255+00:00",
+  "capturedAt": "2026-10-02T12:30:11.751310+00:00",
   "sourceHashes": {
     "src/components/timeline/TimelineView.tsx": "be2586c969c8bd1dc2923a3d1ce75021fc60d968a91b21643664c0d4981804e4",
     "tests/connector-ui/board-access.spec.ts": "3c6cb6a9358c6b0dd1f41d43722bfe0eafba385ecff83dee206c662e57d8ecaf"
@@ -10,7 +10,7 @@
     "android-chrome-192x192.png": "50117c38991d1f05eb547aa9fdd5310ddbc1c3c3191074974178cedba6f67b88",
     "android-chrome-512x512.png": "8372cbeffa825e3add85147f032f25f27c394bdec8f25765ca172b904d1e26d8",
     "apple-touch-icon.png": "bc8585046099cb1b4ed0def79c5c8965be7503da6abd47b2bb266d896b210cdc",
-    "assets/AppShell-BWXOOkRE.js": "bdf0ac59f94e17cb9442e9d7e5f5ab2e9dc1054af10eef01cb836d131c800015",
+    "assets/AppShell-CAf3oGkI.js": "7d34c23e16046c65fa2c379f893bdbb52d34f54fd6101a5f3b8294a6083d9837",
     "assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff": "9e97905f0663eab927bcaa72b4e5b844bfa980ada3f894ff92052ec7ed2d8c03",
     "assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2": "259b63d9a2dcdf449b73f46624e409de1d62a51134e884d3f4af1242736cde10",
     "assets/geist-mono-latin-400-normal-CoULgQGM.woff": "af2a06fc6940abff35305a96ce4e2f69c2934106339b488b8cb85ca6f136dfff",
@@ -25,13 +25,13 @@
     "assets/geist-sans-latin-600-normal-DFOURf8L.woff2": "9d99fbd791968493fa507ac846de561cee47b00f8100c23cad333b3cb78392d6",
     "assets/geist-sans-latin-700-normal-BmN9tIp5.woff2": "3d59addfafec3452d44717aa0a18911d5c3812487ed06af47f2ef27192ea1eed",
     "assets/geist-sans-latin-700-normal-CjScfYeH.woff": "a25e16202a8cd74d4a149b97d69262582e23ae59abfde1cee1a051ba5c41622a",
+    "assets/index-CH2R12FU.js": "ffdeba1866b3e377616806797a2b8cc9f34d1e123e17e06e2b8c92a8b03ca2b8",
     "assets/index-CHEpaECk.css": "263e79f76a1b7eea90ef1464343a1cde2748db1ae45e75881816b9f83fe9cf05",
-    "assets/index-q79N9Snq.js": "3e608ebc3d64e61c927d73fe85b73736d7a38c2613d4afa60b2a4aabd2c0b24b",
-    "assets/matter-Bb6jj1jT.js": "3fd250d0388c1f3816907b7ba2b7152dedb5b1c39739d81177ca01a043d7eaae",
+    "assets/matter-clxoECXF.js": "b9de54783be49ba936a379c3d2c09bc7eb4dd7a52de921cc82df2099584ab1e9",
     "favicon-16x16.png": "bfbf0d89f45777cd191e9469821d552a6fdd165caed3df063aaaa35069312864",
     "favicon-32x32.png": "346c79ed3891dff343b7ea9ff401095dbe756c97f1c872408f87c242c3ecb597",
     "favicon.ico": "b1a99af77445241f1676ddbf23fb12b3f7b59f0ca3ccda3158834b0179b31a15",
-    "index.html": "5c19ae1db7fe5cc243656976d5ca775075792bdcb6ec057e8a5113c4209c3c8f",
+    "index.html": "d300711bcb98e153e0f38757f047ba807edfaadf8aad0d52245f6c7459f674a4",
     "logo/logo_color.svg": "471cfbd7f8e6c166e1f034b9a8a859f93b7dd0d4485a692addef37a25119ce23",
     "logo/logo_dark_pointer.svg": "bfc85a05ebd3a97ea76a282a07ca486c9f2e781f0241fd5306995df6ec5c42cf",
     "logo/logo_wordmark.svg": "d722e84c19e78e085cd2039c133dddc956263e7bdbfdd126da4afe03e94ba3ef",
@@ -51,7 +51,7 @@
   },
   "screenshots": {
     "docs/qa/v0.8/timeline-copy/read-only-title-desktop.png": {
-      "sha256": "e877814bdcba72ac929ce8a63c22b49e1e2714d318981e93c5c5a0f7180dc908",
+      "sha256": "b72cbbfec5a1c2b456ebafbad58e329fab1f15c0d8d8b77cb359f697656d54b1",
       "width": 1280,
       "height": 720
     },
@@ -63,18 +63,14 @@
   },
   "harnessHashes": {
     "docs/qa/v0.8/timeline-copy/harness/tenth-timeline-vite.config.mjs": "83ed4c469537528537171d8580013af4f43c79b70512f1fb7cf7097abc37969b",
-    "docs/qa/v0.8/timeline-copy/harness/tenth-timeline-playwright.config.mjs": "0b06ab50d7d4c91cb240c0cfca55c06ae6f622e8a5b991c37196f34b0d72e87f",
-    "docs/qa/v0.8/timeline-copy/harness/tenth-combined-playwright.config.mjs": "7b0a6cd13c99b16cd8b4c588aba1d4c49df853948771c9f8867cc4aa0302cda6"
+    "docs/qa/v0.8/timeline-copy/harness/tenth-timeline-playwright.config.mjs": "0b06ab50d7d4c91cb240c0cfca55c06ae6f622e8a5b991c37196f34b0d72e87f"
   },
   "logHashes": {
     "docs/qa/v0.8/timeline-copy/logs/build.log": "a92cafd1a5b0d1335fd943e21775b8be1a9e327365dc5a5985ded5c177ebbedc",
     "docs/qa/v0.8/timeline-copy/logs/compiled-initial.log": "9445b0abb7eea2a44b4d52575877481df5334bbf9c97a2a8626aa5224ef56f9e",
     "docs/qa/v0.8/timeline-copy/logs/compiled-six-pass.log": "a6f92861d34ec7cf602445d47b890be7a561659fff8844805e05d49e4c4880a4",
     "docs/qa/v0.8/timeline-copy/logs/compiled-final.log": "42d128496144d5768f16a3d7b1c6142b35f714cf2b0bdb818f2931ec0e77eb8d",
-    "docs/qa/v0.8/timeline-copy/logs/scoped-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "docs/qa/v0.8/timeline-copy/logs/combined-build.log": "5fb1623a0ab2c898de5d12a226a428a6c6910873708676009675e025cdd293b2",
-    "docs/qa/v0.8/timeline-copy/logs/combined-compiled.log": "367ec6d5b99bbf5c919e35d9ff18b23f60326cdcaa2cea0289a253b285d84e71",
-    "docs/qa/v0.8/timeline-copy/logs/combined-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "docs/qa/v0.8/timeline-copy/logs/scoped-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "results": {
     "initialCompiled": {
@@ -97,23 +93,7 @@
       ]
     },
     "workingBuild": "pass",
-    "scopedLint": "pass",
-    "combinedCompiled": {
-      "passed": 18,
-      "failed": 0,
-      "workers": 1,
-      "retries": 0,
-      "timelineExecutions": 8,
-      "aiDraftExecutions": 10,
-      "runner": "Node20.20.2",
-      "durationSeconds": 48.6
-    }
+    "scopedLint": "pass"
   },
-  "scope": "Final combined Vite bundle: v0.8PR42merge f8cfd7 plus the two Timeline product-line changes. All255tracked code/configuration hashes remain unchanged through build and18compiled desktop/mobile executions; current2screenshots are recaptured from that bundle. Historical base63eight-case receipt/images remain preserved separately. No persistentTimeline draft retention or human/provider/production claim. Full exact-head CI remains required beforemerge.",
-  "combinedHeadBeforeQa": "8eedec633ecc4e686c503937a012cf1b3542966c",
-  "sourceFreeze": {
-    "manifest": "combined-source-hashes.json",
-    "sha256": "a7395c85fc44c6b6bed17610b3d7879a8a022e9d7d4d3ab3332c37b2c127e7ce",
-    "files": 255
-  }
+  "scope": "Compiled disposable browser fixtures against a Vite build of the base commit plus two product-line changes. Eight executions cover both IME variants with normal Enter and exact one write, read-only retained copy while open/no writes/close resets persisted title, and recurring keyboard activation/full editor/no writes. No new durable draft retention, human auth, provider or production claim. Full CI remains a merge prerequisite."
 }

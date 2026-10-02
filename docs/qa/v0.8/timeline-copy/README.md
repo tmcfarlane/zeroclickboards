@@ -12,8 +12,14 @@ These disposable desktop/mobile fixtures show the retained unsaved title, the co
 
 ## Verification
 
-The final narrow browser gate passed all eight executions with one worker and zero retries: the existing two IME cases, recurring card keyboard activation/full editor, and editor-to-viewer downgrade with copyable text and close/reopen behavior, on desktop and mobile. Normal Enter retains its exact-one-write control; denied edits and card activation send no writes. The working build and scoped lint passed.
+The initial Timeline gate passed all eight executions with one worker and zero retries: the existing two IME cases, recurring card keyboard activation/full editor, and editor-to-viewer downgrade with copyable text and close/reopen behavior, on desktop and mobile. Normal Enter retains its exact-one-write control; denied edits and card activation send no writes. The working build and scoped lint passed.
 
 The initial six-case compiled gate passed four and failed two because disabled drag attributes incorrectly marked the operable read-only card disabled. That failure is preserved. Excluding those drag attributes from non-draggable cards passed all six, then the additional recurring control brought the final gate to eight passes. The copy correction does not add durable title retention or shell navigation protection.
 
 [verification.json](verification.json) records the source, 41 compiled artifact, harness, screenshot dimension, and log hashes. The harness snapshots record task-local paths and private output directories; they document the executed build, rather than serving as portable repository configuration. Full CI must pass the final PR head before merge.
+
+## Combined integration gate
+
+After integrating PR42's `v0.8` merge `f8cfd718a867e90be26609fd392ec6129d05def9`, a new Node20.20.2 Vite build passed and all18 compiled desktop/mobile executions passed in48.6seconds: eight Timeline controls plus ten AI draft protection/SDK owner/accepted-send cases. One worker, no retries, and all255 tracked code/configuration files remained unchanged through the gate. Scoped lint and diff checks passed. The two current screenshots were recaptured from this combined bundle.
+
+The original base63 build, eight-case results and screenshots remain in [preintegration-verification.json](preintegration-verification.json) and `preintegration/`; the receipt's original screenshot paths resolve to that archived directory for historical byte checks. Original logs are preserved beside the combined logs. Current [verification.json](verification.json) identifies41 newly built artifacts and current images. Its full exact-head CI gate remains pending.
