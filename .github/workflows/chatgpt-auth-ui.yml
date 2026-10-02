@@ -1,0 +1,32 @@
+name: ChatGPT identity sign-in UI
+
+on:
+  pull_request:
+    branches: [main, v0.8]
+  push:
+    branches: [main, v0.8]
+
+jobs:
+  browser:
+    name: ChatGPT sign-in UI (enabled=${{ matrix.enabled }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        enabled: ['true', 'false']
+    env:
+      CHATGPT_SIGN_IN_ENABLED: ${{ matrix.enabled }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config playwright.chatgpt-auth.config.ts
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: chatgpt-sign-in-ui-${{ matrix.enabled }}
+          path: test-results/chatgpt-auth/
+          retention-days: 7
