@@ -20,6 +20,8 @@ The standalone browser suite renders the actual application with disposable HTTP
 
 Verified locally: 658 app/API tests, 136 MCP tests, and 34 desktop/mobile browser cases. Lint and the production build pass. A fresh root-only `npm ci` without nested MCP dependencies also passes the backend tests and production build, matching Vercel's install layout.
 
+The Vercel preview also serves the built app at `/account` and `/auth/connector`. An unauthenticated management request returns JSON 401, confirming the packaged handler loads. MCP and OAuth discovery return the intended 503 while the connector is disabled. The existing CI suite passes all 17 isolated account/browser synchronization cases.
+
 ## Screenshot evidence
 
 Screenshots in `docs/screenshots/chatgpt-ui/` come from the browser suite's disposable fixtures. They show the implemented UI, not an already provisioned production connection or a completed ChatGPT directory installation.

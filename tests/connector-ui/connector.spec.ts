@@ -108,11 +108,21 @@ test.describe('service failure', () => {
   });
 
   test('retries a failed status request and recovers', async ({ page }) => {
-    let failed = true;
-    await page.route('**/api/connector', (route) => json(route, failed ? { error: 'Connection service temporarily unavailable.' } : ready, failed ? 503 : 200));
+    // Auth initialization can legitimately trigger more than one status request.
+    // Recover only after the actual retry click, never while the user is still
+    // looking at the initial failure. Capture runs before React issues its fetch.
+    await page.addInitScript(() => {
+      document.addEventListener('click', (event) => {
+        const button = event.target instanceof Element ? event.target.closest('button') : null;
+        if (button?.textContent?.trim() === 'Try again') document.documentElement.dataset.connectorRetryClicked = 'true';
+      }, true);
+    });
+    await page.route('**/api/connector', async (route) => {
+      const retried = await page.evaluate(() => document.documentElement.dataset.connectorRetryClicked === 'true');
+      await json(route, retried ? ready : { error: 'Connection service temporarily unavailable.' }, retried ? 200 : 503);
+    });
     await page.goto('/account#connectors');
     await expect(page.getByRole('alert')).toHaveText('Connection service temporarily unavailable.');
-    failed = false;
     await page.getByRole('button', { name: 'Try again' }).click();
     await expect(page.getByText('Ready to connect', { exact: true })).toBeVisible();
   });
