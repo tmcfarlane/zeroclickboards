@@ -610,7 +610,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
           <div
             ref={setNodeRef}
             style={dragStyle}
-            {...attributes}
+            {...(canEdit && !isRecurring ? attributes : {})}
             {...listeners}
             onClick={openPopover}
             onKeyDown={(e) => {
@@ -646,7 +646,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
           onEscapeKeyDown={(event) => { if (isComposingKey(event)) event.preventDefault(); }}
           onClick={(e) => e.stopPropagation()}
         >
-          {!canEdit && <p role="alert" className="text-xs text-amber-100">This board is read-only. Your title draft is kept here.</p>}
+          {!canEdit && <p role="alert" className="text-xs text-amber-100">This board is read-only. Unsaved title changes are discarded when this panel closes. Copy them before closing or leaving Timeline.</p>}
           <div className="space-y-1.5">
             <label htmlFor={`timeline-title-${card.id}`} className="text-[10px] uppercase tracking-wide text-[#A8B2B2]">
               Title

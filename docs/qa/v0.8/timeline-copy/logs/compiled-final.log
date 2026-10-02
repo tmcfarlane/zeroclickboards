@@ -1,0 +1,19 @@
+[WebServer] (node:28760) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+(node:28782) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (2.8s)
+  ✓  2 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (2.0s)
+  ✓  3 [desktop] › tests/connector-ui/board-access.spec.ts:760:1 › timeline recurring cards stay operable when drag is disabled (1.5s)
+  ✓  4 [desktop] › tests/connector-ui/board-access.spec.ts:775:1 › timeline downgrade keeps title copyable while open and explains closing discards it (2.4s)
+(node:29021) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  5 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (2.0s)
+  ✓  6 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (1.7s)
+  ✓  7 [mobile] › tests/connector-ui/board-access.spec.ts:760:1 › timeline recurring cards stay operable when drag is disabled (1.7s)
+  ✓  8 [mobile] › tests/connector-ui/board-access.spec.ts:775:1 › timeline downgrade keeps title copyable while open and explains closing discards it (1.8s)
+
+  8 passed (27.3s)
