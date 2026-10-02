@@ -1,0 +1,17 @@
+# Integrated SDK app/API verification
+
+Integrated source: `9893eb7394a262f87632b9db3e5fcbbff8b576e7`, including the latest v0.8 auth and native SQL fixture repairs. The three reviewed SDK package/test hashes remain unchanged. This appends verification to the original evidence; [receipt.json](receipt.json) is preserved byte for byte.
+
+One full app/API pass ran under the root-provided Node **20.20.2** binary with two workers, the original Vite test settings, a private cache and CI placeholder Supabase values. All **966 tests across 46 files passed** on the first attempt in 97.52 seconds, including the four repaired native SQL cases and the eight actual-adapter size-header cases. No retry, source correction or test relaxation followed this pass. The shared SQL test slot was released immediately after the process exited.
+
+Both app and API/node TypeScript projects passed with `--incremental false --noEmit`. ESLint on the new adapter test and diff whitespace checks passed. [integration-full-test-summary.json](integration-full-test-summary.json) records every suite count; [integration-full-test.log](integration-full-test.log) preserves the complete output. The empty typecheck/lint logs and [integration-build.log](integration-build.log) accompany the machine-readable [integration-nonbrowser-receipt.json](integration-nonbrowser-receipt.json).
+
+The integrated production build used the original `vite.config.ts` and plugins, overriding only its private cache/output directory and empty-output behavior. It completed in 11.59 seconds, retaining the existing Browserslist age notice and large-chunk advisory. The build used `https://connector-fixture.invalid` and a disposable public key so the compiled app matches the local connector browser fixtures. This is not a production deployment or a live Supabase/AI request.
+
+All **41** integrated artifacts are retained at `/private/tmp/zeroboard-sdk-integrated-built-smoke/dist`. Their exact bytes and SHA-256 values are recorded in the integration receipt. The private build config is retained at `outputs/gauntlet/thirteenth-sdk-integration/vite-build.config.mts` outside the repository. This agent did not execute browser checks or write browser evidence; the separately appended browser integration evidence is owned by root.
+
+The earlier 41-artifact build still exists at `/private/tmp/zeroboard-ai-response-limit-production`; every byte continues to match its original receipt. Its original private config is `/private/tmp/zeroboard-ai-response-limit-proof/vite-proof.config.mts`. Neither location was overwritten by the integrated build.
+
+The source check covers 351 tracked code/config files and found no changed hashes after the full pass, typechecks, lint and build. Pre-run git state was clean at the immutable integrated commit. The explicit pre-execution manifest covered TypeScript, JavaScript, JSON, YAML, HTML and CSS; SQL, JSONC and ignore/CODEOWNERS settings were subsequently checked against that same commit and added to the manifest. The original receipt's SHA-256 remains `36dc509e18ebe5801a547d064e320165564b3a6a878effbff111db7a0fcd576b`.
+
+The original before/after proof still establishes the SDK's **2 GiB declared-header guard**, using small valid streamed fixtures. Integration adds no proof of a smaller app memory cap or an unadvertised 2 GiB transfer. No focused provider/audit repeat, MCP suite, service mutation, commit or push was performed in this integrated gate.

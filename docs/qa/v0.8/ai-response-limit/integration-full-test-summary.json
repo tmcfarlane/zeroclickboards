@@ -1,0 +1,289 @@
+{
+  "head": "9893eb7394a262f87632b9db3e5fcbbff8b576e7",
+  "node": "20.20.2",
+  "total": 966,
+  "passed": 966,
+  "failed": 0,
+  "files": 46,
+  "success": true,
+  "attempts": 1,
+  "maxWorkers": 2,
+  "suites": [
+    {
+      "file": "api/_lib/__tests__/ai-provider-response-limit.test.ts",
+      "status": "passed",
+      "total": 8,
+      "passed": 8
+    },
+    {
+      "file": "api/_lib/__tests__/connector-config.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3
+    },
+    {
+      "file": "api/_lib/__tests__/connector-readiness.test.ts",
+      "status": "passed",
+      "total": 60,
+      "passed": 60
+    },
+    {
+      "file": "api/_lib/__tests__/connector-sql.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4
+    },
+    {
+      "file": "api/_lib/__tests__/connector.test.ts",
+      "status": "passed",
+      "total": 21,
+      "passed": 21
+    },
+    {
+      "file": "api/_lib/__tests__/resolve-commands.test.ts",
+      "status": "passed",
+      "total": 11,
+      "passed": 11
+    },
+    {
+      "file": "src/components/__tests__/ErrorBoundary.test.tsx",
+      "status": "passed",
+      "total": 3,
+      "passed": 3
+    },
+    {
+      "file": "src/hooks/__tests__/useKeyboardShortcuts.test.ts",
+      "status": "passed",
+      "total": 18,
+      "passed": 18
+    },
+    {
+      "file": "src/hooks/__tests__/useSignOutAction.test.tsx",
+      "status": "passed",
+      "total": 7,
+      "passed": 7
+    },
+    {
+      "file": "src/pages/__tests__/LandingPage.test.tsx",
+      "status": "passed",
+      "total": 1,
+      "passed": 1
+    },
+    {
+      "file": "src/pages/__tests__/SharedBoardPage.test.tsx",
+      "status": "passed",
+      "total": 10,
+      "passed": 10
+    },
+    {
+      "file": "src/store/__tests__/boardConcurrentMutations.test.ts",
+      "status": "passed",
+      "total": 21,
+      "passed": 21
+    },
+    {
+      "file": "src/store/__tests__/boardSyncIntegration.test.ts",
+      "status": "passed",
+      "total": 70,
+      "passed": 70
+    },
+    {
+      "file": "src/store/__tests__/useBoardStore.test.ts",
+      "status": "passed",
+      "total": 34,
+      "passed": 34
+    },
+    {
+      "file": "src/store/__tests__/useUndoStore.test.ts",
+      "status": "passed",
+      "total": 15,
+      "passed": 15
+    },
+    {
+      "file": "src/lib/__tests__/apiFetch.test.ts",
+      "status": "passed",
+      "total": 13,
+      "passed": 13
+    },
+    {
+      "file": "src/lib/__tests__/auth-helpers.test.ts",
+      "status": "passed",
+      "total": 12,
+      "passed": 12
+    },
+    {
+      "file": "src/lib/__tests__/board-io.test.ts",
+      "status": "passed",
+      "total": 50,
+      "passed": 50
+    },
+    {
+      "file": "src/lib/__tests__/board-merge.test.ts",
+      "status": "passed",
+      "total": 63,
+      "passed": 63
+    },
+    {
+      "file": "src/lib/__tests__/board-sync.test.ts",
+      "status": "passed",
+      "total": 51,
+      "passed": 51
+    },
+    {
+      "file": "src/lib/__tests__/calendar-date.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6
+    },
+    {
+      "file": "src/lib/__tests__/ci-guard.test.ts",
+      "status": "passed",
+      "total": 32,
+      "passed": 32
+    },
+    {
+      "file": "src/lib/__tests__/claude.test.ts",
+      "status": "passed",
+      "total": 15,
+      "passed": 15
+    },
+    {
+      "file": "src/lib/__tests__/recurrence.test.ts",
+      "status": "passed",
+      "total": 78,
+      "passed": 78
+    },
+    {
+      "file": "src/lib/__tests__/stripe-webhook.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7
+    },
+    {
+      "file": "src/lib/__tests__/supabase-auth-lock.test.ts",
+      "status": "passed",
+      "total": 15,
+      "passed": 15
+    },
+    {
+      "file": "src/lib/__tests__/templates.test.ts",
+      "status": "passed",
+      "total": 19,
+      "passed": 19
+    },
+    {
+      "file": "src/lib/__tests__/utils.test.ts",
+      "status": "passed",
+      "total": 13,
+      "passed": 13
+    },
+    {
+      "file": "src/components/ai/__tests__/AIAssistant.test.tsx",
+      "status": "passed",
+      "total": 20,
+      "passed": 20
+    },
+    {
+      "file": "src/components/auth/__tests__/AuthRedirect.test.tsx",
+      "status": "passed",
+      "total": 5,
+      "passed": 5
+    },
+    {
+      "file": "src/components/auth/__tests__/SignInModal.test.tsx",
+      "status": "passed",
+      "total": 6,
+      "passed": 6
+    },
+    {
+      "file": "src/components/auth/__tests__/signOut.test.tsx",
+      "status": "passed",
+      "total": 6,
+      "passed": 6
+    },
+    {
+      "file": "src/components/connectors/__tests__/connector-api.test.ts",
+      "status": "passed",
+      "total": 25,
+      "passed": 25
+    },
+    {
+      "file": "src/components/connectors/__tests__/connector-ownership.test.tsx",
+      "status": "passed",
+      "total": 30,
+      "passed": 30
+    },
+    {
+      "file": "src/components/connectors/__tests__/connector-setup.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1
+    },
+    {
+      "file": "src/components/connectors/__tests__/connector-ui.test.tsx",
+      "status": "passed",
+      "total": 31,
+      "passed": 31
+    },
+    {
+      "file": "api/invite/__tests__/send.test.ts",
+      "status": "passed",
+      "total": 26,
+      "passed": 26
+    },
+    {
+      "file": "src/components/board/__tests__/ActiveCardEditor.test.tsx",
+      "status": "passed",
+      "total": 17,
+      "passed": 17
+    },
+    {
+      "file": "src/components/board/__tests__/BoardSelector.test.tsx",
+      "status": "passed",
+      "total": 3,
+      "passed": 3
+    },
+    {
+      "file": "src/components/board/__tests__/BoardSyncNotice.test.tsx",
+      "status": "passed",
+      "total": 13,
+      "passed": 13
+    },
+    {
+      "file": "src/components/board/__tests__/CardActivityFeed.test.tsx",
+      "status": "passed",
+      "total": 8,
+      "passed": 8
+    },
+    {
+      "file": "src/components/board/__tests__/CardEditor.test.tsx",
+      "status": "passed",
+      "total": 53,
+      "passed": 53
+    },
+    {
+      "file": "src/components/board/__tests__/CreateBoardDialog.async.test.tsx",
+      "status": "passed",
+      "total": 16,
+      "passed": 16
+    },
+    {
+      "file": "src/components/board/__tests__/KanbanCard.test.tsx",
+      "status": "passed",
+      "total": 6,
+      "passed": 6
+    },
+    {
+      "file": "src/components/board/__tests__/ReadOnlyBoard.test.tsx",
+      "status": "passed",
+      "total": 13,
+      "passed": 13
+    },
+    {
+      "file": "src/components/layout/__tests__/AppShell.test.tsx",
+      "status": "passed",
+      "total": 27,
+      "passed": 27
+    }
+  ]
+}

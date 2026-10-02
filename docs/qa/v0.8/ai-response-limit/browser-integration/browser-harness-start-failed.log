@@ -1,0 +1,6 @@
+[WebServer] error when starting preview server:
+[WebServer] Error: The directory "dist" does not exist. Did you build your project?
+[WebServer]     at preview (file:///Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/vite/dist/node/chunks/config.js:35067:200)
+[WebServer]     at async CAC.<anonymous> (file:///Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/vite/dist/node/cli.js:669:18)
+Error: Process from config.webServer was not able to start. Exit code: 1
+
