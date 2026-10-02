@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 
@@ -10,7 +10,7 @@ export function useSignOutAction() {
   accountRef.current = user?.id;
   const attemptRef = useRef<{ accountId: string } | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; attemptRef.current = null; };
   }, []);

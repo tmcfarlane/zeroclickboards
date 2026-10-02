@@ -1,7 +1,7 @@
 {
   "baseCommit": "ef779c57235d8699cf40feec79e6e66ec68e338d",
   "targetBranch": "v0.8",
-  "capturedAt": "2026-10-02T10:33:51Z",
+  "capturedAt": "2026-10-02T10:49:41.393170Z",
   "sourceHashes": {
     "src/components/auth/AuthProvider.tsx": "6e0b56f9549421ba7e0a2bcb5ca93d723f4e21e3f68fe50be8c5f2d363327c11",
     "src/components/auth/UserProfile.tsx": "6e2d165f98de486abda166994cdc3075050c63621e2f19390f173ee8f42e1fee",
@@ -9,7 +9,7 @@
     "src/components/layout/AppShell.tsx": "9af62c2c109a43e886c2705081c0fd35d7a345cc7fefa23c1b9e8d7b2f095e50",
     "src/components/layout/AppToaster.tsx": "a8ff5d6eee6702bad159e26697ca2b1de9f781c40ab9f90f303a0e33245b5503",
     "src/main.tsx": "7406127375e63bc3d916af109672a26d27f1b875b7e81349ca185376feec8fcf",
-    "src/hooks/useSignOutAction.ts": "e555c201d3b5de2661531a04f02f2be8e31cd811261ae5b920ce15a8c9037a21",
+    "src/hooks/useSignOutAction.ts": "231422491ffc6d09bf9f2a1c28737122d47136b6e0383a270f022e749c780025",
     "src/components/auth/__tests__/signOut.test.tsx": "7c5b7b1a5fe9c2dd170879122aa0c0933c52144af6b6f83bbf6c85fdbcfcae31",
     "src/hooks/__tests__/useSignOutAction.test.tsx": "10f23bb1cd16009400895e4b824cf1cd7d34703ad5dbf4bae89dc509f2bb144a",
     "tests/connector-ui/fixtures.ts": "f2b9ed7075bd7bfc5b76b6709473f23fa1319760ab04ac5baded8a3911e563f4",
@@ -21,7 +21,7 @@
     "android-chrome-192x192.png": "50117c38991d1f05eb547aa9fdd5310ddbc1c3c3191074974178cedba6f67b88",
     "android-chrome-512x512.png": "8372cbeffa825e3add85147f032f25f27c394bdec8f25765ca172b904d1e26d8",
     "apple-touch-icon.png": "bc8585046099cb1b4ed0def79c5c8965be7503da6abd47b2bb266d896b210cdc",
-    "assets/AppShell-C2bnP75Z.js": "109ae1e7ff5062feeaaf3ea2d14c6803495a3b44e52b8f4a5c886b62691f35b5",
+    "assets/AppShell-D5_yXEH9.js": "4c721897fb1e314793bd129420fc6d4912525c73578202a9c235594ef9bd7ef4",
     "assets/geist-mono-cyrillic-400-normal-BPBWmzPh.woff": "9e97905f0663eab927bcaa72b4e5b844bfa980ada3f894ff92052ec7ed2d8c03",
     "assets/geist-mono-cyrillic-400-normal-Ce5q_31Z.woff2": "259b63d9a2dcdf449b73f46624e409de1d62a51134e884d3f4af1242736cde10",
     "assets/geist-mono-latin-400-normal-CoULgQGM.woff": "af2a06fc6940abff35305a96ce4e2f69c2934106339b488b8cb85ca6f136dfff",
@@ -36,13 +36,13 @@
     "assets/geist-sans-latin-600-normal-DFOURf8L.woff2": "9d99fbd791968493fa507ac846de561cee47b00f8100c23cad333b3cb78392d6",
     "assets/geist-sans-latin-700-normal-BmN9tIp5.woff2": "3d59addfafec3452d44717aa0a18911d5c3812487ed06af47f2ef27192ea1eed",
     "assets/geist-sans-latin-700-normal-CjScfYeH.woff": "a25e16202a8cd74d4a149b97d69262582e23ae59abfde1cee1a051ba5c41622a",
-    "assets/index-1fVMlwAL.js": "09fcd6725ccdc133868e2d3d36a08753f2f7546c9dc995a8abafe181d4c6cebf",
+    "assets/index-BUK-e8_M.js": "6996206c354a89485c0614c88c041caec5ccc836d5452b1ff86fb24313b700ab",
     "assets/index-CHEpaECk.css": "263e79f76a1b7eea90ef1464343a1cde2748db1ae45e75881816b9f83fe9cf05",
-    "assets/matter-D85mR4NG.js": "40375a477a3c1b5ad8ebce463b47eadb0a2a7e8993ededf8bd2ba90d19e18374",
+    "assets/matter-B4lEEcKv.js": "cf2dba374203433068dad8eba5a99d1424e1ab7b0e3ae239f587c93e1090728b",
     "favicon-16x16.png": "bfbf0d89f45777cd191e9469821d552a6fdd165caed3df063aaaa35069312864",
     "favicon-32x32.png": "346c79ed3891dff343b7ea9ff401095dbe756c97f1c872408f87c242c3ecb597",
     "favicon.ico": "b1a99af77445241f1676ddbf23fb12b3f7b59f0ca3ccda3158834b0179b31a15",
-    "index.html": "6c0b00651d7d2d6faac63fad3390b7728c599a2fd9f082ff879021bd8d8be909",
+    "index.html": "bd0eddffd4f60c2443a58d013f96f87f6f210a6c2779d259490e5a8d0ebc4f8e",
     "logo/logo_color.svg": "471cfbd7f8e6c166e1f034b9a8a859f93b7dd0d4485a692addef37a25119ce23",
     "logo/logo_dark_pointer.svg": "bfc85a05ebd3a97ea76a282a07ca486c9f2e781f0241fd5306995df6ec5c42cf",
     "logo/logo_wordmark.svg": "d722e84c19e78e085cd2039c133dddc956263e7bdbfdd126da4afe03e94ba3ef",
@@ -91,7 +91,11 @@
     "browser-full": "e3d62a81049bbdf1da5f005f50b1b24007442cc49468bfdc2aa0a2f7637210ee",
     "built-browser": "a84071cb266b4464f4d73e447cd40577aff56e366044e74426185e687655e9d5",
     "built-evidence": "bbf5dff4d0bbebdd487ca447dfd3f8cda91715c1580f10f0a2197258b7a994aa",
-    "evidence-lint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "evidence-lint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lifetime-focused": "06f3ac102a2e3ca0d01d870a759267ceb38dea4de4e55f1db819a04c4dd01ba2",
+    "lifetime-lint": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "lifetime-build": "d317474be6a8b4aff5900fea7d37f248f0a94fc0c91d5d6ac03ee199709c963c",
+    "lifetime-built": "279a9610d3504ca5f142605cb3c2a6481f55d25a17638fb13f3b828b67562dc3"
   },
   "results": {
     "appApi": 931,
@@ -100,6 +104,10 @@
     "fullBrowserPasses": 198,
     "fullBrowserInapplicableSkips": 2,
     "workingBuiltPasses": 10,
-    "finalScreenshotCases": 2
-  }
+    "finalScreenshotCases": 2,
+    "lifetimeFocusedPasses": 13,
+    "lifetimeWorkingBuiltPasses": 10
+  },
+  "previousValidatedCommit": "a92589f272eadf863307fbe9f413109a0adc6895",
+  "resultScope": "Full local app/API and broader browser results precede the final passive-to-layout cleanup hardening at previousValidatedCommit. The final tree has new focused, lint, working build and compiled desktop/mobile checks; CI must repeat the full gates on the final PR head before merge."
 }

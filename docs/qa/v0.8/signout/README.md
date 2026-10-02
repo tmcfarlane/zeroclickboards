@@ -15,9 +15,9 @@ These are actual compiled-app Chromium captures with disposable desktop/mobile a
 - 931 app/API tests passed in one isolated full run. The initial overlapping run had two 5-second PGlite timeouts; it was rerun without concurrent browser/build work.
 - Lint, TypeScript and the working fixture build passed. The broader browser suite passed 198 cases, with two existing inapplicable mobile skips.
 - All ten sign-out/billing/feedback cases passed against the copied working build. The final two Account cases recaptured the images above; retry uses a viewport capture after the earlier error notification expires.
-- Independent read-only review found no product blocker. Its test-option and notification-host reliability observations were corrected before the final capture.
+- Independent read-only review found no product blocker. Its test-option and notification-host reliability observations were corrected. A bounded departure-to-passive-cleanup gap was also hardened with layout cleanup before merge; 13 focused tests, targeted lint, TypeScript/build and all ten compiled desktop/mobile cases passed afterward, refreshing these four captures.
 
-`verification.json` records source, screenshot, log and copied build hashes. The PR description records the final commit identity. CI now includes `v0.8` alongside `main`; this candidate targets the feature branch.
+The full local app/API and broader browser results belong to the first candidate `a92589f272eadf863307fbe9f413109a0adc6895`; the final cleanup hardening is covered by the newer focused/compiled checks, and full CI must pass on the final head. `verification.json` records current source, refreshed screenshot, log and copied build hashes with that result scope. The PR description records the final commit identity. CI now includes `v0.8` alongside `main`; this candidate targets the feature branch.
 
 ## Remaining limits
 
