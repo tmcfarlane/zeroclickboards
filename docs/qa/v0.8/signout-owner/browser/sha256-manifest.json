@@ -1,0 +1,15 @@
+{
+  "README.md": "e451ca6d25866ce1d8438fc870a41dbb6efac067935181872d98902363c9366f",
+  "build.log": "2a1ced32e9c1252ecbadfafc0a0a645a2964cb5d50a24c9fc162f291259f15b3",
+  "initial-fixture-mismatch.log": "5ceb6cc8a038032f4c8b83415eaa8bac4cc665db84e1abf2ae9d3b7b22fdcefa",
+  "initial-playwright.config.mjs.txt": "5893ffe3c36eaf83e7ef52d2291bfb282f95e7f91fc64d22e7cf18b5a6937b81",
+  "playwright.config.mjs.txt": "331136a4b1959f8a54ba229719cccb4d646a7e921f36b081c9e68666ceddf209",
+  "screenshots/account-failure-desktop.png": "ffda16a7c9f3c21e1d43b15f407c09bdc308722b5454eee76d5abf3fbe0dc946",
+  "screenshots/account-failure-mobile.png": "02475bdeca977332daf409cc893689f345215c391cb7a500182efb0bf07c7d02",
+  "screenshots/account-retry-desktop.png": "f62c5a768168636ff1e8eddb34327537a596e0e0931dddbd942c7be53d4b5e29",
+  "screenshots/account-retry-mobile.png": "284853f817c1dd81021a1f3db19886daa35fa07ebecb13216264d7b18d3afbbc",
+  "source-before.json": "e170dadedec0f4e3bac3d766ace0ea16b51c3f445aec9485d0ef3bd9bc2dee1f",
+  "tests.log": "243007ca6735572788c939e476c91943154b0b7bf81abbd310b5a9a6ccf724a9",
+  "verification.json": "a309c88e6eb1f77363f4ec13dcab2907430373ec057792734ea2ff1709d98903",
+  "vite-build.config.mts.txt": "ea39865ebebdcfe95ffd45cd7b091218b35987b1ef105eb3d07ac8fcbae01bb5"
+}

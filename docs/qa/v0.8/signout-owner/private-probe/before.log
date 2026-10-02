@@ -1,0 +1,153 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/private-before
+
+ ✓ src/hooks/__tests__/useSignOutAction.test.tsx (7 tests) 204ms
+ ❯ src/hooks/__tests__/commit-order.test.tsx (7 tests | 7 failed) 2172ms
+     × stays visibly pending after passive effects flush 88ms
+     × does not permit a second request while the committed action is held 14ms
+     × shows the current owner failure and enables an explicit retry 1013ms
+     × stays visibly pending after passive effects flush 19ms
+     × does not permit a second request while the committed action is held 16ms
+     × shows the current owner failure and enables an explicit retry 1008ms
+   × allows a replacement owner commit action while an old owner request is held, suppressing the old failure 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > initial owner action at the DOM commit boundary > stays visibly pending after passive effects flush
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > replacement owner action at the DOM commit boundary > stays visibly pending after passive effects flush
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Signing out..."
+
+Here are the accessible roles:
+
+  region:
+
+  Name "Notifications alt+T":
+  [36m<section[39m
+    [33maria-atomic[39m=[32m"false"[39m
+    [33maria-label[39m=[32m"Notifications alt+T"[39m
+    [33maria-live[39m=[32m"polite"[39m
+    [33maria-relevant[39m=[32m"additions text"[39m
+    [33mtabindex[39m=[32m"-1"[39m
+  [36m/>[39m
+
+  --------------------------------------------------button:
+
+  Name "Sign out":
+  [36m<button />[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-atomic[39m=[32m"false"[39m
+      [33maria-label[39m=[32m"Notifications alt+T"[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33maria-relevant[39m=[32m"additions text"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+    [36m/>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<button>[39m
+      [0mSign out[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError ../../../../work/zeroboard-ai-response-limit/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ ../../../../work/zeroboard-ai-response-limit/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ ../../../../work/zeroboard-ai-response-limit/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ ../../../../work/zeroboard-ai-response-limit/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/hooks/__tests__/commit-order.test.tsx:57:19
+     55|     renderAtBoundary(kind);
+     56|     expect(fixture.auth.signOut).toHaveBeenCalledOnce();
+     57|     expect(screen.getByRole('button', { name: 'Signing out...' })).toB…
+       |                   ^
+     58|   });
+     59|   it('does not permit a second request while the committed action is h…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > initial owner action at the DOM commit boundary > does not permit a second request while the committed action is held
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > replacement owner action at the DOM commit boundary > does not permit a second request while the committed action is held
+AssertionError: expected "vi.fn()" to be called once, but got 2 times
+ ❯ src/hooks/__tests__/commit-order.test.tsx:64:34
+     62|     // Click the actual committed control after both layout and passiv…
+     63|     act(() => { screen.getByRole('button').click(); });
+     64|     expect(fixture.auth.signOut).toHaveBeenCalledOnce();
+       |                                  ^
+     65|   });
+     66|   it('shows the current owner failure and enables an explicit retry', …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > initial owner action at the DOM commit boundary > shows the current owner failure and enables an explicit retry
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > replacement owner action at the DOM commit boundary > shows the current owner failure and enables an explicit retry
+TestingLibraryElementError: Unable to find an element with the text: Could not sign out. Try again.. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-atomic[39m=[32m"false"[39m
+      [33maria-label[39m=[32m"Notifications alt+T"[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33maria-relevant[39m=[32m"additions text"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+    [36m/>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<button>[39m
+      [0mSign out[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33maria-atomic[39m=[32m"false"[39m
+      [33maria-label[39m=[32m"Notifications alt+T"[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33maria-relevant[39m=[32m"additions text"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+    [36m/>[39m
+  [36m</div>[39m
+  [36m<div>[39m
+    [36m<button>[39m
+      [0mSign out[0m
+    [36m</button>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper ../../../../work/zeroboard-ai-response-limit/node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ ../../../../work/zeroboard-ai-response-limit/node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/hooks/__tests__/commit-order.test.tsx:70:25
+     68|     renderAtBoundary(kind);
+     69|     await act(async () => { request.resolve({ error: 'Disposable curre…
+     70|     expect(await screen.findByText(message)).toBeVisible();
+       |                         ^
+     71|     expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabl…
+     72|     const retry = deferred(); fixture.auth.signOut.mockReturnValueOnce…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > allows a replacement owner commit action while an old owner request is held, suppressing the old failure
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/hooks/__tests__/commit-order.test.tsx:89:26
+     87|   view.rerender(<CommitAction startAtCommit invokeActionAtCommit />);
+     88|   expect(oldSignOut).toHaveBeenCalledOnce();
+     89|   expect(currentSignOut).toHaveBeenCalledOnce();
+       |                          ^
+     90|   expect(screen.getByRole('button', { name: 'Signing out...' })).toBeD…
+     91|   await act(async () => { oldRequest.resolve({ error: 'Disposable old-…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  7 failed | 7 passed (14)
+   Start at  06:38:47
+   Duration  4.13s (transform 91ms, setup 133ms, import 274ms, tests 2.38s, environment 1.12s)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/before.json
