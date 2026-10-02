@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ViewToggle } from '@/components/board/ViewToggle';
 import { BoardSelector } from '@/components/board/BoardSelector';
+import { isComposingKey } from '@/lib/keyboard';
 import {
   Popover,
   PopoverAnchor,
@@ -642,6 +643,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
           className="w-64 bg-[#111515] border-white/10 p-3 space-y-3"
           align="start"
           onOpenAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={(event) => { if (isComposingKey(event)) event.preventDefault(); }}
           onClick={(e) => e.stopPropagation()}
         >
           {!canEdit && <p role="alert" className="text-xs text-amber-100">This board is read-only. Your title draft is kept here.</p>}
@@ -656,6 +658,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={(e) => {
+                if (isComposingKey(e.nativeEvent)) return;
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   if (!useBoardStore.getState().canEditBoard(boardId)) return;

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCardActivities } from '@/hooks/useCards';
 import { useBoardStore } from '@/store/useBoardStore';
 import type { Json } from '@/types';
+import { isComposingKey } from '@/lib/keyboard';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -80,6 +81,8 @@ const ACTIVITY_CONFIG: Record<string, { icon: typeof MessageSquare; format: (dat
 
 export function CardActivityFeed({ cardId }: CardActivityFeedProps) {
   const [commentText, setCommentText] = useState('');
+  const submitting = useRef(false);
+  const draftRevision = useRef(0);
   const currentUserId = useBoardStore((s) => s.currentUserId);
   const { activities, isLoading, addActivity, isAddingActivity } = useCardActivities({
     cardId,
@@ -87,16 +90,20 @@ export function CardActivityFeed({ cardId }: CardActivityFeedProps) {
   });
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim() || !currentUserId) return;
+    if (submitting.current || isAddingActivity || !commentText.trim() || !currentUserId) return;
+    submitting.current = true;
+    const submittedRevision = draftRevision.current;
     try {
       await addActivity({
         user_id: currentUserId,
         type: 'comment',
         data: { text: commentText.trim() } as Json,
       });
-      setCommentText('');
+      if (draftRevision.current === submittedRevision) setCommentText('');
     } catch (err) {
       console.error('[activity] comment failed:', err);
+    } finally {
+      submitting.current = false;
     }
   };
 
@@ -106,11 +113,12 @@ export function CardActivityFeed({ cardId }: CardActivityFeedProps) {
       <div className="space-y-2 mb-4">
         <Textarea
           value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
+          onChange={(e) => { draftRevision.current++; setCommentText(e.target.value); }}
           placeholder="Write a comment..."
           className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 min-h-[60px] resize-none text-sm"
           rows={2}
           onKeyDown={(e) => {
+            if (isComposingKey(e.nativeEvent)) return;
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
               handleSubmitComment();

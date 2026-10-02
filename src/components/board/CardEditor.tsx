@@ -30,6 +30,7 @@ import { LabelPicker } from './LabelPicker';
 import { CardActivityFeed } from './CardActivityFeed';
 import { getAllCardTemplates, deleteUserCardTemplate, type CardTemplate } from '@/lib/templates';
 import { normalizeCalendarDate } from '@/lib/calendar-date';
+import { isComposingKey } from '@/lib/keyboard';
 
 export interface CardEditorSaveData {
   title: string;
@@ -823,7 +824,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, accessMessage, m
                   onChange={(e) => setNewChecklistItem(e.target.value)}
                   placeholder="Add an item..."
                   className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/40 flex-1 h-9"
-                  onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
+                  onKeyDown={(e) => !isComposingKey(e.nativeEvent) && e.key === 'Enter' && addChecklistItem()}
                 />
                 <Button
                   type="button"
@@ -879,6 +880,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, accessMessage, m
                           defaultValue={attachment.name}
                           onBlur={(e) => renameAttachment(attachment.id, e.target.value)}
                           onKeyDown={(e) => {
+                            if (isComposingKey(e.nativeEvent)) return;
                             if (e.key === 'Enter') renameAttachment(attachment.id, e.currentTarget.value);
                             if (e.key === 'Escape') setEditingAttachmentId(null);
                           }}
@@ -953,7 +955,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, accessMessage, m
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[95vw] sm:max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0" aria-describedby={undefined}>
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] w-[95vw] sm:max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0" aria-describedby={undefined} onEscapeKeyDown={(event) => { if (isComposingKey(event)) event.preventDefault(); }}>
         <DialogTitle className="sr-only">{mode === 'create' ? 'Create Card' : 'Edit Card'}</DialogTitle>
         {/* Cover Image from first attachment */}
         {coverAttachment && (
@@ -985,6 +987,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, accessMessage, m
             maxLength={200}
             autoFocus
             onKeyDown={(e) => {
+              if (isComposingKey(e.nativeEvent)) return;
               if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
               if (e.key === 'Escape') { e.preventDefault(); onClose(); }
             }}

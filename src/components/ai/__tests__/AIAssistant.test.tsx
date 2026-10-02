@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Card } from '@/types';
@@ -41,6 +41,21 @@ function setSharedAccess(role: 'editor' | 'viewer' | 'commenter') {
 }
 
 describe('AI shared-board permissions', () => {
+  it.each([{ isComposing: true }, { keyCode: 229 }])('keeps composition confirmation out of AI commands (%j)', async composition => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ commands: [{ type: 'count_cards', params: {}, originalText: 'Count cards' }] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    render(<AIAssistant isOpen onClose={() => {}} />);
+    const input = screen.getByPlaceholderText('What should we do next?');
+    fireEvent.change(input, { target: { value: '未完成の入力' } });
+    fireEvent.keyDown(input, { key: 'Enter', ...composition });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(input).toHaveValue('未完成の入力');
+    fireEvent.compositionEnd(input);
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await screen.findByText('1 total card (To Do: 1)');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it.each(['viewer', 'commenter'] as const)('keeps %s board commands read-only and does not claim an edit succeeded', async role => {
     setSharedAccess(role);
     const before = structuredClone(useBoardStore.getState().boards);

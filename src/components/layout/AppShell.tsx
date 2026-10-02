@@ -63,7 +63,7 @@ export function AppShell() {
 
   const activeBoard = getActiveBoard();
   const userBoards = getBoardsForUser();
-  const hasUnsavedChanges = !!cardEditorSession || !!textDialogRequest || hasShareDraft || Object.values(boardSyncStates).some((state) => state.status !== 'saved');
+  const hasUnsavedChanges = !!cardEditorSession || !!newCardTarget || isCreateDialogOpen || !!textDialogRequest || hasShareDraft || Object.values(boardSyncStates).some((state) => state.status !== 'saved');
   const repoUrl = import.meta.env.VITE_GITHUB_REPO_URL as string | undefined;
   const canEditActiveBoard = !!activeBoard && useBoardStore.getState().canEditBoard(activeBoard.id);
   const sharedBoard = shareDialogRequest ? useBoardStore.getState().boards.find((board) => board.id === shareDialogRequest.boardId) : undefined;
@@ -160,13 +160,13 @@ export function AppShell() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (isSignedIn && remoteStatus === 'ready' && userBoards.length === 0 && !cardEditorSession && !textDialogRequest && !shareDialogRequest) {
+    if (isSignedIn && remoteStatus === 'ready' && userBoards.length === 0 && !cardEditorSession && !newCardTarget && !isCreateDialogOpen && !textDialogRequest && !shareDialogRequest) {
       const boardId = createBoard('My First Project', 'Welcome to ZeroBoard!');
       setActiveBoard(boardId);
     } else if (!activeBoardId && userBoards.length > 0) {
       setActiveBoard(userBoards[0].id);
     }
-  }, [userBoards, activeBoardId, createBoard, setActiveBoard, isSignedIn, isLoaded, remoteStatus, cardEditorSession, textDialogRequest, shareDialogRequest]);
+  }, [userBoards, activeBoardId, createBoard, setActiveBoard, isSignedIn, isLoaded, remoteStatus, cardEditorSession, newCardTarget, isCreateDialogOpen, textDialogRequest, shareDialogRequest]);
 
   const handleAIClick = () => {
     setIsAIOpen((v) => !v);

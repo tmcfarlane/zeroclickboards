@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -34,6 +34,7 @@ import { useAuthContext } from '@/components/auth/AuthProvider';
 import { useAIUsage } from '@/hooks/useAIUsage';
 import { ChevronDown, Sparkles, AlertTriangle, Loader2 } from 'lucide-react';
 import type { Card, CardContent, CardLabel, Column } from '@/types';
+import { isComposingKey } from '@/lib/keyboard';
 
 interface CreateBoardDialogProps {
   isOpen: boolean;
@@ -69,23 +70,10 @@ interface BoardTemplateResponse {
   usage: { used: number; limit: number | null; warning: boolean; charged: boolean };
 }
 
-const COLUMN_DELAY_MS = 380;
-const CARD_DELAY_MS = 180;
-const LABEL_DELAY_MS = 140;
-
-function sleepAbortable(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal.aborted) return resolve();
-    const timer = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
-      resolve();
-    }, ms);
-    function onAbort() {
-      clearTimeout(timer);
-      resolve();
-    }
-    signal.addEventListener('abort', onAbort, { once: true });
-  });
+interface BoardCreationAttempt {
+  controller: AbortController;
+  userId: string | null;
+  kind: 'generation' | 'import';
 }
 
 function aiCardToCard(tmpl: AITemplateCard): Card {
@@ -107,7 +95,7 @@ function aiCardToCard(tmpl: AITemplateCard): Card {
     title: tmpl.title,
     description: tmpl.description,
     content,
-    labels: [],
+    labels: [...(tmpl.labels ?? [])],
     isArchived: false,
     createdAt: now,
     updatedAt: now,
@@ -121,7 +109,7 @@ export function CreateBoardDialog({
   onUpgrade,
 }: CreateBoardDialogProps) {
   const { session, isSignedIn } = useAuthContext();
-  const { createBoard, setActiveBoard, syncBoard } = useBoardStore();
+  const { createBoard, setActiveBoard } = useBoardStore();
   const { used, limit, isLimitReached, isPaid, resetsAt, updateUsage } = useAIUsage();
 
   const [prompt, setPrompt] = useState('');
@@ -133,6 +121,48 @@ export function CreateBoardDialog({
   const [selectedTemplate, setSelectedTemplate] = useState<UITemplate | null>(null);
   const [templates] = useState<UITemplate[]>(() => getAllBoardTemplates());
   const importFileRef = useRef<HTMLInputElement>(null);
+  const pendingAttemptRef = useRef<BoardCreationAttempt | null>(null);
+  const userId = session?.user.id ?? null;
+
+  const invalidatePendingAttempt = useCallback(() => {
+    pendingAttemptRef.current?.controller.abort();
+    pendingAttemptRef.current = null;
+  }, []);
+
+  useEffect(() => invalidatePendingAttempt, [invalidatePendingAttempt]);
+  useEffect(() => {
+    invalidatePendingAttempt();
+    setIsGenerating(false);
+    setPrompt('');
+    setNewBoardName('');
+    setNewBoardDescription('');
+    setSelectedTemplate(null);
+  }, [userId, invalidatePendingAttempt]);
+  useEffect(() => {
+    if (!isOpen && pendingAttemptRef.current) {
+      invalidatePendingAttempt();
+      setIsGenerating(false);
+    }
+  }, [isOpen, invalidatePendingAttempt]);
+
+  function isCurrentAttempt(attempt: BoardCreationAttempt): boolean {
+    return pendingAttemptRef.current === attempt
+      && !attempt.controller.signal.aborted
+      && useBoardStore.getState().currentUserId === attempt.userId;
+  }
+
+  function beginAttempt(kind: BoardCreationAttempt['kind']): BoardCreationAttempt {
+    invalidatePendingAttempt();
+    setIsGenerating(false);
+    const attempt: BoardCreationAttempt = { controller: new AbortController(), userId, kind };
+    pendingAttemptRef.current = attempt;
+    return attempt;
+  }
+
+  function handleOpenChange(open: boolean): void {
+    if (!open) invalidatePendingAttempt();
+    onOpenChange(open);
+  }
 
   const overQuota = !isPaid && isLimitReached;
 
@@ -152,101 +182,12 @@ export function CreateBoardDialog({
     ? new Date(resetsAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : null;
 
-  async function runAnimatedBuild(template: AITemplate): Promise<void> {
-    const boardId = createBoard(template.name, template.description, []);
-    setActiveBoard(boardId);
-    onOpenChange(false);
-
-    const controller = new AbortController();
-    const onEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') controller.abort();
-    };
-    window.addEventListener('keydown', onEscape);
-
-    try {
-      for (let colIdx = 0; colIdx < template.columns.length; colIdx++) {
-        const colTmpl = template.columns[colIdx];
-        const newColumn: Column = {
-          id: uuidv4(),
-          title: colTmpl.title,
-          cards: [],
-          order: colIdx,
-        };
-
-        await sleepAbortable(COLUMN_DELAY_MS, controller.signal);
-
-        useBoardStore.setState((s) => ({
-          boards: s.boards.map((b) =>
-            b.id === boardId
-              ? {
-                  ...b,
-                  columns: [...b.columns, newColumn],
-                  updatedAt: new Date().toISOString(),
-                }
-              : b
-          ),
-        }));
-
-        for (const cardTmpl of colTmpl.sampleCards) {
-          const newCard = aiCardToCard(cardTmpl);
-
-          await sleepAbortable(CARD_DELAY_MS, controller.signal);
-
-          useBoardStore.setState((s) => ({
-            boards: s.boards.map((b) =>
-              b.id === boardId
-                ? {
-                    ...b,
-                    columns: b.columns.map((c) =>
-                      c.id === newColumn.id ? { ...c, cards: [...c.cards, newCard] } : c
-                    ),
-                    updatedAt: new Date().toISOString(),
-                  }
-                : b
-            ),
-          }));
-
-          if (cardTmpl.labels && cardTmpl.labels.length > 0) {
-            await sleepAbortable(LABEL_DELAY_MS, controller.signal);
-
-            useBoardStore.setState((s) => ({
-              boards: s.boards.map((b) =>
-                b.id === boardId
-                  ? {
-                      ...b,
-                      columns: b.columns.map((c) =>
-                        c.id === newColumn.id
-                          ? {
-                              ...c,
-                              cards: c.cards.map((cd) =>
-                                cd.id === newCard.id
-                                  ? { ...cd, labels: [...(cardTmpl.labels ?? [])] }
-                                  : cd
-                              ),
-                            }
-                          : c
-                      ),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : b
-              ),
-            }));
-          }
-        }
-      }
-    } finally {
-      window.removeEventListener('keydown', onEscape);
-      syncBoard(boardId);
-      toast.success('Board generated — edit anything you like');
-    }
-  }
-
   async function handleGenerate(): Promise<void> {
     const trimmed = prompt.trim();
-    if (!trimmed || isGenerating) return;
+    if (!trimmed || isGenerating || pendingAttemptRef.current?.kind === 'generation') return;
 
-    if (!isSignedIn || !session?.access_token) {
-      onOpenChange(false);
+    if (!isSignedIn || !session?.access_token || !userId) {
+      handleOpenChange(false);
       onOpenSignIn();
       return;
     }
@@ -257,6 +198,7 @@ export function CreateBoardDialog({
       return;
     }
 
+    const attempt = beginAttempt('generation');
     setIsGenerating(true);
     try {
       const res = await fetch('/api/ai/board-template', {
@@ -266,11 +208,12 @@ export function CreateBoardDialog({
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ prompt: trimmed }),
-        signal: AbortSignal.timeout(35_000),
+        signal: AbortSignal.any([attempt.controller.signal, AbortSignal.timeout(35_000)]),
       });
+      if (!isCurrentAttempt(attempt)) return;
 
       if (res.status === 401) {
-        onOpenChange(false);
+        handleOpenChange(false);
         onOpenSignIn();
         return;
       }
@@ -278,6 +221,7 @@ export function CreateBoardDialog({
         const json = (await res.json().catch(() => null)) as
           | { usage?: { used: number; limit: number } }
           | null;
+        if (!isCurrentAttempt(attempt)) return;
         if (json?.usage) {
           updateUsage({ used: json.usage.used, limit: json.usage.limit });
         }
@@ -295,9 +239,20 @@ export function CreateBoardDialog({
       }
 
       const data = (await res.json()) as BoardTemplateResponse;
+      if (!isCurrentAttempt(attempt)) return;
+      // Persist the complete accepted template in the initial creation snapshot.
+      // Navigation must never decide how much generated content is saved.
+      const columns: Column[] = data.template.columns.map((column, order) => ({
+        id: uuidv4(), title: column.title, order, cards: column.sampleCards.map(aiCardToCard),
+      }));
+      if (!isCurrentAttempt(attempt)) return;
       updateUsage({ used: data.usage.used, limit: data.usage.limit, warning: data.usage.warning });
-      await runAnimatedBuild(data.template);
+      const boardId = createBoard(data.template.name, data.template.description, columns);
+      setActiveBoard(boardId);
+      handleOpenChange(false);
+      toast.success('Board generated — edit anything you like');
     } catch (err) {
+      if (!isCurrentAttempt(attempt)) return;
       if (err instanceof DOMException && err.name === 'TimeoutError') {
         toast.error('AI timed out. Try again or use Advanced options.');
       } else {
@@ -305,25 +260,31 @@ export function CreateBoardDialog({
         toast.error('Something went wrong. Try again.');
       }
     } finally {
-      setIsGenerating(false);
+      if (pendingAttemptRef.current === attempt) {
+        pendingAttemptRef.current = null;
+        setIsGenerating(false);
+      }
     }
   }
 
   function handleManualCreate(): void {
     if (!newBoardName.trim()) return;
+    invalidatePendingAttempt();
     createBoard(
       newBoardName.trim(),
       newBoardDescription.trim() || undefined,
       selectedTemplate ? templateToColumns(selectedTemplate) : undefined
     );
-    onOpenChange(false);
+    handleOpenChange(false);
   }
 
   async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = e.target.files?.[0];
     if (!file) return;
+    const attempt = beginAttempt('import');
     try {
       const data = await readFileAsJSON(file);
+      if (!isCurrentAttempt(attempt)) return;
       const result = validateBoardJSON(data);
       if (!result.valid) {
         toast.error(result.error);
@@ -331,20 +292,25 @@ export function CreateBoardDialog({
       }
       const { name, description, columns } = importBoardFromJSON(result.payload);
       createBoard(name, description, columns);
+      if (importFileRef.current) importFileRef.current.value = '';
       toast.success('Board imported successfully');
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch (err) {
+      if (!isCurrentAttempt(attempt)) return;
       toast.error(err instanceof Error ? err.message : 'Failed to import board');
     } finally {
-      if (importFileRef.current) importFileRef.current.value = '';
+      if (pendingAttemptRef.current === attempt) {
+        pendingAttemptRef.current = null;
+        if (importFileRef.current) importFileRef.current.value = '';
+      }
     }
   }
 
   const showUsageChip = isSignedIn && !isPaid && typeof limit === 'number';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] sm:max-w-[520px]">
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7] sm:max-w-[520px]" onEscapeKeyDown={(event) => { if (isComposingKey(event)) event.preventDefault(); }}>
         <DialogHeader>
           <DialogTitle>Create New Board</DialogTitle>
           <DialogDescription className="text-[#A8B2B2]">
@@ -365,7 +331,7 @@ export function CreateBoardDialog({
                 <button
                   type="button"
                   onClick={() => {
-                    onOpenChange(false);
+                    handleOpenChange(false);
                     onUpgrade();
                   }}
                   className="mt-1 text-xs font-medium text-amber-300 hover:text-amber-200 underline underline-offset-2"
@@ -399,6 +365,7 @@ export function CreateBoardDialog({
                 disabled={isGenerating || overQuota}
                 className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
                 onKeyDown={(e) => {
+                  if (isComposingKey(e.nativeEvent)) return;
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     void handleGenerate();
@@ -487,6 +454,7 @@ export function CreateBoardDialog({
                   maxLength={100}
                   className="h-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
                   onKeyDown={(e) => {
+                    if (isComposingKey(e.nativeEvent)) return;
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       handleManualCreate();
@@ -519,7 +487,7 @@ export function CreateBoardDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
           >
             Cancel

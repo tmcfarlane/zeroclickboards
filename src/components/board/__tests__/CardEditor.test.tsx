@@ -27,6 +27,49 @@ function open(initialData: Card) {
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+describe('CardEditor composition', () => {
+  it.each([{ isComposing: true, keyCode: 13 }, { isComposing: false, keyCode: 229 }])('waits before adding a checklist item with %j', async (event) => {
+    const user = userEvent.setup();
+    const save = open(card());
+    await user.click(screen.getByRole('button', { name: 'Checklist' }));
+    const input = screen.getByRole('textbox', { name: 'New checklist item' });
+    await user.type(input, '日本語');
+    fireEvent.compositionStart(input);
+    fireEvent.keyDown(input, { key: 'Enter', ...event });
+    expect(input).toHaveValue('日本語');
+    expect(screen.queryByRole('checkbox', { name: 'Complete 日本語' })).not.toBeInTheDocument();
+    fireEvent.compositionEnd(input);
+    await user.keyboard('{Enter}');
+    expect(input).toHaveValue('');
+    expect(screen.getByRole('checkbox', { name: 'Complete 日本語' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].content.checklist).toEqual([{ id: expect.any(String), text: '日本語', completed: false }]);
+  });
+
+  it.each([{ isComposing: true, keyCode: 13 }, { isComposing: false, keyCode: 229 }])('keeps the attachment name draft for composing Enter and Escape with %j', async (event) => {
+    const user = userEvent.setup();
+    const close = vi.fn();
+    const save = vi.fn();
+    render(<CardEditor isOpen mode="edit" cardId="card-1" initialData={card({ attachments: [first] })} onClose={close} onSave={save} />);
+    await user.click(screen.getByRole('button', { name: 'Actions for First image' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    const input = await screen.findByRole('textbox', { name: 'Attachment name' });
+    await user.clear(input);
+    await user.type(input, '日本語');
+    fireEvent.compositionStart(input);
+    fireEvent.keyDown(input, { key: 'Enter', ...event });
+    expect(input).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: 'Escape', ...event });
+    expect(input).toHaveValue('日本語');
+    expect(close).not.toHaveBeenCalled();
+    fireEvent.compositionEnd(input);
+    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('textbox', { name: 'Attachment name' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(save.mock.calls[0][0].attachments).toEqual([{ ...first, isCover: false, name: '日本語' }]);
+  });
+});
+
 describe('CardEditor text fields', () => {
   it('shows distinct description and body values and preserves both on an unrelated edit', async () => {
     const user = userEvent.setup();

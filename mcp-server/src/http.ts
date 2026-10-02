@@ -19,6 +19,7 @@ export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: s
       res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, MCP-Protocol-Version');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Expose-Headers', 'WWW-Authenticate');
     }
     if (req.method === 'OPTIONS') { res.status(204).end(); return; }
     next();
