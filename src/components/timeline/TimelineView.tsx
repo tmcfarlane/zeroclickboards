@@ -111,6 +111,7 @@ interface ActiveDrag {
 }
 
 export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
+  const canEdit = useBoardStore((state) => state.canEditBoard(board.id));
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const isMobile = useIsMobile();
@@ -243,6 +244,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
     : null;
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (!useBoardStore.getState().canEditBoard(board.id)) return;
     const data = event.active.data.current;
     if (data?.type !== 'timeline-card') return;
     setActiveDrag({
@@ -256,6 +258,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveDrag(null);
+    if (!useBoardStore.getState().canEditBoard(board.id)) return;
     const { active, over } = event;
     if (!over) return;
 
@@ -323,6 +326,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
         <div className="flex flex-wrap items-center gap-3">
           <BoardSelector onCreateBoardClick={onNewBoardClick} />
           <ViewToggle />
+          {!canEdit && <span className="text-xs text-[#A8B2B2]">Read-only board</span>}
 
           <div className="flex items-center gap-2">
             <Button
@@ -520,6 +524,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
   const { card, occurrenceDate, isRecurringInstance } = item;
   const isRecurring = !!card.recurrence;
   const { editCard, openCardEditor } = useBoardStore();
+  const canEdit = useBoardStore((state) => state.canEditBoard(boardId));
   const { logActivity } = useActivityLogger();
 
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -539,7 +544,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
       sourceColumnId: columnId,
       sourceDate: occurrenceDate,
     },
-    disabled: isRecurring,
+    disabled: isRecurring || !canEdit,
   });
 
   const labels = card.labels;
@@ -554,7 +559,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
     opacity: isDragging ? 0.3 : undefined,
   };
 
-  const cursorClass = isRecurring ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing';
+  const cursorClass = isRecurring || !canEdit ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing';
 
   const openPopover = () => {
     setTitleDraft(card.title);
@@ -562,6 +567,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
   };
 
   const commitTitle = () => {
+    if (!useBoardStore.getState().canEditBoard(boardId)) return;
     const next = titleDraft.trim();
     if (!next || next === card.title) {
       setTitleDraft(card.title);
@@ -572,6 +578,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
   };
 
   const toggleLabel = (label: CardLabel) => {
+    if (!useBoardStore.getState().canEditBoard(boardId)) return;
     const current = card.labels ?? [];
     const nextLabels = current.includes(label)
       ? current.filter((l) => l !== label)
@@ -613,7 +620,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
             }}
             role="button"
             tabIndex={0}
-            aria-label={`Edit ${card.title}`}
+            aria-label={`${canEdit ? 'Edit' : 'View'} ${card.title}`}
             title={recurringTitle}
             className={`${inlineStyle ? '' : DEFAULT_CARD_STYLE} border rounded-lg p-1 sm:p-2 overflow-hidden transition-[filter,transform] hover:brightness-125 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#78fcd6]/60 ${cursorClass}`}
           >
@@ -637,6 +644,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
           onOpenAutoFocus={(e) => e.preventDefault()}
           onClick={(e) => e.stopPropagation()}
         >
+          {!canEdit && <p role="alert" className="text-xs text-amber-100">This board is read-only. Your title draft is kept here.</p>}
           <div className="space-y-1.5">
             <label htmlFor={`timeline-title-${card.id}`} className="text-[10px] uppercase tracking-wide text-[#A8B2B2]">
               Title
@@ -644,11 +652,13 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
             <Input
               id={`timeline-title-${card.id}`}
               value={titleDraft}
+              readOnly={!canEdit}
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={commitTitle}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
+                  if (!useBoardStore.getState().canEditBoard(boardId)) return;
                   commitTitle();
                   setPopoverOpen(false);
                 } else if (e.key === 'Escape') {
@@ -672,6 +682,7 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
                   <button
                     key={label}
                     type="button"
+                    disabled={!canEdit}
                     onClick={() => toggleLabel(label)}
                     aria-label={`${active ? 'Remove' : 'Add'} ${label} label`}
                     aria-pressed={active}
@@ -690,7 +701,9 @@ function TimelineCardItem({ boardId, columnId, item }: TimelineCardItemProps) {
               type="button"
               variant="outline"
               size="sm"
+              disabled={!canEdit}
               onClick={() => {
+                if (!useBoardStore.getState().canEditBoard(boardId)) return;
                 setPopoverOpen(false);
                 openCardEditor(boardId, card.id);
               }}

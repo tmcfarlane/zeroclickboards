@@ -31,3 +31,17 @@ Fixture views after the repairs:
 ![Desktop board](screenshots/gauntlet/desktop.png)
 
 ![Mobile board with visible card actions](screenshots/gauntlet/mobile.png)
+
+## Shared access and native OAuth follow-up
+
+Shared-board access is tracked separately from board content. Viewer/commenter boards use a searchable read-only presentation; ownership controls sharing/deletion, and editors retain content controls. Pending card drafts survive a downgrade, while queued saves, undo/redo, archive actions, activity writes, and delayed AI commands recheck current access. Shared writes refresh membership before saving because production publishes board changes but not membership changes. Focus also refreshes membership; this is not an instantaneous membership push guarantee.
+
+The slash shortcut switches timeline to the board and focuses the visible desktop or mobile search. Hidden-column and empty-board recovery remains available after reload. Keyboard users can reach board rename/delete submenus, and card creation consistently opens the full editor for the selected column.
+
+Native Codex OAuth accepts only literal HTTP `127.0.0.1` callbacks with a valid port. The registered path/query remain fixed, HTTPS callbacks remain exact, and token exchange must match the actual stored callback including its port. HTTP preflight rejects unsafe callbacks before the SDK can redirect. Consent approval and cancellation share the same validation.
+
+A production ACL audit found that unrelated SQL logins inherited public access to privileged invite and trigger helpers. The reviewed ACL-only migration removes this inherited execution, restricts the browser invite wrapper to the authenticated role, and retains trusted service/owner paths. It was applied and its live function ACLs verified; existing signup and settings triggers remain enabled. PostgreSQL regression tests reproduce the prior invite/temporary-trigger paths and verify intended signup, settings, RLS, and browser invite behavior after applying the repair twice.
+
+Follow-up validation: 730 app/API tests, 164 MCP tests, and 82 disposable desktop/mobile browser checks passed. Full lint, TypeScript, build, and diff checks passed. A concurrent app/browser run hit three default-timeout failures; the isolated app rerun passed without assertion or timeout changes. Hosted runtime credentials and real client linking remain a separate deployment step.
+
+Remaining draft-retention work includes board/column text dialogs and an open share dialog when ownership falls to viewer access; content writes are blocked, but those presentation switches can still dismiss local text.

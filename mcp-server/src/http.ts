@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { mcpAuthRouter, createOAuthMetadata, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { buildServer } from './server.js';
 import { ZeroBoardOAuth, SCOPES } from './oauth.js';
+import { oauthCallbackMatches } from './oauth-callback.js';
 
 /** Mount behind TLS on the canonical origin. No shared MCP sessions or local credential files. */
 export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: string; allowedOrigins: string[] }) {
@@ -28,9 +29,21 @@ export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: s
     revocation_endpoint_auth_methods_supported: ['none'],
     authorization_response_iss_parameter_supported: true,
   }));
-  app.use('/authorize', (req, res, next) => {
+  app.post('/authorize', express.urlencoded({ extended: false }));
+  app.use('/authorize', async (req, res, next) => {
+    // The SDK permits broader normalized loopback matches (including userinfo,
+    // fragments and HTTPS port changes). Reject those before its protocol-error
+    // path can redirect, even when the remaining OAuth parameters are invalid.
+    const params = req.method === 'POST' ? req.body : req.query;
+    if ((req.method === 'GET' || req.method === 'POST') && typeof params?.client_id === 'string' && params.redirect_uri !== undefined) {
+      const client = await oauth.clientsStore.getClient(params.client_id);
+      if (client && !client.redirect_uris.some((uri) => oauthCallbackMatches(params.redirect_uri, uri))) {
+        res.status(400).json({ error: 'invalid_request', error_description: 'Unregistered redirect_uri' });
+        return;
+      }
+    }
     const redirect = res.redirect.bind(res);
-    // The SDK validates the client/callback before redirecting protocol errors.
+    // The shared policy and SDK validate the client/callback before redirects.
     // Add RFC 9207 issuer identification to those responses as well as consent
     // outcomes, and preserve valid state even when another parameter is invalid.
     res.redirect = ((statusOrUrl: number | string, url?: string) => {

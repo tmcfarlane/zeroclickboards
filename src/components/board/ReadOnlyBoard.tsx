@@ -4,6 +4,7 @@ import { parseLocalDate } from '@/lib/utils';
 
 interface ReadOnlyBoardProps {
   board: Board;
+  searchQuery?: string;
 }
 
 const LABEL_COLORS: Record<CardLabel, string> = {
@@ -66,7 +67,7 @@ function ReadOnlyCard({ card }: { card: Card }) {
   );
 }
 
-export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
+export function ReadOnlyBoard({ board, searchQuery = '' }: ReadOnlyBoardProps) {
   const hiddenColumnIds = board.hiddenColumnIds ?? [];
   const visibleColumns = board.columns.filter((col) => !hiddenColumnIds.includes(col.id));
 
@@ -110,17 +111,18 @@ export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
 
   return (
     <div
-      className="h-full min-h-full flex flex-col"
+      className="h-full min-h-0 flex flex-col"
       style={board.background ? { background: board.background } : undefined}
     >
       {/* Board columns */}
+      {visibleColumns.length === 0 && <p className="p-6 text-center text-sm text-[#A8B2B2]">No visible columns in this board.</p>}
       <div
         ref={scrollRef}
         className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden scrollbar-hover cursor-grab select-none"
       >
         <div className="h-full flex items-stretch gap-4 p-4 min-w-max">
           {visibleColumns.map((column) => {
-            const activeCards = column.cards.filter(c => !c.isArchived);
+            const activeCards = column.cards.filter(c => !c.isArchived && c.title.toLowerCase().includes(searchQuery.toLowerCase()));
             return (
               <div
                 key={column.id}
@@ -133,13 +135,13 @@ export function ReadOnlyBoard({ board }: ReadOnlyBoardProps) {
                 </div>
 
                 {/* Cards */}
-                <div className="flex-1 overflow-hidden p-2 space-y-2">
+                <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-2">
                   {activeCards.map((card) => (
                     <ReadOnlyCard key={card.id} card={card} />
                   ))}
                   {activeCards.length === 0 && (
                     <div className="text-center py-4 text-xs text-[#A8B2B2]">
-                      No cards
+                      {searchQuery ? 'No matching cards' : 'No cards'}
                     </div>
                   )}
                 </div>

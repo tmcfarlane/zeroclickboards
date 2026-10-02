@@ -190,10 +190,29 @@ function SyncErrorNotice({ boardId, message }: BoardSyncNoticeProps & { message?
   );
 }
 
+function ReadOnlyDraftNotice({ boardId, message }: BoardSyncNoticeProps & { message?: string }) {
+  const saveAsCopy = useBoardStore((store) => store.saveBoardDraftAsCopy);
+  const discard = useBoardStore((store) => store.discardBoardDraft);
+  return (
+    <div role="alert" className={noticeClassName}>
+      <AlertCircle className="size-4 shrink-0 text-[#78fcd6]" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p>{message || 'You no longer have editing access to this board.'}</p>
+        <p className="mt-1 text-[#A8B2B2]">Your unsaved draft is kept in this tab. Save a new board to keep it, or discard it to view the latest saved board.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" className={secondaryButtonClassName} onClick={() => discard(boardId)}>Discard local draft</Button>
+        <Button type="button" size="sm" className={primaryButtonClassName} onClick={() => saveAsCopy(boardId)}>Save as a new board</Button>
+      </div>
+    </div>
+  );
+}
+
 export function BoardSyncNotice({ boardId }: BoardSyncNoticeProps) {
   const state = useBoardStore((store) => store.boardSyncStates[boardId]);
 
   if (!state || state.status === 'saved') return null;
+  if (state.status === 'readonly') return <ReadOnlyDraftNotice boardId={boardId} message={state.message} />;
   if (state.status === 'conflict') return <ConflictNotice key={boardId} boardId={boardId} state={state} />;
   if (state.status === 'deleted') return <DeletedDraftNotice boardId={boardId} message={state.message} />;
   if (state.status === 'error') return <SyncErrorNotice boardId={boardId} message={state.message} />;

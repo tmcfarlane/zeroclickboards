@@ -52,6 +52,7 @@ function harness(options: { creating?: boolean } = {}) {
   let status: BoardSyncState = { status: 'saved' };
   let serial = 10;
   const hooks = {
+    canWrite: vi.fn(() => true),
     read: vi.fn(async (): Promise<BoardSnapshot | null> => structuredClone(remote)),
     write: vi.fn(async (_id: string, expectedRevision: string, value: BoardDocument): Promise<BoardSnapshot | null> => {
       if (!remote || remote.revision !== expectedRevision) return null;
@@ -89,6 +90,50 @@ function harness(options: { creating?: boolean } = {}) {
 describe('BoardSyncCoordinator', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
+
+  it('stops after an awaited read when permission is lost without deleting the readable draft', async () => {
+    const h = harness();
+    const pending = deferred<BoardSnapshot | null>();
+    h.hooks.read.mockImplementationOnce(() => pending.promise);
+    h.edit((draft) => { draft.name = 'Preserved draft'; });
+    const saving = h.coordinator.flush(BOARD_ID);
+    h.hooks.canWrite.mockReturnValue(false);
+    h.coordinator.accessChanged(BOARD_ID);
+    pending.resolve(h.initial);
+    await saving;
+    expect(h.local.name).toBe('Preserved draft');
+    expect(h.status.status).toBe('readonly');
+    expect(h.hooks.write).not.toHaveBeenCalled();
+    expect(h.hooks.remove).not.toHaveBeenCalled();
+    h.coordinator.observe(h.setRemote((value) => { columns(value)[0].cards[0].content.text = 'New remote body'; }));
+    expect(columns(h.local)[0].cards[0].content.text).toBe('New remote body');
+    expect(h.local.name).toBe('Preserved draft');
+    await vi.advanceTimersByTimeAsync(400);
+    expect(h.hooks.write).not.toHaveBeenCalled();
+  });
+
+  it('does not apply an old save response after access is lost and restored while it is running', async () => {
+    const h = harness();
+    const pending = deferred<BoardSnapshot | null>();
+    h.hooks.write.mockImplementationOnce(() => pending.promise);
+    h.edit((draft) => { draft.name = 'Preserved draft'; });
+    const saving = h.coordinator.flush(BOARD_ID);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.hooks.write).toHaveBeenCalledOnce();
+    h.hooks.canWrite.mockReturnValue(false);
+    h.coordinator.accessChanged(BOARD_ID);
+    h.hooks.canWrite.mockReturnValue(true);
+    h.coordinator.accessChanged(BOARD_ID);
+    pending.resolve(snapshot({ ...document(), name: 'Old acknowledgement' }, revisions.second));
+    await saving;
+    expect(h.local.name).toBe('Preserved draft');
+    expect(h.status.status).toBe('error');
+    expect(h.hooks.apply).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(h.hooks.write).toHaveBeenCalledOnce();
+    await h.coordinator.flush(BOARD_ID);
+    expect(h.status.status).toBe('saved');
+  });
 
   it.each(['local', 'remote'] as const)('retains a board rename that was pending before a form conflict resolved to %s', async (choice) => {
     const h = harness();

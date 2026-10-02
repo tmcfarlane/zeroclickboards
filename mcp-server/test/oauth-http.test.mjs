@@ -24,12 +24,12 @@ class TestStore {
   async take(kind, key) { const record = await this.get(kind, key); this.records.delete(`${kind}:${key}`); return record; }
 }
 const digest = (token) => createHash('sha256').update(token).digest('hex');
-async function setup(t) {
+async function setup(t, clients = [{ client_id: 'chatgpt-test', client_name: 'Test ChatGPT', redirect_uris: ['https://chatgpt.test/callback'], token_endpoint_auth_method: 'none' }]) {
   const store = new TestStore();
   const accounts = { alice: { userId: 'user-1', boardId: 'board-1' }, bob: { userId: 'user-2', boardId: 'board-2' } };
   const oauth = new ZeroBoardOAuth({ issuer: new URL('https://mcp.test'), resource: new URL('https://mcp.test/mcp'),
     consentUrl: new URL('https://board.test/auth/plugin'), store,
-    clients: [{ client_id: 'chatgpt-test', client_name: 'Test ChatGPT', redirect_uris: ['https://chatgpt.test/callback'], token_endpoint_auth_method: 'none' }],
+    clients,
     resolveAccount: async (ref) => {
       const account = accounts[ref]; if (!account) throw new Error('Account session revoked');
       const fixture = createBoardFixture({ row: makeBoard({ id: account.boardId, user_id: account.userId, name: ref }), access: { userId: account.userId, boardIds: [account.boardId] } });
@@ -175,4 +175,120 @@ test('malformed and oversized MCP JSON return protocol errors without HTML, body
   assert.equal(oversized.status, 413);
   assert.deepEqual(await oversized.json(), { jsonrpc: '2.0', error: { code: -32600, message: 'MCP request exceeds the 1 MiB JSON limit' }, id: null });
   assert.equal(oversized.headers.get('cache-control'), 'no-store');
+});
+
+const nativeClient = { client_id: 'codex-native-test', client_name: 'Test native Codex',
+  redirect_uris: ['http://127.0.0.1/callback?native=fixture'], token_endpoint_auth_method: 'none' };
+const nativeParams = (redirectUri, verifier, extras = {}) => new URLSearchParams({ client_id: nativeClient.client_id, redirect_uri: redirectUri,
+  response_type: 'code', state: 'native-state', code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+  code_challenge_method: 'S256', resource: 'https://mcp.test/mcp', scope: 'boards:read', ...extras });
+
+test('predefined native clients authorize two listener ports, identify callbacks, and bind token exchange to the actual URI', async (t) => {
+  const { oauth, request, exchange, connect } = await setup(t, [nativeClient]);
+  for (const port of [54321, 54322]) {
+    const redirectUri = `http://127.0.0.1:${port}/callback?native=fixture`;
+    const verifier = randomBytes(32).toString('base64url');
+    const response = await request(`/authorize?${nativeParams(redirectUri, verifier)}`);
+    assert.equal(response.status, 302, await response.clone().text());
+    const pending = new URL(response.headers.get('location')).searchParams.get('request');
+    const callback = new URL(await oauth.approveConsent(pending, 'alice', ['board-1']));
+    assert.equal(callback.origin + callback.pathname, `http://127.0.0.1:${port}/callback`);
+    assert.equal(callback.searchParams.get('native'), 'fixture');
+    assert.equal(callback.searchParams.get('state'), 'native-state');
+    assert.equal(callback.searchParams.get('iss'), 'https://mcp.test/');
+    const code = callback.searchParams.get('code');
+    const exchangeNative = (extras = {}) => exchange(code, verifier, { client_id: nativeClient.client_id, redirect_uri: redirectUri, ...extras });
+    assert.equal((await exchangeNative({ redirect_uri: `http://127.0.0.1:${port + 1}/callback?native=fixture` })).status, 400);
+    assert.equal((await exchangeNative({ redirect_uri: nativeClient.redirect_uris[0] })).status, 400);
+    assert.equal((await exchangeNative({ code_verifier: randomBytes(32).toString('base64url') })).status, 400);
+    assert.equal((await exchangeNative({ resource: 'https://evil.test/mcp' })).status, 400);
+    const tokenResponse = await exchangeNative();
+    assert.equal(tokenResponse.status, 200, await tokenResponse.clone().text());
+    const tokens = await tokenResponse.json();
+    assert.equal((await exchangeNative()).status, 400);
+    const client = await connect(tokens.access_token);
+    assert.deepEqual(payload(await client.callTool({ name: 'list_boards', arguments: {} })).map(board => board.id), ['board-1']);
+  }
+});
+
+test('native denial and GET/form protocol errors return only the approved active port with issuer and state', async (t) => {
+  const { oauth, request } = await setup(t, [nativeClient]);
+  const redirectUri = 'http://127.0.0.1:54321/callback?native=fixture';
+  const verifier = randomBytes(32).toString('base64url');
+  const authorization = await request(`/authorize?${nativeParams(redirectUri, verifier)}`);
+  const pending = new URL(authorization.headers.get('location')).searchParams.get('request');
+  const denied = new URL(await oauth.cancelConsent(pending));
+  assert.equal(denied.origin + denied.pathname, 'http://127.0.0.1:54321/callback');
+  assert.equal(denied.searchParams.get('native'), 'fixture');
+  assert.equal(denied.searchParams.get('error'), 'access_denied');
+  assert.equal(denied.searchParams.get('iss'), 'https://mcp.test/');
+  assert.equal(denied.searchParams.get('state'), 'native-state');
+  assert.equal(denied.searchParams.has('code'), false);
+  for (const extras of [{ response_type: 'token' }, { code_challenge_method: 'plain' }, { scope: 'boards:read unsupported' }, { resource: 'https://evil.test/mcp' }]) {
+    for (const method of ['GET', 'POST']) {
+      const params = nativeParams(redirectUri, verifier, extras);
+      const response = await request(method === 'GET' ? `/authorize?${params}` : '/authorize', method === 'GET' ? {} :
+        { method, headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: params });
+      assert.equal(response.status, 302, await response.clone().text());
+      const callback = new URL(response.headers.get('location'));
+      assert.equal(callback.origin + callback.pathname, 'http://127.0.0.1:54321/callback');
+      assert.equal(callback.searchParams.get('native'), 'fixture');
+      assert.equal(callback.searchParams.get('iss'), 'https://mcp.test/');
+      assert.equal(callback.searchParams.get('state'), 'native-state');
+      assert.equal(callback.searchParams.has('error'), true);
+      assert.equal(callback.searchParams.has('code'), false);
+    }
+  }
+});
+
+test('unsafe native and HTTPS loopback callbacks never redirect, including SDK protocol-error paths', async (t) => {
+  const httpsLoopback = { ...nativeClient, client_id: 'https-loopback-test', redirect_uris: ['https://127.0.0.1/callback'] };
+  const { request, store } = await setup(t, [nativeClient, httpsLoopback]);
+  const verifier = randomBytes(32).toString('base64url');
+  const invalid = [
+    'http://user:pass@127.0.0.1:54321/callback?native=fixture', 'http://@127.0.0.1:54321/callback?native=fixture',
+    'http://127.0.0.1:54321/callback?native=fixture#fragment', 'http://127.0.0.1:54321/callback?native=fixture#',
+    'http://2130706433:54321/callback?native=fixture', 'http://0x7f000001:54321/callback?native=fixture',
+    'http://127.1:54321/callback?native=fixture', 'http://localhost:54321/callback?native=fixture',
+    'http://[::1]:54321/callback?native=fixture', 'http://127.0.0.1:54321/other?native=fixture',
+    'http://127.0.0.1:54321/other/../callback?native=fixture', 'http://127.0.0.1:54321/callback?native=other',
+    'http://127.0.0.1:0/callback?native=fixture', 'http://127.0.0.1:54321/callback?native=fixture\t',
+  ];
+  for (const redirectUri of invalid) {
+    for (const method of ['GET', 'POST']) {
+      for (const responseType of ['code', 'token']) {
+        const params = nativeParams(redirectUri, verifier, { response_type: responseType });
+        const response = await request(method === 'GET' ? `/authorize?${params}` : '/authorize', method === 'GET' ? {} :
+          { method, headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: params });
+        assert.equal(response.status, 400, `${method} ${redirectUri} ${responseType}`);
+        assert.equal(response.headers.get('location'), null);
+        assert.equal((await response.json()).error, 'invalid_request');
+      }
+    }
+  }
+  for (const uri of ['https://127.0.0.1:54321/callback', 'https://user:pass@127.0.0.1/callback', 'https://127.0.0.1/callback#fragment']) {
+    const https = await request(`/authorize?${nativeParams(uri, verifier,
+      { client_id: httpsLoopback.client_id, response_type: 'token' })}`);
+    assert.equal(https.status, 400);
+    assert.equal(https.headers.get('location'), null);
+  }
+  assert.equal(store.records.size, 0);
+});
+
+test('durable native pending requests and codes fail after their registered path or query changes', async (t) => {
+  const { oauth, request } = await setup(t, [nativeClient]);
+  const verifier = randomBytes(32).toString('base64url');
+  const response = await request(`/authorize?${nativeParams('http://127.0.0.1:54321/callback?native=fixture', verifier)}`);
+  const pending = new URL(response.headers.get('location')).searchParams.get('request');
+  const changedClient = { ...nativeClient, redirect_uris: ['http://127.0.0.1/callback?native=changed'] };
+  const changed = new ZeroBoardOAuth({ ...oauth.options, clients: [changedClient] });
+  await assert.rejects(changed.approveConsent(pending, 'alice', ['board-1']), /callback/);
+  await assert.rejects(changed.cancelConsent(pending), /Callback/);
+  // Use a separate pending request because cancellation consumes its request.
+  const next = await request(`/authorize?${nativeParams('http://127.0.0.1:54322/callback?native=fixture', verifier)}`);
+  const nextPending = new URL(next.headers.get('location')).searchParams.get('request');
+  const code = new URL(await oauth.approveConsent(nextPending, 'alice', ['board-1'])).searchParams.get('code');
+  await assert.rejects(changed.challengeForAuthorizationCode(changedClient, code), /callback/);
+  await assert.rejects(changed.exchangeAuthorizationCode(changedClient, code, verifier,
+    'http://127.0.0.1:54322/callback?native=fixture', oauth.options.resource), /callback/);
 });

@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Board } from '@/types';
 import type { BoardSyncState } from '@/lib/board-sync';
+import { boardAccessFor, editableAccess, type BoardAccess } from '@/lib/board-access';
+import type { CardEditorSession } from '@/store/useBoardStore';
 import { AppShell } from '../AppShell';
 
 const state = vi.hoisted(() => ({
@@ -10,9 +12,22 @@ const state = vi.hoisted(() => ({
   activeBoard: null as Board | null,
   boards: [] as Board[],
   store: {
+    boards: [] as Board[],
+    boardAccess: {} as Record<string, BoardAccess>,
     activeBoardId: 'current-board',
     viewMode: 'board',
+    cardEditorSession: null as CardEditorSession | null,
     createBoard: vi.fn(),
+    addCard: vi.fn(),
+    getBoardAccess: vi.fn(),
+    canEditBoard: vi.fn(),
+    canManageBoard: vi.fn(),
+    canRecoverCardDraft: vi.fn(),
+    openCardEditor: vi.fn(),
+    closeCardEditor: vi.fn(),
+    saveCardEditor: vi.fn(),
+    renameBoard: vi.fn(),
+    deleteBoard: vi.fn(),
     setActiveBoard: vi.fn(),
     setViewMode: vi.fn(),
     getActiveBoard: vi.fn(),
@@ -29,7 +44,10 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('@/store/useBoardStore', () => ({
-  useBoardStore: (selector?: (store: typeof state.store) => unknown) => selector ? selector(state.store) : state.store,
+  useBoardStore: Object.assign(
+    (selector?: (store: typeof state.store) => unknown) => selector ? selector(state.store) : state.store,
+    { getState: () => state.store },
+  ),
 }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => state.auth }));
 vi.mock('@/hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
@@ -67,12 +85,19 @@ beforeEach(() => {
     userId: 'current-user',
   };
   state.boards = [state.activeBoard];
+  state.store.boards = state.boards;
+  state.store.boardAccess = {};
+  state.store.cardEditorSession = null;
   state.store.activeBoardId = state.activeBoard.id;
   state.store.viewMode = 'board';
   state.store.remoteStatus = 'ready';
   state.store.boardSyncStates = {};
   state.store.getActiveBoard.mockImplementation(() => state.activeBoard);
   state.store.getBoardsForUser.mockImplementation(() => state.boards);
+  state.store.getBoardAccess.mockImplementation((id: string) => boardAccessFor(state.boards.find((board) => board.id === id), state.auth.userId, state.store.boardAccess));
+  state.store.canEditBoard.mockImplementation((id: string) => editableAccess(state.store.getBoardAccess(id)));
+  state.store.canManageBoard.mockImplementation((id: string) => state.store.getBoardAccess(id) === 'owner');
+  state.store.canRecoverCardDraft.mockReturnValue(false);
   state.store.refreshFromRemote.mockResolvedValue(undefined);
 });
 
@@ -99,7 +124,7 @@ describe('AppShell board synchronization', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it.each(['pending', 'saving', 'error', 'conflict', 'deleted'] as const)(
+  it.each(['pending', 'saving', 'error', 'conflict', 'deleted', 'readonly'] as const)(
     'warns before leaving when a background board has %s changes',
     (status) => {
       state.store.boardSyncStates = {
@@ -110,6 +135,22 @@ describe('AppShell board synchronization', () => {
       expect(attemptToLeave().defaultPrevented).toBe(true);
     },
   );
+
+  it('shows retained readonly drafts with recovery actions and blocks editable Kanban presentation', () => {
+    state.activeBoard!.userId = 'board-owner';
+    state.store.boardAccess['current-board'] = 'viewer';
+    state.store.boardSyncStates['current-board'] = { status: 'readonly', message: 'Your editing access changed. Your local draft is kept.' };
+    renderAppShell();
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Your local draft is kept.');
+    expect(screen.getByRole('button', { name: 'Save as a new board' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Discard local draft' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveTextContent('Read-only board');
+    expect(screen.getByRole('textbox', { name: 'Search cards' })).toBeInTheDocument();
+    expect(screen.queryByText('Kanban board content')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry save' })).not.toBeInTheDocument();
+    expect(attemptToLeave().defaultPrevented).toBe(true);
+  });
 
   it('only warns while changes remain and removes the warning on unmount', () => {
     state.store.boardSyncStates['background-board'] = { status: 'pending' };

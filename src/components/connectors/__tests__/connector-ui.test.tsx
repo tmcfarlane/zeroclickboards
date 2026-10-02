@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
 import { ConnectorSettings } from '../ConnectorSettings';
 import { ConnectorConsentPage } from '@/pages/ConnectorConsentPage';
@@ -42,6 +42,17 @@ beforeEach(() => {
   state.auth.isLoaded = true;
   state.auth.session = { access_token: 'account-token' } as Session;
 });
+afterEach(() => vi.unstubAllGlobals());
+
+function captureNavigation() {
+  const assign = vi.fn();
+  // JSDOM's Location is non-configurable. Observe only the component's explicit
+  // navigation call while leaving the document and event APIs on the real window.
+  vi.stubGlobal('window', new Proxy(window, { get(target, property) {
+    return property === 'location' ? { assign } : Reflect.get(target, property, target);
+  } }));
+  return assign;
+}
 
 describe('connector consent', () => {
   it('requires explicit board selection and submits only selected eligible boards', async () => {
@@ -87,6 +98,54 @@ describe('connector consent', () => {
     renderConsent();
     await user.click(await screen.findByRole('button', { name: 'Cancel' }));
     expect(await screen.findByRole('link', { name: 'Return to ChatGPT' })).toHaveAttribute('href', 'https://chatgpt.example.com/callback?error=access_denied&state=original');
+  });
+
+  it('returns native approval to the active loopback listener after explicit selection', async () => {
+    const callback = 'http://127.0.0.1:54321/callback?code=fixture&state=original&iss=https%3A%2F%2Fboard.example.com%2F';
+    state.fetch.mockResolvedValueOnce(response({ ...consent, clientName: 'Codex native' })).mockResolvedValueOnce(response({ redirectUrl: callback }));
+    const user = userEvent.setup();
+    renderConsent();
+    await user.click(await screen.findByRole('checkbox', { name: 'Personal website' }));
+    const assign = captureNavigation();
+    await user.click(screen.getByRole('button', { name: 'Allow connection' }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(callback));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('offers the native denial callback without following it automatically', async () => {
+    const callback = 'http://127.0.0.1:54322/callback?error=access_denied&state=original&iss=https%3A%2F%2Fboard.example.com%2F';
+    state.fetch.mockResolvedValueOnce(response({ ...consent, clientName: 'Codex native' })).mockResolvedValueOnce(response({ cancelled: true, redirectUrl: callback }));
+    const user = userEvent.setup();
+    renderConsent();
+    const cancel = await screen.findByRole('button', { name: 'Cancel' });
+    const assign = captureNavigation();
+    await user.click(cancel);
+    expect(await screen.findByRole('link', { name: 'Return to Codex native' })).toHaveAttribute('href', callback);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'http://localhost:54321/callback?code=fixture', 'http://2130706433:54321/callback?code=fixture',
+    'http://user:pass@127.0.0.1:54321/callback?code=fixture', 'http://127.0.0.1:54321/callback?code=fixture#fragment',
+    'https://user:pass@client.example.com/callback?code=fixture',
+  ])('rejects an unsafe approval address without navigating: %s', async callback => {
+    state.fetch.mockResolvedValueOnce(response(consent)).mockResolvedValueOnce(response({ redirectUrl: callback }));
+    const user = userEvent.setup();
+    renderConsent();
+    await user.click(await screen.findByRole('checkbox', { name: 'Personal website' }));
+    const assign = captureNavigation();
+    await user.click(screen.getByRole('button', { name: 'Allow connection' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('invalid return address');
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('completes cancellation without offering an unsafe native return link', async () => {
+    state.fetch.mockResolvedValueOnce(response(consent)).mockResolvedValueOnce(response({ cancelled: true, redirectUrl: 'http://2130706433:54321/callback?error=access_denied' }));
+    const user = userEvent.setup();
+    renderConsent();
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByRole('heading', { name: 'Connection cancelled' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Return to ChatGPT' })).not.toBeInTheDocument();
   });
 
   it.each(['cards:delete', 'constructor', 'toString', '__proto__'])('fails closed for unsupported permission %s', async scope => {

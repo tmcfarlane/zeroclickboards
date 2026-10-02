@@ -2,7 +2,7 @@ import type { Board } from '@/types';
 import { documentsEqual, mergeBoardDocuments, type BoardDocument, type BoardMergeConflict } from './board-merge';
 
 export interface BoardSyncState {
-  status: 'saved' | 'pending' | 'saving' | 'error' | 'conflict' | 'deleted';
+  status: 'saved' | 'pending' | 'saving' | 'error' | 'conflict' | 'deleted' | 'readonly';
   message?: string;
   conflicts?: BoardMergeConflict[];
 }
@@ -14,6 +14,7 @@ export interface BoardSnapshot {
 }
 
 interface SyncHooks {
+  canWrite?: (id: string) => boolean;
   read: (id: string) => Promise<BoardSnapshot | null>;
   write: (id: string, revision: string, document: BoardDocument) => Promise<BoardSnapshot | null>;
   local: (id: string) => BoardDocument | undefined;
@@ -23,6 +24,7 @@ interface SyncHooks {
 }
 
 interface Entry {
+  accessVersion: number;
   base: BoardSnapshot;
   ready: boolean;
   deleted: boolean;
@@ -67,14 +69,40 @@ export class BoardSyncCoordinator {
     return !!local && !documentsEqual(local, entry.base.document);
   }
 
+  private writable(id: string, entry: Entry): boolean {
+    if (this.hooks.canWrite?.(id) !== false) return true;
+    if (entry.timer) clearTimeout(entry.timer);
+    entry.timer = undefined;
+    entry.resolution = undefined;
+    this.setState(id, entry, { status: 'readonly', message: 'This board is read-only. Your unsaved edits are kept in this tab.' });
+    return false;
+  }
+
+  /** Invalidate work dispatched under an older permission, without deleting
+   * the readable board or its draft. Database RLS handles dispatched requests. */
+  accessChanged(id: string) {
+    const entry = this.entries.get(id);
+    if (!entry || !this.active(id, entry)) return;
+    entry.accessVersion++;
+    if (this.hooks.canWrite?.(id) === false) {
+      if (entry.timer) clearTimeout(entry.timer);
+      entry.timer = undefined;
+      entry.resolution = undefined;
+      if (this.hasEdits(id, entry) || entry.flight || entry.status === 'conflict') this.writable(id, entry);
+    } else if (entry.status === 'readonly') {
+      this.setState(id, entry, { status: 'error', message: 'Your edit access was restored. Retry saving to keep your draft.' });
+    }
+  }
+
   register(snapshot: BoardSnapshot, creating = false) {
     if (this.disposed) return;
     const id = snapshot.board.id;
-    this.entries.set(id, { base: structuredClone(snapshot), ready: !creating, deleted: false, status: creating ? 'saving' : 'saved' });
+    this.entries.set(id, { base: structuredClone(snapshot), ready: !creating, deleted: false, accessVersion: 0, status: creating ? 'saving' : 'saved' });
     this.hooks.state(id, { status: creating ? 'saving' : 'saved' });
   }
 
   isCreating(id: string) { return this.entries.get(id)?.ready === false; }
+  isDeleted(id: string) { const entry = this.entries.get(id); return !!entry?.deleted && !entry.forgotten; }
 
   getBaseline(id: string): BoardDocument | undefined {
     if (this.disposed) return undefined;
@@ -124,7 +152,8 @@ export class BoardSyncCoordinator {
       const merged = mergeBoardDocuments(entry.base.document, local, snapshot.document);
       if (merged.conflicts.length) {
         entry.conflictRevision = snapshot.revision;
-        this.setState(id, entry, { status: 'conflict', conflicts: merged.conflicts });
+        if (this.hooks.canWrite?.(id) === false) this.writable(id, entry);
+        else this.setState(id, entry, { status: 'conflict', conflicts: merged.conflicts });
         return;
       }
       entry.base = structuredClone(snapshot);
@@ -140,6 +169,7 @@ export class BoardSyncCoordinator {
   schedule(id: string) {
     const entry = this.entries.get(id);
     if (!entry || !this.active(id, entry)) return;
+    if (!this.writable(id, entry)) return;
     if (entry.timer) clearTimeout(entry.timer);
     this.setState(id, entry, { status: entry.flight || !entry.ready ? 'saving' : 'pending' });
     entry.timer = setTimeout(() => { entry.timer = undefined; void this.flush(id); }, this.delay);
@@ -151,6 +181,8 @@ export class BoardSyncCoordinator {
   async stage(id: string, ancestor: BoardDocument, draft: BoardDocument, acknowledgedAtOpening?: BoardDocument): Promise<void> {
     const entry = this.entries.get(id);
     if (!entry || this.disposed || entry.forgotten) return;
+    if (!entry.deleted && !this.writable(id, entry)) throw new Error('This board is read-only. Your open draft is kept.');
+    const accessVersion = entry.accessVersion;
     const opening = structuredClone(ancestor);
     const submitted = structuredClone(draft);
     const acknowledged = structuredClone(acknowledgedAtOpening ?? ancestor);
@@ -160,6 +192,7 @@ export class BoardSyncCoordinator {
       await entry.flight;
       if (this.disposed || this.entries.get(id) !== entry || entry.forgotten) return;
     }
+    if (!entry.deleted && (!this.writable(id, entry) || entry.accessVersion !== accessVersion)) throw new Error('Your board access changed. Your open draft is kept.');
     // A flight finalizer can schedule another save while stage awaits it.
     if (entry.timer) clearTimeout(entry.timer);
     entry.timer = undefined;
@@ -189,6 +222,7 @@ export class BoardSyncCoordinator {
   resolve(id: string, choice: 'local' | 'remote') {
     const entry = this.entries.get(id);
     if (!entry?.conflictRevision || !this.active(id, entry)) return;
+    if (!this.writable(id, entry)) return;
     entry.resolution = { revision: entry.conflictRevision, choice };
     void this.flush(id);
   }
@@ -196,6 +230,7 @@ export class BoardSyncCoordinator {
   async flush(id: string): Promise<void> {
     const entry = this.entries.get(id);
     if (!entry || !this.active(id, entry) || !entry.ready) return;
+    if (!this.writable(id, entry)) return;
     if (entry.flight) return entry.flight;
     if (entry.timer) clearTimeout(entry.timer);
     entry.timer = undefined;
@@ -204,6 +239,7 @@ export class BoardSyncCoordinator {
     const local = structuredClone(current);
     const base = entry.base;
     const resolution = entry.resolution;
+    const accessVersion = entry.accessVersion;
     entry.resolution = undefined;
     this.setState(id, entry, { status: 'saving' });
     const run = async () => {
@@ -211,6 +247,7 @@ export class BoardSyncCoordinator {
       for (let attempt = 0; attempt < 3; attempt++) {
         const latest = await this.hooks.read(id);
         if (!this.active(id, entry)) return;
+        if (!this.writable(id, entry) || entry.accessVersion !== accessVersion) return;
         if (!latest) { this.remoteDeleted(id); return; }
         if (latest.revision === rejectedRevision) throw new Error('Your edits could not be saved. Check your access and retry.');
         const choice = resolution?.revision === latest.revision ? resolution.choice : undefined;
@@ -224,6 +261,7 @@ export class BoardSyncCoordinator {
           ? latest
           : await this.hooks.write(id, latest.revision, merged.document);
         if (!this.active(id, entry)) return;
+        if (!this.writable(id, entry) || entry.accessVersion !== accessVersion) return;
         if (!saved) { rejectedRevision = latest.revision; continue; }
         const now = this.hooks.local(id);
         if (!now) return;
@@ -245,14 +283,14 @@ export class BoardSyncCoordinator {
       throw new Error('The board keeps changing elsewhere. Your edits are kept; retry when it settles.');
     };
     entry.flight = run().catch((error: unknown) => {
-      if (this.active(id, entry)) this.failed(id, error instanceof Error ? error.message : 'Unable to save changes. Your edits are kept.');
+      if (this.active(id, entry) && this.writable(id, entry)) this.failed(id, error instanceof Error ? error.message : 'Unable to save changes. Your edits are kept.');
     }).finally(() => {
       entry.flight = undefined;
       if (!this.active(id, entry)) return;
       const incoming = entry.incoming;
       entry.incoming = undefined;
       if (incoming) this.observe(incoming);
-      if (entry.status === 'pending') this.schedule(id);
+      if (entry.status === 'pending' && entry.accessVersion === accessVersion) this.schedule(id);
     });
     return entry.flight;
   }
@@ -267,6 +305,22 @@ export class BoardSyncCoordinator {
     } else {
       this.hooks.remove(id);
     }
+  }
+
+  async discard(id: string): Promise<void> {
+    const entry = this.entries.get(id);
+    if (!entry || !this.active(id, entry)) return;
+    if (entry.timer) clearTimeout(entry.timer);
+    entry.timer = undefined;
+    // Tombstone any old acknowledgement before replacing the entry.
+    await entry.flight;
+    if (!this.active(id, entry)) return;
+    const latest = await this.hooks.read(id);
+    if (!this.active(id, entry)) return;
+    this.forget(id);
+    if (!latest) { this.hooks.remove(id); return; }
+    this.register(latest);
+    this.hooks.apply(latest, latest.document);
   }
 
   forget(id: string) {

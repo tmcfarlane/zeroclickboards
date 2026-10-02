@@ -18,6 +18,7 @@ const jwt = (userId: string, exp = Math.floor(Date.now() / 1000) + 3600) => `hea
 const aliceToken = jwt(alice)
 const bobToken = jwt(bob)
 const client = { client_id: 'chatgpt-fixture', client_name: 'ChatGPT fixture', redirect_uris: ['https://chatgpt.test/callback'], token_endpoint_auth_method: 'none' as const }
+const nativeClient = { client_id: 'codex-native-fixture', client_name: 'Codex native fixture', redirect_uris: ['http://127.0.0.1/callback'], token_endpoint_auth_method: 'none' as const }
 const baseEnv = (): NodeJS.ProcessEnv => ({ ZEROBOARD_CONNECTOR_ENABLED: 'true', ZEROBOARD_CONNECTOR_ISSUER: 'https://connector.test',
   ZEROBOARD_CONNECTOR_DATABASE_URL: 'postgres://connector:password@db.test/postgres', ZEROBOARD_CONNECTOR_VAULT_KEY: randomBytes(32).toString('base64'),
   ZEROBOARD_CONNECTOR_PROPOSAL_KEY: 'fixture-proposal-key-with-at-least-32-bytes', ZEROBOARD_CONNECTOR_CLIENTS: JSON.stringify([client]),
@@ -62,10 +63,10 @@ beforeEach(() => {
   }))
 })
 
-async function setup(preparsed = false) {
+async function setup(preparsed = false, connectorConfig = config()) {
   const pg = await database(); cleanup.push(() => pg.close())
   await pg.exec('set role zeroboard_connector')
-  const runtime = createConnectorRuntime(config(), pg)
+  const runtime = createConnectorRuntime(connectorConfig, pg)
   const handler = createConnectorHandler({ runtime: () => runtime, authenticate: async (req) => {
     const token = (req as IncomingMessage).headers.authorization?.replace(/^Bearer /, '')
     if (!token) return null
@@ -116,6 +117,18 @@ describe('connector configuration and encrypted account vault', () => {
     expect(readConnectorConfig({ ...baseEnv(), ZEROBOARD_CONNECTOR_CLIENTS: JSON.stringify([{ ...client, redirect_uris: ['https://chatgpt.test/callback?connector=fixture'] }]) })?.clients[0].redirect_uris[0]).toBe('https://chatgpt.test/callback?connector=fixture')
     expect(sessionExpiry(jwt(alice, Math.floor(Date.now()/1000) + 60)) - Date.now()).toBeLessThanOrEqual(60000)
     expect(() => sessionExpiry(jwt(alice, 0))).toThrow()
+  })
+  it('accepts separate native public clients but rejects aliases, credentials, fragments and non-loopback HTTP', () => {
+    const env = baseEnv()
+    const configured = readConnectorConfig({ ...env, ZEROBOARD_CONNECTOR_CLIENTS: JSON.stringify([client, nativeClient]) })!
+    expect(configured.clients.map(entry => entry.client_id)).toEqual([client.client_id, nativeClient.client_id])
+    expect(configured.clients[1].redirect_uris).toEqual(['http://127.0.0.1/callback'])
+    for (const callback of ['http://evil.test/callback', 'http://localhost/callback', 'http://[::1]/callback',
+      'http://2130706433/callback', 'http://0x7f000001/callback', 'http://127.1/callback',
+      'http://user:pass@127.0.0.1/callback', 'http://@127.0.0.1/callback', 'http://127.0.0.1/callback#',
+      'http://127.0.0.1:0/callback', 'http://127.0.0.1:65536/callback', 'http://127.0.0.1/other/../callback']) {
+      expect(() => readConnectorConfig({ ...env, ZEROBOARD_CONNECTOR_CLIENTS: JSON.stringify([{ ...nativeClient, redirect_uris: [callback] }]) }), callback).toThrow()
+    }
   })
   it('stores ciphertext, rejects tampering/expiry and denies browser roles', async () => {
     const pg = await database(); cleanup.push(() => pg.close())
@@ -225,6 +238,48 @@ describe('account connector API and durable OAuth flow', () => {
     expect((await post({ action: 'revoke', connectionId: connections[0].id })).status).toBe(200)
     await expect(restarted.oauth.accountForToken(access)).rejects.toThrow(/revoked/)
     expect((await pg.query('select account_ref from zeroboard_oauth.sessions')).rows).toHaveLength(0)
+  })
+  it.each([false,true])('native form authorization and approval preserve active callback ports through the Vercel adapter (preparsed=%s)', async preparsed => {
+    const nativeConfig = readConnectorConfig({ ...baseEnv(), ZEROBOARD_CONNECTOR_CLIENTS: JSON.stringify([client, nativeClient]) })!
+    const { runtime, request, post } = await setup(preparsed, nativeConfig)
+    const verifier = randomBytes(32).toString('base64url')
+    const redirectUri = 'http://127.0.0.1:54321/callback'
+    const params = new URLSearchParams({ client_id: nativeClient.client_id, redirect_uri: redirectUri, response_type: 'code',
+      code_challenge_method: 'S256', code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+      resource: runtime.config.resource.href, scope: 'boards:read', state: 'native-adapter-state' })
+    const authorizeForm = (body: URLSearchParams) => request('/api/connector?route=authorize', { method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: body.toString() })
+    const malicious = new URLSearchParams(params)
+    malicious.set('redirect_uri', 'http://user:pass@127.0.0.1:54321/callback#fragment')
+    malicious.set('response_type', 'token')
+    const rejected = await authorizeForm(malicious)
+    expect(rejected.status).toBe(400); expect(rejected.headers.location).toBeUndefined()
+    expect(rejected.json()).toMatchObject({ error: 'invalid_request' })
+    const protocolError = new URLSearchParams(params); protocolError.set('response_type', 'token')
+    const error = await authorizeForm(protocolError)
+    expect(error.status).toBe(302)
+    const errorCallback = new URL(error.headers.location!)
+    expect(errorCallback.origin + errorCallback.pathname).toBe(redirectUri)
+    expect(errorCallback.searchParams.get('iss')).toBe(runtime.config.issuer.href)
+    expect(errorCallback.searchParams.get('state')).toBe('native-adapter-state')
+    expect(errorCallback.searchParams.has('code')).toBe(false)
+    const authorized = await authorizeForm(params)
+    expect(authorized.status).toBe(302)
+    const pending = new URL(authorized.headers.location!).searchParams.get('request')!
+    const approved = await post({ action: 'approve', request: pending, boardIds: ['owned'] })
+    expect(approved.status).toBe(200)
+    const callback = new URL(approved.json().redirectUrl as string)
+    expect(callback.origin + callback.pathname).toBe(redirectUri)
+    expect(callback.searchParams.get('iss')).toBe(runtime.config.issuer.href)
+    expect(callback.searchParams.get('state')).toBe('native-adapter-state')
+    const exchange = (actualRedirect = redirectUri) => request('/api/connector?route=token', { method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: nativeClient.client_id,
+        grant_type: 'authorization_code', code: callback.searchParams.get('code')!, code_verifier: verifier,
+        redirect_uri: actualRedirect, resource: runtime.config.resource.href }).toString() })
+    expect((await exchange('http://127.0.0.1:54322/callback')).status).toBe(400)
+    const tokens = await exchange(); expect(tokens.status).toBe(200)
+    expect((await runtime.oauth.accountForToken(tokens.json().access_token as string)).grant.boardIds).toEqual(['owned'])
+    expect((await exchange()).status).toBe(400)
   })
   it('cancels once and returns only the stored callback with state and access_denied', async () => {
     const { post, authorize } = await setup()

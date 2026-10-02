@@ -7,10 +7,14 @@ export function ActiveCardEditor() {
   const session = useBoardStore((state) => state.cardEditorSession);
   const close = useBoardStore((state) => state.closeCardEditor);
   const save = useBoardStore((state) => state.saveCardEditor);
+  const canEdit = useBoardStore((state) => session ? state.canEditBoard(session.boardId) : false);
+  const canRecover = useBoardStore((state) => session ? state.canRecoverCardDraft(session.boardId) : false);
   const { logActivity } = useActivityLogger();
   if (!session) return null;
 
   const handleSave = (data: CardEditorSaveData, initialForm?: CardEditorSaveData) => {
+    const store = useBoardStore.getState();
+    if (!store.canEditBoard(session.boardId) && !store.canRecoverCardDraft(session.boardId)) return;
     const previous = initialForm ?? session.card;
     if (data.title !== previous.title) {
       logActivity(session.cardId, 'renamed', { from: previous.title, to: data.title });
@@ -27,6 +31,7 @@ export function ActiveCardEditor() {
 
   const handleDelete = () => {
     const store = useBoardStore.getState();
+    if (!store.canEditBoard(session.boardId)) return;
     const column = store.boards.find((board) => board.id === session.boardId)?.columns
       .find((candidate) => candidate.cards.some((card) => card.id === session.cardId));
     if (column) store.removeCard(session.boardId, column.id, session.cardId);
@@ -39,10 +44,11 @@ export function ActiveCardEditor() {
       isOpen
       onClose={close}
       onSave={handleSave}
-      onDelete={handleDelete}
       mode="edit"
       cardId={session.cardId}
       initialData={session.card}
+      accessMessage={!canEdit && !canRecover ? 'You no longer have editing access to this board. Your form is kept here; copy anything you need before closing it.' : undefined}
+      onDelete={canEdit ? handleDelete : undefined}
     />
   );
 }

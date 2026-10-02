@@ -15,6 +15,7 @@ interface ArchiveViewProps {
 
 export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
   const { boards, restoreCard, removeCard } = useBoardStore();
+  const canEdit = useBoardStore((state) => state.canEditBoard(boardId));
   const { logActivity } = useActivityLogger();
 
   const archived = useMemo(() => {
@@ -38,6 +39,7 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
               variant="ghost"
               size="sm"
               onClick={() => {
+                if (!useBoardStore.getState().canEditBoard(boardId)) return;
                 const snapshot = archived.map(({ card, columnId }) => ({ card: structuredClone(card), columnId }));
                 // Suppress individual undo actions
                 useUndoStore.setState({ _skipRecord: true });
@@ -47,6 +49,7 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
                 useUndoStore.getState().pushAction({
                   description: `Delete ${snapshot.length} archived cards`,
                   undo: () => {
+                    if (!useBoardStore.getState().canEditBoard(boardId)) return;
                     snapshot.forEach(({ card, columnId }) => {
                       useBoardStore.setState((state) => ({
                         boards: state.boards.map((b) =>
@@ -66,6 +69,7 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
                     useBoardStore.getState().syncBoard(boardId);
                   },
                   redo: () => {
+                    if (!useBoardStore.getState().canEditBoard(boardId)) return;
                     snapshot.forEach(({ card, columnId }) => {
                       useBoardStore.getState().removeCard(boardId, columnId, card.id);
                     });
@@ -73,11 +77,13 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
                 });
               }}
               className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 h-7 px-2 mr-4"
+              disabled={!canEdit}
             >
               Delete All
             </Button>
           )}
         </DialogHeader>
+        {!canEdit && <p role="alert" className="text-sm text-[#A8B2B2]">This board is read-only. Archived cards cannot be changed.</p>}
         <div className="overflow-hidden">
           <div className="space-y-2">
             {archived.length === 0 ? (
@@ -99,10 +105,13 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => {
+                            if (!useBoardStore.getState().canEditBoard(boardId)) return;
                             logActivity(card.id, 'restored', {});
                             restoreCard(boardId, columnId, card.id);
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity border-white/10 text-[#F2F7F7] hover:bg-white/5 p-2"
+                          aria-label={`Restore ${card.title}`}
+                          disabled={!canEdit}
+                          className="opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity border-white/10 text-[#F2F7F7] hover:bg-white/5 p-2"
                         >
                           <ArchiveRestore className="w-4 h-4" />
                         </Button>
@@ -116,7 +125,9 @@ export function ArchiveView({ boardId, open, onOpenChange }: ArchiveViewProps) {
                           variant="destructive"
                           size="sm"
                           onClick={() => removeCard(boardId, columnId, card.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 p-2"
+                          aria-label={`Delete ${card.title}`}
+                          disabled={!canEdit}
+                          className="opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 p-2"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

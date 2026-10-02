@@ -22,20 +22,19 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CardEditor, type CardEditorSaveData } from './CardEditor';
 
 interface KanbanColumnProps {
   boardId: string;
   column: Column;
   onHide?: () => void;
   isDragOver?: boolean;
+  onAddCard: () => void;
 }
 
-export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColumnProps) {
-  const { renameColumn, removeColumn, addCard, archiveAllCards } = useBoardStore();
+export function KanbanColumn({ boardId, column, onHide, isDragOver, onAddCard }: KanbanColumnProps) {
+  const { renameColumn, removeColumn, archiveAllCards } = useBoardStore();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isAddCardOpen, setIsAddCardOpen] = useState(false);
   const [newTitle, setNewTitle] = useState(column.title);
 
   const {
@@ -69,17 +68,6 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
   const handleDelete = () => {
     removeColumn(boardId, column.id);
     setIsDeleteDialogOpen(false);
-  };
-
-  const handleAddCard = (data: CardEditorSaveData) => {
-    addCard(boardId, column.id, data.title, data.content, data.targetDate, {
-      description: data.description,
-      labels: data.labels,
-      coverImage: data.coverImage,
-      attachments: data.attachments,
-      recurrence: data.recurrence,
-    });
-    setIsAddCardOpen(false);
   };
 
   return (
@@ -198,7 +186,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
           {/* Add Card Button */}
           <div className="p-2 border-t border-white/5">
             <Button
-              onClick={() => setIsAddCardOpen(true)}
+                  onClick={onAddCard}
               variant="ghost"
               className="w-full h-9 justify-start text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"
             >
@@ -274,12 +262,6 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
       </Dialog>
 
       {/* Add Card Dialog */}
-      <CardEditor
-        isOpen={isAddCardOpen}
-        onClose={() => setIsAddCardOpen(false)}
-        onSave={handleAddCard}
-        mode="create"
-      />
 
     </>
   );

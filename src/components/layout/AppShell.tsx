@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +11,10 @@ import { BoardSkeleton } from '@/components/board/BoardSkeleton';
 import { ActiveCardEditor } from '@/components/board/ActiveCardEditor';
 import { CardEditor, type CardEditorSaveData } from '@/components/board/CardEditor';
 import { BoardSyncNotice } from '@/components/board/BoardSyncNotice';
+import { BoardSelector } from '@/components/board/BoardSelector';
+import { ReadOnlyBoard } from '@/components/board/ReadOnlyBoard';
+import { ViewToggle } from '@/components/board/ViewToggle';
+import { Input } from '@/components/ui/input';
 import { TimelineView } from '@/components/timeline/TimelineView';
 import { AIAssistant } from '@/components/ai/AIAssistant';
 import { UserProfile } from '@/components/auth/UserProfile';
@@ -41,6 +45,9 @@ export function AppShell() {
   } = useBoardStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newCardTarget, setNewCardTarget] = useState<{ boardId: string; columnId: string } | null>(null);
+  const [searchBoardId, setSearchBoardId] = useState<string | null>(null);
+  const [viewerSearch, setViewerSearch] = useState('');
+  const viewerSearchRef = useRef<HTMLInputElement>(null);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -52,10 +59,11 @@ export function AppShell() {
   const userBoards = getBoardsForUser();
   const hasUnsavedChanges = !!cardEditorSession || Object.values(boardSyncStates).some((state) => state.status !== 'saved');
   const repoUrl = import.meta.env.VITE_GITHUB_REPO_URL as string | undefined;
-  const searchInputId = 'board-search-input';
+  const canEditActiveBoard = !!activeBoard && useBoardStore.getState().canEditBoard(activeBoard.id);
 
   useKeyboardShortcuts({
     onNewCard: () => {
+      if (!activeBoard || !useBoardStore.getState().canEditBoard(activeBoard.id)) return;
       const column = activeBoard?.columns.find((candidate) => !activeBoard.hiddenColumnIds?.includes(candidate.id));
       if (activeBoard && column) {
         setNewCardTarget({ boardId: activeBoard.id, columnId: column.id });
@@ -64,17 +72,26 @@ export function AppShell() {
       }
     },
     onSearch: () => {
-      const el = document.getElementById(searchInputId) as HTMLInputElement | null;
-      el?.focus();
+      if (!activeBoard) return;
+      setViewMode('board');
+      setSearchBoardId(activeBoard.id);
     },
     onToggleAI: () => setIsAIOpen((v) => { if (!v && viewMode === 'timeline') setViewMode('board'); return !v; }),
     onBoardView: () => setViewMode('board'),
     onTimelineView: () => { setViewMode('timeline'); setIsAIOpen(false); },
     onNewBoard: () => setIsCreateDialogOpen(true),
     onShowShortcuts: () => setIsShortcutsOpen(true),
-    onUndo: () => useUndoStore.getState().undo(),
-    onRedo: () => useUndoStore.getState().redo(),
+    onUndo: () => { if (canEditActiveBoard) useUndoStore.getState().undo(); },
+    onRedo: () => { if (canEditActiveBoard) useUndoStore.getState().redo(); },
   });
+
+  useEffect(() => {
+    if (searchBoardId && searchBoardId !== activeBoard?.id) setSearchBoardId(null);
+    else if (searchBoardId && !canEditActiveBoard && viewMode === 'board') {
+      viewerSearchRef.current?.focus();
+      setSearchBoardId(null);
+    }
+  }, [searchBoardId, activeBoard?.id, canEditActiveBoard, viewMode]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -131,19 +148,20 @@ export function AppShell() {
 
   const handleKeyboardAddCard = (data: CardEditorSaveData) => {
     if (!newCardTarget) return;
+    if (!useBoardStore.getState().canEditBoard(newCardTarget.boardId)) return;
     const board = useBoardStore.getState().boards.find((candidate) => candidate.id === newCardTarget.boardId);
     if (!board?.columns.some((column) => column.id === newCardTarget.columnId)) {
       toast.error('This column is no longer available. Close this card and choose another column.');
       return;
     }
-    addCard(newCardTarget.boardId, newCardTarget.columnId, data.title, data.content, data.targetDate, {
+    const cardId = addCard(newCardTarget.boardId, newCardTarget.columnId, data.title, data.content, data.targetDate, {
       description: data.description,
       labels: data.labels,
       coverImage: data.coverImage,
       attachments: data.attachments,
       recurrence: data.recurrence,
     });
-    setNewCardTarget(null);
+    if (cardId) setNewCardTarget(null);
   };
 
   if (!isLoaded) {
@@ -219,11 +237,28 @@ export function AppShell() {
               <BoardSkeleton />
             ) : activeBoard ? (
               viewMode === 'board' ? (
+                !canEditActiveBoard ? (
+                  <div className="h-full min-h-0 flex flex-col">
+                    <div className="px-3 py-3 border-b border-white/10 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <BoardSelector onCreateBoardClick={() => setIsCreateDialogOpen(true)} />
+                        <ViewToggle />
+                      </div>
+                      <p className="text-xs text-[#A8B2B2]">Read-only board</p>
+                      <Input ref={viewerSearchRef} aria-label="Search cards" placeholder="Search cards..." value={viewerSearch} onChange={(event) => setViewerSearch(event.target.value)} className="bg-white/5 border-white/10" />
+                    </div>
+                    <div className="flex-1 min-h-0"><ReadOnlyBoard board={activeBoard} searchQuery={viewerSearch} /></div>
+                  </div>
+                ) : (
                 <KanbanBoard
                   board={activeBoard}
                   onAIClick={handleAIClick}
                   onNewBoardClick={() => setIsCreateDialogOpen(true)}
+                  onNewCardClick={(columnId) => { if (useBoardStore.getState().canEditBoard(activeBoard.id)) setNewCardTarget({ boardId: activeBoard.id, columnId }); }}
+                  searchRequested={searchBoardId === activeBoard.id}
+                  onSearchHandled={() => setSearchBoardId(null)}
                 />
+                )
               ) : (
                 <TimelineView
                   board={activeBoard}
@@ -256,7 +291,7 @@ export function AppShell() {
 
       <ActiveCardEditor />
       {newCardTarget && (
-        <CardEditor isOpen onClose={() => setNewCardTarget(null)} onSave={handleKeyboardAddCard} mode="create" />
+        <CardEditor isOpen onClose={() => setNewCardTarget(null)} onSave={handleKeyboardAddCard} mode="create" accessMessage={!useBoardStore.getState().canEditBoard(newCardTarget.boardId) ? 'You no longer have editing access to this board. Your form is kept here; copy anything you need before closing it.' : undefined} />
       )}
       <AIUpgradePrompt isOpen={isUpgradePromptOpen} onOpenChange={setIsUpgradePromptOpen} />
       <KeyboardShortcutsHelp isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />

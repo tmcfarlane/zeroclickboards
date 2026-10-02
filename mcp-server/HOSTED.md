@@ -13,7 +13,7 @@ Set these only in Vercel server configuration. Never prefix private values with 
 | `ZEROBOARD_CONNECTOR_DATABASE_URL` | TLS Postgres connection for a dedicated connector login inheriting `zeroboard_connector`. Use the Supabase pooler appropriate to the deployment; prepared statements are disabled. |
 | `ZEROBOARD_CONNECTOR_VAULT_KEY` | Stable, randomly generated 32-byte AES key encoded as canonical base64. Rotation invalidates existing encrypted sessions. |
 | `ZEROBOARD_CONNECTOR_PROPOSAL_KEY` | Stable random server secret of at least 32 bytes; rotation invalidates outstanding card previews. |
-| `ZEROBOARD_CONNECTOR_CLIENTS` | JSON array of actual predefined public clients: `client_id`, `client_name`, exact `redirect_uris`, and `token_endpoint_auth_method: "none"`. Obtain the ID/callback from the chosen ChatGPT/Codex setup; there are no invented defaults. |
+| `ZEROBOARD_CONNECTOR_CLIENTS` | JSON array of predefined public clients: `client_id`, `client_name`, `redirect_uris`, and `token_endpoint_auth_method: "none"`. HTTPS callbacks match exactly. A separate native Codex client may register literal `http://127.0.0.1/callback`; only its listener port may vary. No default client is provisioned. |
 | `ZEROBOARD_CONNECTOR_ALLOWED_ORIGINS` | Optional JSON array of exact HTTPS browser origins that may call the OAuth/MCP resource. The issuer origin is always allowed. |
 | `SUPABASE_URL` | HTTPS Supabase project URL. Existing `VITE_SUPABASE_URL` is a fallback. |
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable key. Existing `SUPABASE_ANON_KEY` / `VITE_SUPABASE_ANON_KEY` are compatible fallbacks. Secret/service-role keys are rejected. |
@@ -40,9 +40,37 @@ Schedule removal of expired rows from `zeroboard_oauth.records` and `zeroboard_o
 
 The hosted connection lasts at most **15 minutes**, capped by the current Supabase access token's expiry. It deliberately neither accepts, stores nor rotates the browser's refresh token. This preserves the browser's session refresh ownership. Reconnect by approving the connection again using the current signed-in browser session. An independent long-lived account session would require a separate authentication design; this implementation does not promise it.
 
-The OAuth flow uses Authorization Code plus S256 PKCE, exact predefined public clients/callbacks, resource binding, one-time durable pending requests/codes, and opaque short-lived tokens. Dynamic client registration and client-ID metadata documents are not advertised or fetched. Changing the registered callback or resource invalidates outstanding requests/codes before approval or exchange. Metadata advertises authorization-code grants only; OAuth refresh grants are disabled.
+The OAuth flow uses Authorization Code plus S256 PKCE, predefined public clients, resource binding, one-time durable pending requests/codes, and opaque short-lived tokens. HTTPS callbacks match exactly. Native HTTP callbacks must use literal `127.0.0.1`, with exactly the registered path/query; their listener port alone may vary. Dynamic client registration and client-ID metadata documents are not advertised or fetched. Removing a callback or changing its path/query or resource invalidates outstanding requests/codes before approval or exchange. Token exchange must match the actual redirect URI saved at authorization, including its active native port. Metadata advertises authorization-code grants only; OAuth refresh grants are disabled.
 
 Authorization metadata advertises RFC 9207 issuer identification. Approval, cancellation, and SDK protocol-error callbacks include `iss` matching the discovery document's exact issuer, with state preserved. This permits eligible OpenAI clients to use their documented stable callback instead of a callback-ID-specific URL; still copy the exact callback from client setup into the predefined allowlist. Do not advertise issuer identification without returning it on success and error callbacks.
+
+### Native Codex client setup
+
+The native desktop app/CLI direct-MCP flow uses a local HTTP listener rather than ChatGPT's HTTPS management callback. Add a separate public native client to the configured array; keep the ChatGPT client and its exact HTTPS callback separate. For example, an operator may choose this public ID (it is not an OpenAI-assigned identifier):
+
+```json
+{
+  "client_id": "zeroboard-codex-native",
+  "client_name": "Codex native",
+  "redirect_uris": ["http://127.0.0.1/callback"],
+  "token_endpoint_auth_method": "none"
+}
+```
+
+After the hosted runtime is configured and available, use that same public ID in Codex:
+
+```sh
+codex mcp add zeroboard \
+  --url https://board.zeroclickdev.ai/mcp \
+  --oauth-client-id zeroboard-codex-native \
+  --oauth-resource https://board.zeroclickdev.ai/mcp
+```
+
+Register the exact callback displayed by `codex mcp add`. With issuer identification, new predefined clients can save the stable `/callback` path. Older entries without a saved callback may use a server-specific path; register that exact path or explicitly save the documented native callback in `mcp_servers.<name>.oauth.callback_url`. Do not allow wildcard paths. The app and CLI share MCP configuration on the same host. Plugin HTTP manifests use `oauth.clientId` and `oauth.callbackUrl` for the corresponding values; the existing local stdio bundle remains a separate setup.
+
+Codex inserts the active listener port into `http://127.0.0.1/callback` during authorization. Leave the registered URL without a port for normal local setup. A fixed callback port requires matching listener configuration (`oauth.callback_port`); a port in the URL alone does not configure the listener. The narrow native policy rejects `localhost`, IPv6, decimal/hex/octal aliases, unrelated HTTP hosts, credentials, fragments and path normalization. The shared browser/server validator and authorization preflight enforce this before the SDK can redirect protocol errors. HTTPS port differences still fail, including HTTPS loopback URLs.
+
+These callback/configuration behaviors were checked against the [official Codex MCP documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) and [configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference) on October 2, 2026. Installed CLI help confirmed the public-client/resource flags; native account linking still requires a separately provisioned deployment and disposable-account smoke verification.
 
 The consent page authenticates through the existing Supabase account and shows the requesting client, exact scopes and available owned/member boards. Public/embed visibility alone never makes a board eligible. Viewers can select read access; `cards:add` requires owner/editor access for every selected board. Approval/revocation require the user's bearer token and the exact app Origin. The backend derives account identity from validated `getUser`, never a submitted user ID. It checks board authorization again before the atomic pending take. An unsuccessful approval removes its provisional vault entry. Cancel consumes the pending request and returns the stored, still-registered callback with `error=access_denied` and the original state; the page can offer a Return to client link. No code/token is issued on cancel.
 
@@ -59,7 +87,7 @@ MCP HTTP is stateless and creates a new server, transport and RLS client for eve
 
 ## Verification and remaining deployment work
 
-The PR's backend tests run actual private-schema migrations and role policies in isolated PostgreSQL. They verify ciphertext/expiry/tampering, browser-role denials, readiness privilege failures, authenticated board eligibility, foreign/viewer write denials, cross-site requests, exact callbacks/resources across configuration changes, S256/replay behavior, raw and pre-parsed Vercel request bodies, `/mcp` discovery/initialize/tool reads, selected-board isolation and revocation. Existing MCP tests separately verify editor RLS and approved card-batch behavior. Browser fixtures validate the settings/consent states without touching real boards or production credentials.
+The PR's backend tests run actual private-schema migrations and role policies in isolated PostgreSQL. They verify ciphertext/expiry/tampering, browser-role denials, readiness privilege failures, authenticated board eligibility, foreign/viewer write denials, cross-site requests, callback/resource revalidation across configuration changes, S256/replay behavior, raw and pre-parsed Vercel request bodies, `/mcp` discovery/initialize/tool reads, selected-board isolation and revocation. Native regressions cover two listener ports, exact token-exchange redirects, protocol-error callbacks, and adversarial URL shapes rejected without redirects. Existing MCP tests separately verify editor RLS and approved card-batch behavior. Consent UI tests cover native approval/denial and unsafe return-address rejection without touching real boards or production credentials.
 
 Before enabling a real deployment: provision the private login/secrets and exact client configuration; inspect deployed board UPDATE policies; apply migrations to staging; run Supabase advisors; validate the connector with MCP Inspector and an installed ChatGPT/Codex client against disposable boards; then enable the production configuration. Add appropriate edge request limits and OpenAI client validation for public distribution. Publishing identity/domain, privacy/terms, listing assets, review cases, release notes and reviewer accounts remain directory requirements. No directory submission, production migration, account identity linking or AI billing change occurs in this PR.
 

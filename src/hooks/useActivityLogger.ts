@@ -9,6 +9,9 @@ export function useActivityLogger() {
   const logActivity = useCallback(
     (cardId: string, type: string, data: Record<string, unknown> = {}) => {
       if (!currentUserId) return;
+      const store = useBoardStore.getState();
+      const board = store.boards.find((candidate) => candidate.columns.some((column) => column.cards.some((card) => card.id === cardId)));
+      if (store.currentUserId !== currentUserId || !board || !store.canEditBoard(board.id)) return;
       cardsApi.addActivity({
         card_id: cardId,
         user_id: currentUserId,

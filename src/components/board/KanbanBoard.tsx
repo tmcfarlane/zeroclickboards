@@ -44,16 +44,19 @@ import { useIsCompact } from '@/hooks/use-is-compact';
 import { MobileColumnTabs } from './MobileColumnTabs';
 import { MobileBottomBar } from './MobileBottomBar';
 import { MobileSearchOverlay } from './MobileSearchOverlay';
-import { CardEditor, type CardEditorSaveData } from './CardEditor';
 
 interface KanbanBoardProps {
   board: Board;
   onAIClick?: () => void;
   onNewBoardClick: () => void;
+  onNewCardClick: (columnId: string) => void;
+  searchRequested?: boolean;
+  onSearchHandled?: () => void;
 }
 
-export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardProps) {
-  const { addColumn, addCard, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
+export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick, searchRequested, onSearchHandled }: KanbanBoardProps) {
+  const canManage = useBoardStore((state) => state.canManageBoard(board.id));
+  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
   const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,11 +70,20 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
   const hiddenColumnIds = board.hiddenColumnIds ?? [];
+  const visibleColumns = board.columns.filter(col => !hiddenColumnIds.includes(col.id));
+  const hiddenColumns = board.columns.filter(col => hiddenColumnIds.includes(col.id));
   const isCompact = useIsCompact();
   const [activeColumnIndex, setActiveColumnIndex] = useState(0);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isMobileAddCardOpen, setIsMobileAddCardOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!searchRequested) return;
+    if (searchInputRef.current?.getClientRects().length) searchInputRef.current.focus();
+    else setIsMobileSearchOpen(true);
+    onSearchHandled?.();
+  }, [searchRequested, onSearchHandled]);
 
   const hideColumn = (columnId: string) => {
     if (hiddenColumnIds.includes(columnId)) return;
@@ -157,7 +169,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
       container.removeEventListener('pointerup', onPointerUp);
       container.removeEventListener('pointercancel', onPointerUp);
     };
-  }, []);
+  }, [isCompact, visibleColumns.length]);
 
   const ALL_LABELS: CardLabel[] = ['red', 'yellow', 'green', 'blue', 'purple', 'gray'];
   const LABEL_COLORS: Record<CardLabel, string> = {
@@ -390,22 +402,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
     }
   };
 
-  const handleMobileAddCard = (data: CardEditorSaveData) => {
-    if (!activeColumn) return;
-    addCard(board.id, activeColumn.id, data.title, data.content, data.targetDate, {
-      description: data.description,
-      labels: data.labels,
-      coverImage: data.coverImage,
-      attachments: data.attachments,
-      recurrence: data.recurrence,
-    });
-    setIsMobileAddCardOpen(false);
-  };
-
   const now = new Date();
-
-  const visibleColumns = board.columns.filter(col => !hiddenColumnIds.includes(col.id));
-  const hiddenColumns = board.columns.filter(col => hiddenColumnIds.includes(col.id));
 
   const filteredColumns = visibleColumns.map((column) => ({
     ...column,
@@ -508,10 +505,10 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
                   <span className="ml-auto w-2 h-2 bg-[#78fcd6] rounded-full" />
                 )}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+              {canManage && <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
                 <Share2 className="w-4 h-4" />
                 Share
-              </DropdownMenuItem>
+              </DropdownMenuItem>}
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem onClick={() => setIsAddColumnDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
                 <Plus className="w-4 h-4" />
@@ -623,6 +620,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
             <Input
               id="board-search-input"
+              ref={searchInputRef}
               aria-label="Search cards"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -720,7 +718,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
           </Popover>
 
           {/* Share Board */}
-          <Button
+          {canManage && <Button
             type="button"
             variant="ghost"
             onClick={() => setIsShareDialogOpen(true)}
@@ -728,7 +726,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
           >
             <Share2 className="w-4 h-4 mr-1.5" />
             Share
-          </Button>
+          </Button>}
 
           {/* More Options */}
           <DropdownMenu>
@@ -839,7 +837,15 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         {/* Mobile Column Tabs (inside DndContext so tabs are droppable) */}
         <MobileColumnTabs columns={filteredColumns} activeIndex={activeColumnIndex} onTabChange={setActiveColumnIndex} />
 
-        {isCompact ? (
+        {visibleColumns.length === 0 ? (
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 px-5 text-center text-[#A8B2B2]">
+            <p className="text-sm">{hiddenColumns.length ? 'All columns are hidden' : 'No columns yet'}</p>
+            <p className="text-xs">{hiddenColumns.length ? 'Show your columns to view and add cards.' : 'Add a column to start organising cards.'}</p>
+            <Button variant="outline" className="border-white/10 text-[#78fcd6]" onClick={() => hiddenColumns.length ? setBoardHiddenColumns(board.id, []) : setIsAddColumnDialogOpen(true)}>
+              {hiddenColumns.length ? 'Show all columns' : 'Add Column'}
+            </Button>
+          </div>
+        ) : isCompact ? (
           activeColumn && (
             <div ref={mobileCardListRef} className="flex-1 overflow-y-auto">
               <div className="p-3 space-y-2">
@@ -870,6 +876,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
                     column={column}
                     onHide={() => hideColumn(column.id)}
                     isDragOver={dragOverColumnId === column.id}
+                    onAddCard={() => onNewCardClick(column.id)}
                   />
                 ))}
               </SortableContext>
@@ -889,10 +896,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
       </DndContext>
 
       {/* Mobile Bottom Bar */}
-      <MobileBottomBar onAIClick={onAIClick} onAddCard={() => setIsMobileAddCardOpen(true)} />
-
-      {/* Mobile Add Card Dialog */}
-      <CardEditor isOpen={isMobileAddCardOpen} onClose={() => setIsMobileAddCardOpen(false)} onSave={handleMobileAddCard} mode="create" />
+      <MobileBottomBar onAIClick={onAIClick} canAddCard={!!activeColumn} onAddCard={() => { if (activeColumn) onNewCardClick(activeColumn.id); }} />
 
       {/* Share Board Dialog */}
       <ShareBoardDialog
