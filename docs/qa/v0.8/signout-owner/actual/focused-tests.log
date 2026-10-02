@@ -1,0 +1,14 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts
+
+ ✓ src/components/auth/__tests__/signOut.test.tsx (6 tests) 1317ms
+     ✓ keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry  484ms
+     ✓ supports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry  438ms
+ ✓ src/hooks/__tests__/useSignOutAction.test.tsx (14 tests) 367ms
+
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
+   Start at  06:43:11
+   Duration  4.61s (transform 594ms, setup 174ms, import 1.14s, tests 1.68s, environment 1.37s)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/focused-tests.json

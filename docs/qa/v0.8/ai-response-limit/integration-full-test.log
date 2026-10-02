@@ -1,0 +1,710 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit
+
+ ✓ src/lib/__tests__/board-merge.test.ts (63 tests) 189ms
+stdout | api/_lib/__tests__/connector.test.ts
+{"step":"auth-module:loaded","ts":1790946345588}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+
+ ✓ src/store/__tests__/boardSyncIntegration.test.ts (70 tests) 1363ms
+ ✓ src/lib/__tests__/board-sync.test.ts (51 tests) 142ms
+ ✓ src/components/board/__tests__/CardEditor.test.tsx (53 tests) 19911ms
+     ✓ waits before adding a checklist item with {"isComposing":true,"keyCode":13}  484ms
+     ✓ keeps the attachment name draft for composing Enter and Escape with {"isComposing":true,"keyCode":13}  378ms
+     ✓ keeps a checklist separate when its description is edited  825ms
+     ✓ edits a checklist body without changing its items or description  598ms
+     ✓ keeps a body draft when adding a checklist  1803ms
+     ✓ hides and restores a checklist with its item state and metadata intact  1120ms
+     ✓ removes only the chosen item and retains body and other item metadata through hide/show  1190ms
+     ✓ shows dormant checklist items and preserves them during unrelated edits  571ms
+     ✓ displays legacy date 2026-02-28T23:30:00-08:00 as 2026-02-28 without introducing a date edit  616ms
+     ✓ displays legacy date 2024-02-29T00:00:00.123Z as 2024-02-29 without introducing a date edit  445ms
+     ✓ displays legacy date 0099-03-04 as 0099-03-04 without introducing a date edit  304ms
+     ✓ shows invalid saved date 2026-02-30 for repair and preserves it during an unrelated edit  304ms
+     ✓ shows invalid saved date not-a-date for repair and preserves it during an unrelated edit  473ms
+     ✓ shows invalid saved date 2026-02-28T99:30:00Z for repair and preserves it during an unrelated edit  640ms
+     ✓ retains a draft when the native picker reports an incomplete date, then saves a correction  415ms
+     ✓ distinguishes an incomplete empty native value from deliberate date removal  403ms
+     ✓ keeps an invalid interval draft open () and saves after correction  607ms
+     ✓ keeps an invalid interval draft open (0) and saves after correction  483ms
+     ✓ keeps an invalid interval draft open (100) and saves after correction  409ms
+     ✓ keeps an invalid interval draft open (1.5) and saves after correction  325ms
+     ✓ sorts and deduplicates weekdays only after a deliberate schedule edit  433ms
+     ✓ preserves a saved image template image alongside existing attachments without changing the cover  326ms
+     ✓ displays a legacy image under text content without creating a cover or an unrelated form edit  413ms
+     ✓ displays a legacy image under checklist content without creating a cover or an unrelated form edit  336ms
+     ✓ displays a legacy image under image content without creating a cover or an unrelated form edit  342ms
+     ✓ does not revive a cleared cover when an attachment is renamed, including a legacy body image  608ms
+ ✓ api/_lib/__tests__/connector.test.ts (21 tests) 25946ms
+     ✓ stores ciphertext, rejects tampering/expiry and denies browser roles  1373ms
+     ✓ requires every storage privilege and matching backend policies for availability  1030ms
+     ✓ authenticates status and reports unavailable configuration honestly  819ms
+     ✓ reports callback capabilities without relying on public client names or exposing callbacks  812ms
+     ✓ shows only owned/member boards, denies foreign/viewer writes, cross-site approval and refresh-token input  1003ms
+     ✓ persists consent/token flow, one-time PKCE exchange and authenticated revocation (preparsed=false)  3037ms
+     ✓ persists consent/token flow, one-time PKCE exchange and authenticated revocation (preparsed=true)  3387ms
+     ✓ native form authorization and approval preserve active callback ports through the Vercel adapter (preparsed=false)  1808ms
+     ✓ native form authorization and approval preserve active callback ports through the Vercel adapter (preparsed=true)  2121ms
+     ✓ cancels once and returns only the stored callback with state and access_denied  1444ms
+     ✓ rejects durable pending requests and codes after their exact registered callback is removed  992ms
+     ✓ bounds valid SDK payloads and preserves OAuth forms (preparsed=false)  1826ms
+     ✓ bounds valid SDK payloads and preserves OAuth forms (preparsed=true)  2081ms
+     ✓ bounds valid SDK payloads and preserves OAuth forms (preparsed=restored)  2053ms
+     ✓ bounds valid SDK payloads and preserves OAuth forms (preparsed=raw-buffer)  2146ms
+ ✓ src/lib/__tests__/recurrence.test.ts (78 tests) 708ms
+     ✓ matches repeated next dates for every weekday subset, including off-selected initial dates  674ms
+stderr | src/components/layout/__tests__/AppShell.test.tsx > AppShell board synchronization > keeps an entered rename and its focus after a blocked route is cancelled, then leaves once explicitly allowed
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/layout/__tests__/AppShell.test.tsx > AppShell board synchronization > keeps an entered rename and its focus after a blocked route is cancelled, then leaves once explicitly allowed
+A component suspended inside an `act` scope, but the `act` call was not awaited. When testing React components that depend on asynchronous data, you must await the result:
+
+await act(() => ...)
+
+stderr | src/components/layout/__tests__/AppShell.test.tsx > AppShell board synchronization > clears private local forms and an old blocked navigation when the account changes
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/layout/__tests__/AppShell.test.tsx > AppShell unsent AI drafts > guards AI-only text before unload and pathname navigation, retaining it on Stay
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/components/layout/__tests__/AppShell.test.tsx > AppShell unsent AI drafts > retains the same-owner signal on rerender and ignores an obsolete owner report after replacement
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to FocusScope inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to Presence inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to DismissableLayer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/components/layout/__tests__/AppShell.test.tsx (27 tests) 4570ms
+     ✓ warns for an open text draft and removes the warning after explicit cancellation  396ms
+     ✓ keeps an entered rename and its focus after a blocked route is cancelled, then leaves once explicitly allowed  600ms
+     ✓ clears private local forms and an old blocked navigation when the account changes  338ms
+     ✓ allows board query cleanup while retaining the entered text and original save target  411ms
+     ✓ retains the same-owner signal on rerender and ignores an obsolete owner report after replacement  431ms
+ ✓ src/components/connectors/__tests__/connector-ownership.test.tsx (30 tests) 4430ms
+     ✓ ignores success approval after exit replacement  305ms
+     ✓ ignores an old revoke success while a successor confirmation is pending  404ms
+ ✓ src/components/connectors/__tests__/connector-ui.test.tsx (31 tests) 3443ms
+     ✓ requires explicit board selection and submits only selected eligible boards  483ms
+     ✓ asks before revoking and removes the connection only after server confirmation  316ms
+ ✓ src/lib/__tests__/supabase-auth-lock.test.ts (15 tests) 409ms
+ ✓ src/components/ai/__tests__/AIAssistant.test.tsx (20 tests) 3441ms
+     ✓ keeps viewer board commands read-only and does not claim an edit succeeded  393ms
+     ✓ checks access between commands in an AI batch  496ms
+ ✓ src/lib/__tests__/board-io.test.ts (50 tests) 38ms
+ ✓ src/store/__tests__/useBoardStore.test.ts (34 tests) 212ms
+ ✓ src/components/board/__tests__/ActiveCardEditor.test.tsx (17 tests) 13068ms
+     ✓ keeps a typed draft open across a remote move and saves only changed fields onto the moved card  1063ms
+     ✓ survives filtering out the source card and cancels without applying its draft  544ms
+     ✓ opens a fresh session with the newest values after a draft is cancelled  677ms
+     ✓ retains the legacy image as an attachment when the user starts a text body  532ms
+     ✓ keeps the raw saved date 2026-02-28T23:30:00-08:00 during a title-only edit  498ms
+     ✓ keeps the raw saved date 2026-02-30 during a title-only edit  572ms
+     ✓ persists an explicit date change and preserves incoming body text  336ms
+     ✓ persists an explicit date remove and preserves incoming body text  621ms
+     ✓ keeps an implicit monthly day untouched during a title edit (remote clears recurrence: false)  772ms
+     ✓ keeps an implicit monthly day untouched during a title edit (remote clears recurrence: true)  1161ms
+     ✓ saves an edited Description independently from an incoming change to the other field  2529ms
+     ✓ saves an edited Body text independently from an incoming change to the other field  1339ms
+     ✓ opens the persistent editor from the timeline and keeps it open if the timeline unmounts  1411ms
+     ✓ passes the separate body text and legacy attachment migration as the unchanged initial form  394ms
+ ✓ src/store/__tests__/boardConcurrentMutations.test.ts (21 tests) 62ms
+ ✓ src/components/board/__tests__/CreateBoardDialog.async.test.tsx (16 tests) 6330ms
+     ✓ aborts cancellation and preserves a reopened prompt even if the transport still succeeds  1323ms
+     ✓ does not let a superseded response or finally reset a newer pending attempt  663ms
+     ✓ ignores previous-account results without closing the current form or changing usage  300ms
+     ✓ checks cancellation again after waiting for response JSON  611ms
+     ✓ creates the complete initial snapshot before closing, with every card, checklist item, and label  420ms
+     ✓ shows a current failure and allows retry without creating a board  417ms
+     ✓ does not import a previous-account file after its asynchronous read completes  308ms
+     ✓ retains the complete accepted snapshot after reopening and cancelling the creation form  355ms
+     ✓ preserves an accepted board while starting a same-account generation successor  345ms
+     ✓ preserves an accepted board while starting a same-account import successor  315ms
+stdout | api/invite/__tests__/send.test.ts
+{"step":"auth-module:loaded","ts":1790946406579}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+
+ ✓ api/invite/__tests__/send.test.ts (26 tests) 33ms
+ ✓ src/components/auth/__tests__/signOut.test.tsx (6 tests) 2135ms
+     ✓ keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry  740ms
+     ✓ supports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry  731ms
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > describes checklist visibility separately from competing body text
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > describes complete recurrence choices using readable schedules
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > reviews each field and both values without resolving changes on dismissal
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > resolves conflicting values with "'Keep my edits'"
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > resolves conflicting values with "'Use incoming edits'"
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > renders incoming markup as plain text and makes missing or structured values readable
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > closes the review when switching boards, so an old decision cannot affect another board
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+stderr | src/components/board/__tests__/BoardSyncNotice.test.tsx > BoardSyncNotice > closes the review when switching boards, so an old decision cannot affect another board
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+
+ ✓ src/components/board/__tests__/BoardSyncNotice.test.tsx (13 tests) 1675ms
+     ✓ describes checklist visibility separately from competing body text  530ms
+ ✓ api/_lib/__tests__/connector-sql.test.ts (4 tests) 8116ms
+     ✓ drains startup work when a socket disconnects before any query  2094ms
+     ✓ detects the same-socket pipelining made by the unreserved driver  1278ms
+     ✓ does not pipeline on either socket with max=1 and releases errors  1528ms
+     ✓ does not pipeline on either socket with max=2 and releases errors  3214ms
+stdout | api/_lib/__tests__/connector-readiness.test.ts
+{"step":"auth-module:loaded","ts":1790946416370}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+
+ ✓ src/pages/__tests__/SharedBoardPage.test.tsx (10 tests) 931ms
+     ✓ offers a bounded retry when refresh ends ready without the invited board  455ms
+ ✓ api/_lib/__tests__/connector-readiness.test.ts (60 tests) 5871ms
+     ✓ accepts the dedicated login with matching current/session identity and unrelated shared-project functions  1422ms
+ ✓ src/hooks/__tests__/useSignOutAction.test.tsx (7 tests) 620ms
+ ✓ src/lib/__tests__/templates.test.ts (19 tests) 15ms
+ ✓ src/lib/__tests__/apiFetch.test.ts (13 tests) 72ms
+ ✓ src/hooks/__tests__/useKeyboardShortcuts.test.ts (18 tests) 89ms
+ ✓ src/components/board/__tests__/CardActivityFeed.test.tsx (8 tests) 488ms
+     ✓ blocks repeated shortcuts before and after the send button becomes disabled  314ms
+ ✓ api/_lib/__tests__/ai-provider-response-limit.test.ts (8 tests) 95ms
+ ✓ src/lib/__tests__/claude.test.ts (15 tests) 14ms
+ ✓ src/components/board/__tests__/ReadOnlyBoard.test.tsx (13 tests) 262ms
+stdout | src/lib/__tests__/stripe-webhook.test.ts > stripe webhook handler > rejects non-POST requests
+{"step":"auth-module:loaded","ts":1790946429295}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+
+stdout | src/lib/__tests__/stripe-webhook.test.ts > stripe webhook handler > rejects missing stripe-signature
+{"step":"auth-module:loaded","ts":1790946429303}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+
+stdout | src/lib/__tests__/stripe-webhook.test.ts > stripe webhook handler > rejects invalid signature
+{"step":"auth-module:loaded","ts":1790946429303}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+
+stdout | src/lib/__tests__/stripe-webhook.test.ts > stripe webhook handler > handles checkout.session.completed
+{"step":"auth-module:loaded","ts":1790946429304}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+
+stdout | src/lib/__tests__/stripe-webhook.test.ts > stripe webhook handler > handles customer.subscription.updated
+{"step":"auth-module:loaded","ts":1790946429306}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+
+stdout | src/lib/__tests__/stripe-webhook.test.ts > stripe webhook handler > handles customer.subscription.deleted
+{"step":"auth-module:loaded","ts":1790946429306}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+
+stdout | src/lib/__tests__/stripe-webhook.test.ts > stripe webhook handler > handles invoice.payment_failed
+{"step":"auth-module:loaded","ts":1790946429310}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+
+ ✓ src/lib/__tests__/stripe-webhook.test.ts (7 tests) 50ms
+ ✓ src/store/__tests__/useUndoStore.test.ts (15 tests) 12ms
+stdout | src/lib/__tests__/auth-helpers.test.ts > API auth helpers > getHeader > extracts header from Web Request-like object
+{"step":"auth-module:loaded","ts":1790946430503}
+{"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+
+ ✓ src/lib/__tests__/auth-helpers.test.ts (12 tests) 18ms
+ ✓ api/_lib/__tests__/resolve-commands.test.ts (11 tests) 7ms
+ ✓ src/components/connectors/__tests__/connector-api.test.ts (25 tests) 32ms
+ ✓ src/lib/__tests__/calendar-date.test.ts (6 tests) 4ms
+ ✓ api/_lib/__tests__/connector-config.test.ts (3 tests) 25ms
+ ✓ src/components/auth/__tests__/SignInModal.test.tsx (6 tests) 1947ms
+     ✓ allows sign-in with a short (pre-existing) password — no 8-char lockout  371ms
+     ✓ submits sign-in via the form and closes on success  377ms
+     ✓ enforces the 8-char minimum only on the sign-up tab  340ms
+     ✓ stays open with a confirmation notice when sign-up needs email verification  343ms
+ ✓ src/components/board/__tests__/KanbanCard.test.tsx (6 tests) 200ms
+ ✓ src/components/auth/__tests__/AuthRedirect.test.tsx (5 tests) 47ms
+ ✓ src/lib/__tests__/utils.test.ts (13 tests) 16ms
+ ✓ src/components/board/__tests__/BoardSelector.test.tsx (3 tests) 288ms
+ ✓ src/pages/__tests__/LandingPage.test.tsx (1 test) 512ms
+     ✓ renders without crashing and shows heading  509ms
+ ✓ src/lib/__tests__/ci-guard.test.ts (32 tests) 246ms
+ ✓ src/components/__tests__/ErrorBoundary.test.tsx (3 tests) 149ms
+ ✓ src/components/connectors/__tests__/connector-setup.test.ts (1 test) 513ms
+   ✓ copied Codex setup preserves public IDs as literal arguments in a real shell  512ms
+
+ Test Files  46 passed (46)
+      Tests  966 passed (966)
+   Start at  06:05:40
+   Duration  97.52s (transform 6.67s, setup 5.25s, import 23.57s, tests 108.74s, environment 45.77s)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/thirteenth-sdk-integration/full-test.json

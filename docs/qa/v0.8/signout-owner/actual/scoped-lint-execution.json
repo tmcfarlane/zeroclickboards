@@ -1,0 +1,18 @@
+{
+  "gate": "scoped-lint",
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/eslint/bin/eslint.js",
+    "src/hooks/useSignOutAction.ts",
+    "src/hooks/__tests__/useSignOutAction.test.tsx"
+  ],
+  "nodeVersion": "20.20.2",
+  "startedAt": "2026-10-02T13:43:16.137088+00:00",
+  "elapsedSeconds": 2.0078247499186546,
+  "exitCode": 0,
+  "explicitEnvironment": {
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, Link2, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuthContext } from '@/components/auth/AuthProvider';
@@ -9,9 +9,14 @@ import type { ConnectorConsent } from '@/components/connectors/connector-api';
 import { isOAuthCallbackUri } from '../../mcp-server/src/oauth-callback';
 
 export function ConnectorConsentPage() {
-  const { session, user, isSignedIn, isLoaded } = useAuthContext();
+  const { user } = useAuthContext();
   const [params] = useSearchParams();
   const request = params.get('request');
+  return <ConnectorConsentRequest key={JSON.stringify([user?.id ?? null, request])} request={request} />;
+}
+
+function ConnectorConsentRequest({ request }: { request: string | null }) {
+  const { session, user, isSignedIn, isLoaded } = useAuthContext();
   const [consent, setConsent] = useState<ConnectorConsent | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -20,17 +25,38 @@ export function ConnectorConsentPage() {
   const [cancelRedirect, setCancelRedirect] = useState<string | null>(null);
   const [signInOpen, setSignInOpen] = useState(false);
   const [refresh, setRefresh] = useState(0);
+  const epoch = useRef(0);
+  const pending = useRef<symbol | null>(null);
+  const read = useRef<AbortController | null>(null);
+  const loadedRefresh = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const lifetime = epoch;
+    ++lifetime.current;
+    return () => {
+      ++lifetime.current;
+      pending.current = null;
+      read.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!isLoaded || !session || !request) return;
+    if (!isLoaded || !session || !request || loadedRefresh.current === refresh) return;
     const controller = new AbortController();
+    const lifetime = epoch.current;
+    read.current = controller;
     setConsent(null);
     setSelected([]);
     setError(null);
     connectorRequest<ConnectorConsent>(session, { query: new URLSearchParams({ action: 'consent', request }), signal: controller.signal })
-      .then((data) => { if (!controller.signal.aborted) setConsent(data); })
+      .then((data) => {
+        if (!controller.signal.aborted && epoch.current === lifetime && read.current === controller) {
+          loadedRefresh.current = refresh;
+          setConsent(data);
+        }
+      })
       .catch((cause: unknown) => {
-        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Unable to load the connection request.');
+        if (!controller.signal.aborted && epoch.current === lifetime && read.current === controller) setError(cause instanceof Error ? cause.message : 'Unable to load the connection request.');
       });
     return () => controller.abort();
   }, [isLoaded, session, request, refresh]);
@@ -41,33 +67,49 @@ export function ConnectorConsentPage() {
   const canApprove = !!consent && !unknownScopes && selected.length > 0 && !busy;
 
   const approve = async () => {
-    if (!session || !request || !canApprove) return;
+    if (!session || !request || !canApprove || pending.current) return;
+    const attempt = Symbol();
+    const lifetime = epoch.current;
+    pending.current = attempt;
+    const current = () => epoch.current === lifetime && pending.current === attempt;
     setBusy('approve');
     setError(null);
     try {
       const data = await connectorRequest<{ redirectUrl: string }>(session, { body: { action: 'approve', request, boardIds: selected } });
+      if (!current()) return;
       if (!isOAuthCallbackUri(data.redirectUrl)) {
         throw new Error('The connection returned an invalid return address. Restart setup in your client.');
       }
       window.location.assign(new URL(data.redirectUrl).href);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to allow the connection. Please try again.');
-      setBusy(null);
+      if (current()) {
+        pending.current = null;
+        setError(cause instanceof Error ? cause.message : 'Unable to allow the connection. Please try again.');
+        setBusy(null);
+      }
     }
   };
 
   const cancel = async () => {
-    if (!session || !request || busy) return;
+    if (!session || !request || pending.current) return;
+    const attempt = Symbol();
+    const lifetime = epoch.current;
+    pending.current = attempt;
+    const current = () => epoch.current === lifetime && pending.current === attempt;
     setBusy('cancel');
     setError(null);
     try {
       const result = await connectorRequest<{ cancelled: true; redirectUrl?: string }>(session, { body: { action: 'cancel', request } });
+      if (!current()) return;
       if (isOAuthCallbackUri(result.redirectUrl)) setCancelRedirect(new URL(result.redirectUrl).href);
       setCancelled(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to cancel. Please try again.');
+      if (current()) setError(cause instanceof Error ? cause.message : 'Unable to cancel. Please try again.');
     } finally {
-      setBusy(null);
+      if (current()) {
+        pending.current = null;
+        setBusy(null);
+      }
     }
   };
 
@@ -147,6 +189,7 @@ export function ConnectorConsentPage() {
                 <Button disabled={!!busy} variant="outline" onClick={cancel} className="border-white/10 hover:bg-white/5">{busy === 'cancel' ? 'Cancelling…' : 'Cancel'}</Button>
                 <Button disabled={!canApprove} onClick={approve} className="bg-[#78fcd6] text-[#0B0F0F] hover:bg-[#78fcd6]/90">{busy === 'approve' ? 'Connecting…' : 'Allow connection'}</Button>
               </div>
+              {busy === 'approve' ? <p role="status" className="mt-3 text-xs text-[#A8B2B2]">Access may finish being approved if you leave. Review or disconnect approved access in Account.</p> : null}
               {selected.length === 0 ? <p className="mt-3 text-center text-xs text-[#A8B2B2]">Select at least one board to allow access.</p> : null}
             </>
           )}

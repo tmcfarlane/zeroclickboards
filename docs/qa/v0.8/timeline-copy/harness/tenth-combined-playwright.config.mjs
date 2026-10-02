@@ -1,0 +1,7 @@
+import { defineConfig, devices } from '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroclickboards/node_modules/@playwright/test/index.mjs';
+export default defineConfig({
+ testDir: '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroclickboards/tests/connector-ui', testMatch: ['board-access.spec.ts', 'ai-drafts.spec.ts'], grep: /timeline (ignores|recurring|downgrade)|AI-only|Clear chat and closing AI|hidden AI draft|same-owner token renewal|composing Enter keeps AI/, outputDir: '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/tenth-timeline-browser-results', fullyParallel: false, workers: 1, retries: 0, reporter: [['list']],
+ use: { baseURL: 'http://127.0.0.1:4265', screenshot: 'only-on-failure', trace: 'retain-on-failure', permissions: ['clipboard-read', 'clipboard-write'] },
+ projects: [{name: 'desktop', use: {...devices['Desktop Chrome']}}, {name: 'mobile', use: {...devices['iPhone 13'], defaultBrowserType: 'chromium'}}],
+ webServer: {command: 'npm run preview -- --config /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/tenth-timeline-vite.config.mjs --host 127.0.0.1 --port 4265 --strictPort', cwd: '/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroclickboards', url: 'http://127.0.0.1:4265', reuseExistingServer: false, timeout: 60000, env: { VITE_SUPABASE_URL: 'https://connector-fixture.invalid', VITE_SUPABASE_ANON_KEY: 'disposable-fixture-public-key' } }
+});

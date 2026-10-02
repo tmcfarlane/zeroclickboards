@@ -1,0 +1,18 @@
+{
+  "scope": "Prepared built fixture gates; no test executed yet",
+  "baseURL": "http://127.0.0.1:4262",
+  "artifactManifestSha256": "450800424b27da9bcabc1878b0152cd819f11289db49b05c7afce55fcc8611e8",
+  "setupCases": 4,
+  "toolbarCases": 3,
+  "externalTransports": "Existing disposable fixture guard; no production auth/board data",
+  "harnessEditsOnly": [
+    "MCP worktree fixture import path",
+    "private output artifact path",
+    "grep selects requested scenarios",
+    "static compiled preview URL"
+  ],
+  "repoFixturesSha256": "f2b9ed7075bd7bfc5b76b6709473f23fa1319760ab04ac5baded8a3911e563f4",
+  "repoConnectorSpecSha256": "a12a2c0da60ca65bc56dc7dbf763a24a5e9ec06c7991e89bdf72efbb832fcc4a",
+  "originalToolbarBoundarySha256": "6ead85c1d8c8b7474028f11ee1f004aa9d62198f8a9f71a593466f6c499d60c4",
+  "adaptedToolbarSha256": "e0262d94a936324716bba64ebdac7c8245da72e2bc8bfe3c47fa967a8c56d681"
+}

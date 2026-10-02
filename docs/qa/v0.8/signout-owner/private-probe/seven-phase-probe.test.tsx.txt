@@ -1,0 +1,98 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { useLayoutEffect, useRef } from 'react';
+import { Toaster, toast } from 'sonner';
+import { useSignOutAction } from '../useSignOutAction';
+
+const fixture = vi.hoisted(() => ({ auth: { user: { id: 'initial-owner' }, signOut: vi.fn<() => Promise<{ error: string | null }>>() } }));
+vi.mock('@/components/auth/AuthProvider', () => ({ useAuthContext: () => fixture.auth }));
+const message = 'Could not sign out. Try again.';
+type Result = { error: string | null };
+function deferred() {
+  let resolve!: (result: Result) => void;
+  const promise = new Promise<Result>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+// This ordinary consumer uses the hook's public action through a committed DOM
+// button. The later layout effect deterministically selects the commit-before-
+// passive boundary; it does not intercept React or reimplement hook state.
+function CommitAction({ startAtCommit, invokeActionAtCommit = false }: { startAtCommit: boolean; invokeActionAtCommit?: boolean }) {
+  const { isSigningOut, runSignOut } = useSignOutAction();
+  const owner = fixture.auth.user.id;
+  const button = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (startAtCommit) {
+      // An old owner's pending DOM can still be disabled during the new owner
+      // commit. Exercise the new public action directly in that one case.
+      if (invokeActionAtCommit) void runSignOut();
+      else button.current!.click();
+    }
+  }, [owner, startAtCommit, invokeActionAtCommit]);
+  return <button ref={button} disabled={isSigningOut} onClick={() => { void runSignOut(); }}>{isSigningOut ? 'Signing out...' : 'Sign out'}</button>;
+}
+
+function renderAtBoundary(kind: 'initial' | 'replacement') {
+  render(<Toaster duration={Infinity} />);
+  if (kind === 'initial') return render(<CommitAction startAtCommit />);
+  const view = render(<CommitAction startAtCommit={false} />);
+  fixture.auth = { ...fixture.auth, user: { id: 'replacement-owner' } };
+  view.rerender(<CommitAction startAtCommit />);
+  return view;
+}
+
+beforeEach(() => {
+  fixture.auth = { user: { id: 'initial-owner' }, signOut: vi.fn<() => Promise<Result>>() };
+});
+afterEach(() => {
+  cleanup();
+  toast.getHistory().forEach(({ id }) => toast.dismiss(id));
+});
+
+describe.each(['initial', 'replacement'] as const)('%s owner action at the DOM commit boundary', kind => {
+  it('stays visibly pending after passive effects flush', () => {
+    const request = deferred(); fixture.auth.signOut.mockReturnValue(request.promise);
+    renderAtBoundary(kind);
+    expect(fixture.auth.signOut).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Signing out...' })).toBeDisabled();
+  });
+  it('does not permit a second request while the committed action is held', () => {
+    const request = deferred(); fixture.auth.signOut.mockReturnValue(request.promise);
+    renderAtBoundary(kind);
+    // Click the actual committed control after both layout and passive effects.
+    act(() => { screen.getByRole('button').click(); });
+    expect(fixture.auth.signOut).toHaveBeenCalledOnce();
+  });
+  it('shows the current owner failure and enables an explicit retry', async () => {
+    const request = deferred(); fixture.auth.signOut.mockReturnValue(request.promise);
+    renderAtBoundary(kind);
+    await act(async () => { request.resolve({ error: 'Disposable current-owner failure' }); await request.promise; });
+    expect(await screen.findByText(message)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabled();
+    const retry = deferred(); fixture.auth.signOut.mockReturnValueOnce(retry.promise);
+    act(() => { screen.getByRole('button').click(); });
+    expect(fixture.auth.signOut).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('button', { name: 'Signing out...' })).toBeDisabled();
+  });
+});
+
+it('allows a replacement owner commit action while an old owner request is held, suppressing the old failure', async () => {
+  const oldRequest = deferred(); const oldSignOut = fixture.auth.signOut.mockReturnValue(oldRequest.promise);
+  render(<Toaster duration={Infinity} />);
+  const view = render(<CommitAction startAtCommit={false} />);
+  act(() => { screen.getByRole('button', { name: 'Sign out' }).click(); });
+  expect(screen.getByRole('button', { name: 'Signing out...' })).toBeDisabled();
+  const currentRequest = deferred(); const currentSignOut = vi.fn<() => Promise<Result>>().mockReturnValue(currentRequest.promise);
+  fixture.auth = { user: { id: 'replacement-owner' }, signOut: currentSignOut };
+  view.rerender(<CommitAction startAtCommit invokeActionAtCommit />);
+  expect(oldSignOut).toHaveBeenCalledOnce();
+  expect(currentSignOut).toHaveBeenCalledOnce();
+  expect(screen.getByRole('button', { name: 'Signing out...' })).toBeDisabled();
+  await act(async () => { oldRequest.resolve({ error: 'Disposable old-owner failure' }); await oldRequest.promise; await new Promise<void>(done => setTimeout(done, 0)); });
+  expect(screen.queryByText(message)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Signing out...' })).toBeDisabled();
+  await act(async () => { currentRequest.resolve({ error: 'Disposable current-owner failure' }); await currentRequest.promise; });
+  expect(await screen.findByText(message)).toBeVisible();
+  expect(screen.getAllByText(message)).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Sign out' })).toBeEnabled();
+});

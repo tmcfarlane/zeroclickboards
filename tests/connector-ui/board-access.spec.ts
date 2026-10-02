@@ -3,7 +3,7 @@ import type { Locator, Page } from '@playwright/test';
 
 type Role = 'owner' | 'editor' | 'viewer' | 'commenter';
 
-async function installBoard(page: Page, initialRole: Role = 'owner', hidden = false, embedEnabled = false) {
+async function installBoard(page: Page, initialRole: Role = 'owner', hidden = false, embedEnabled = false, recurring = false) {
   let role = initialRole;
   let deleted = false;
   const today = await page.evaluate(() => {
@@ -16,7 +16,7 @@ async function installBoard(page: Page, initialRole: Role = 'owner', hidden = fa
     embed_enabled: embedEnabled,
     data: {
       columns: [
-        { id: 'todo', title: 'To Do', order: 0, cards: [{ id: 'design-card', title: 'Design pricing page', targetDate: today, labels: ['green'], content: { type: 'text', text: 'Review mobile conversion' }, createdAt: boardRows[0].created_at, updatedAt: boardRows[0].updated_at }] },
+        { id: 'todo', title: 'To Do', order: 0, cards: [{ id: 'design-card', title: 'Design pricing page', targetDate: today, recurrence: recurring ? { frequency: 'daily', interval: 7 } : undefined, labels: ['green'], content: { type: 'text', text: 'Review mobile conversion' }, createdAt: boardRows[0].created_at, updatedAt: boardRows[0].updated_at }] },
         { id: 'doing', title: 'In Progress', order: 1, cards: [] },
       ],
       hiddenColumnIds: hidden ? ['todo', 'doing'] : [],
@@ -757,7 +757,22 @@ for (const mode of ['edit', 'create'] as const) {
   });
 }
 
-test('timeline downgrade retains the title draft and blocks blur and Enter saves', async ({ page }) => {
+test('timeline recurring cards stay operable when drag is disabled', async ({ page }) => {
+  const fixture = await installBoard(page, 'owner', false, false, true);
+  await openBoard(page);
+  await page.getByRole('button', { name: 'Timeline', exact: true }).click();
+  const card = page.getByRole('button', { name: 'Edit Design pricing page', exact: true });
+  await expect(card).toBeEnabled();
+  await card.focus();
+  await card.press('Enter');
+  await expect(page.getByRole('textbox', { name: 'Title', exact: true })).toHaveValue('Design pricing page');
+  await page.getByRole('button', { name: 'Open Full Editor', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit Card', exact: true });
+  await expect(editor.getByPlaceholder('Card title...')).toHaveValue('Design pricing page');
+  expect(fixture.writes).toEqual([]);
+});
+
+test('timeline downgrade keeps title copyable while open and explains closing discards it', async ({ page }, testInfo) => {
   const fixture = await installBoard(page, 'editor');
   await openBoard(page);
   await page.getByRole('button', { name: 'Timeline', exact: true }).click();
@@ -765,10 +780,24 @@ test('timeline downgrade retains the title draft and blocks blur and Enter saves
   const title = page.getByRole('textbox', { name: 'Title', exact: true });
   await title.fill('Unsaved timeline title');
   await fixture.downgrade();
-  await expect(page.getByRole('alert')).toContainText('title draft is kept');
+  await expect(page.getByRole('alert')).toContainText('Unsaved title changes are discarded when this panel closes.');
+  await expect(title).toBeEnabled();
+  await expect(title).toHaveAttribute('readonly');
+  await expect(page.getByRole('button', { name: 'Open Full Editor', exact: true })).toBeDisabled();
+  if (process.env.TIMELINE_COPY_SCREENSHOT_DIR) {
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: `${process.env.TIMELINE_COPY_SCREENSHOT_DIR}/read-only-title-${testInfo.project.name}.png`, fullPage: true });
+  }
   await expect(title).toHaveValue('Unsaved timeline title');
   await title.press('Enter');
   await expect(title).toBeVisible();
   await title.press('Tab');
+  expect(fixture.writes).toEqual([]);
+  if (await title.isVisible()) await title.press('Escape');
+  await expect(title).not.toBeVisible();
+  const viewCard = page.getByRole('button', { name: 'View Design pricing page', exact: true });
+  await expect(viewCard).toBeEnabled();
+  await viewCard.click();
+  await expect(title).toHaveValue('Design pricing page');
   expect(fixture.writes).toEqual([]);
 });

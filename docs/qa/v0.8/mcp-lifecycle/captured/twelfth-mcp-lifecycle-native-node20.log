@@ -1,0 +1,120 @@
+TAP version 13
+# Subtest: allowed browser origins can discover the Bearer challenge without exposing it to denied origins
+ok 1 - allowed browser origins can discover the Bearer challenge without exposing it to denied origins
+  ---
+  duration_ms: 154.298792
+  ...
+# Subtest: HTTPS resource discovery, S256 and accurate public-client metadata; unauthorized, Host and Origin denial
+ok 2 - HTTPS resource discovery, S256 and accurate public-client metadata; unauthorized, Host and Origin denial
+  ---
+  duration_ms: 35.299583
+  ...
+# Subtest: authorization code PKCE, exact callback/resource, one-time code and approval; token expiry and revocation
+ok 3 - authorization code PKCE, exact callback/resource, one-time code and approval; token expiry and revocation
+  ---
+  duration_ms: 82.311042
+  ...
+# Subtest: two hosted users have isolated MCP tools, search and resources; read grants omit commit
+ok 4 - two hosted users have isolated MCP tools, search and resources; read grants omit commit
+  ---
+  duration_ms: 267.786833
+  ...
+# Subtest: OAuth rejects unknown client, mismatched redirect, unsupported scopes and unauthorized selected boards
+ok 5 - OAuth rejects unknown client, mismatched redirect, unsupported scopes and unauthorized selected boards
+  ---
+  duration_ms: 17.840708
+  ...
+# Subtest: authorization callbacks identify the exact discovery issuer on approval, denial, and protocol errors
+ok 6 - authorization callbacks identify the exact discovery issuer on approval, denial, and protocol errors
+  ---
+  duration_ms: 24.303834
+  ...
+# Subtest: malformed and oversized MCP JSON return protocol errors without HTML, body text or stack traces
+ok 7 - malformed and oversized MCP JSON return protocol errors without HTML, body text or stack traces
+  ---
+  duration_ms: 23.293625
+  ...
+# Subtest: authenticated unsupported MCP methods advertise POST and OPTIONS while discovery remains protected
+ok 8 - authenticated unsupported MCP methods advertise POST and OPTIONS while discovery remains protected
+  ---
+  duration_ms: 57.732291
+  ...
+# Subtest: predefined native clients authorize two listener ports, identify callbacks, and bind token exchange to the actual URI
+ok 9 - predefined native clients authorize two listener ports, identify callbacks, and bind token exchange to the actual URI
+  ---
+  duration_ms: 85.067833
+  ...
+# Subtest: native denial and GET/form protocol errors return only the approved active port with issuer and state
+ok 10 - native denial and GET/form protocol errors return only the approved active port with issuer and state
+  ---
+  duration_ms: 42.035834
+  ...
+# Subtest: unsafe native and HTTPS loopback callbacks never redirect, including SDK protocol-error paths
+ok 11 - unsafe native and HTTPS loopback callbacks never redirect, including SDK protocol-error paths
+  ---
+  duration_ms: 104.269958
+  ...
+# Subtest: durable native pending requests and codes fail after their registered path or query changes
+ok 12 - durable native pending requests and codes fail after their registered path or query changes
+  ---
+  duration_ms: 12.099083
+  ...
+# Subtest: private SQL OAuth store persists records, atomically consumes codes, and denies API roles
+ok 13 - private SQL OAuth store persists records, atomically consumes codes, and denies API roles
+  ---
+  duration_ms: 2597.06175
+  ...
+# Subtest: put infers a TEXT payload parameter and round-trips nested pending records as JSON objects
+ok 14 - put infers a TEXT payload parameter and round-trips nested pending records as JSON objects
+  ---
+  duration_ms: 960.546166
+  ...
+# Subtest: selected meeting actions preview without writes, approved batch saves dates, replay is additive once, standup reads
+ok 15 - selected meeting actions preview without writes, approved batch saves dates, replay is additive once, standup reads
+  ---
+  duration_ms: 204.761875
+  ...
+# Subtest: modified or stale preview fails without writes
+ok 16 - modified or stale preview fails without writes
+  ---
+  duration_ms: 17.494625
+  ...
+# Subtest: viewer membership permits only intended reads and writes
+ok 17 - viewer membership permits only intended reads and writes
+  ---
+  duration_ms: 19.476833
+  ...
+# Subtest: editor membership permits only intended reads and writes
+ok 18 - editor membership permits only intended reads and writes
+  ---
+  duration_ms: 14.42
+  ...
+# Subtest: public stranger membership permits only intended reads and writes
+ok 19 - public stranger membership permits only intended reads and writes
+  ---
+  duration_ms: 11.326
+  ...
+# Subtest: selected-board grant blocks direct tools, resources, search and empty grants
+ok 20 - selected-board grant blocks direct tools, resources, search and empty grants
+  ---
+  duration_ms: 31.050625
+  ...
+# Subtest: approved preview cannot cross accounts and current viewer role blocks commit
+ok 21 - approved preview cannot cross accounts and current viewer role blocks commit
+  ---
+  duration_ms: 28.367
+  ...
+# Subtest: large Unicode previews fail with actionable batching guidance before returning an unusable token
+ok 22 - large Unicode previews fail with actionable batching guidance before returning an unusable token
+  ---
+  duration_ms: 39.676583
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7015.744417

@@ -1,0 +1,23 @@
+{
+  "gate": "full-test",
+  "startedAt": "2026-10-02T13:56:04.883156+00:00",
+  "endedAt": "2026-10-02T13:57:59.228509+00:00",
+  "elapsedSeconds": 114.34393904102035,
+  "exitCode": 0,
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--config",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/vite-test.config.mts",
+    "--maxWorkers=2",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile.json=/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/full-test.json"
+  ],
+  "explicitEnvironment": {
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://placeholder.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "placeholder-key"
+  }
+}

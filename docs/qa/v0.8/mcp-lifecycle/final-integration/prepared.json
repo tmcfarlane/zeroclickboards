@@ -1,0 +1,53 @@
+{
+  "preparedAt": "2026-10-02T13:53:44.541361+00:00",
+  "status": "Prepared only; not executed; awaiting parent confirmed combined head/go",
+  "worktree": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci",
+  "node": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+  "suite": {
+    "workers": 2,
+    "retry": false,
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://placeholder.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "placeholder-key",
+    "configOverridesOnly": [
+      "cacheDir"
+    ]
+  },
+  "build": {
+    "outDir": "/private/tmp/zeroboard-mcp-final-integrated-built-smoke/dist",
+    "VITE_SUPABASE_URL": "https://connector-fixture.invalid",
+    "VITE_SUPABASE_ANON_KEY": "disposable-fixture-public-key",
+    "configOverridesOnly": [
+      "cacheDir",
+      "build.outDir",
+      "build.emptyOutDir"
+    ]
+  },
+  "prior981_1DurableEvidence": {
+    "README.md": "854c367adb65daf8efc7d2d29de2d4dc8f2983c1207acf1b0f97eb37388838e5",
+    "build-execution.json": "c956a2521d9b48397db8e6e61e400a638eb395f70d8194002f0fffd1b8ab08f6",
+    "build.log": "c11fd102eb3f4077ab24966b6fef551340dcad6cd51ca9ea44eeac8c18f49292",
+    "built-artifact-sha256.json": "b0d30620e5b67d89083b7f03648a43fbbcd4b7dddc766d0ed0aac98d56faa07f",
+    "full-test-execution.json": "e18425081bf09209c4e261b84b4e0f71c505580e445ffd91c8a4602fe6388073",
+    "full-test.json": "ae44be9e5e17ca0eb2233c781b2f1131808ee745cc428eeefea4f3c5cc7fe321",
+    "full-test.log": "e7965a0ae3cfdf0194ff050eba15b8046afcdfcfb15f2b2ae4ccec9bd599684e",
+    "manifest.json": "d08e9c2d919b203c62a10a9959a9adc273460f93b39acae1188d11897fd0f2aa",
+    "receipt.json": "a44cba2f811e730b051ac408f1dd1a3c280c90dfda74f0c66bdc9128b8db388b",
+    "run-command.py": "b109f1c62b877f77a4947d49a5aab5c359391d78521e2d0454f16e18cc5d7320",
+    "scoped-lint-execution.json": "259604edfb48b5d2607381fd4a100036ff30b4f3d3970b002266582f0154064f",
+    "scoped-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked-source-after-final.json": "c859f7e075ac700dbb4937817eb54b8e8708091479c6076298c1834514f4f70f",
+    "tracked-source-after-full.json": "42735294a92362c6fa719c66d36f6dbc6f501addcbf4e2f729ef4390ef4d6d55",
+    "tracked-source-before.json": "a5ca7f282c050e9d4de4ffdfa63c049cac49b49a43ef780fa26b76d2ce52dfcf",
+    "typecheck-app-execution.json": "8be8ab20f156e8dcf2afe9a583b792cbbfcddeaff9776b59962abe34dc096ed2",
+    "typecheck-app.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "typecheck-node-execution.json": "d3d6cdd7c880940dd2142385bd1d5b6ee666735e9dce0ddbfe3b9542eb99795b",
+    "typecheck-node.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "vite-build.config.mts": "5f95f41a2f2e46b903d4b6bc9e6209bd323a8ee40e5ae27c9b46431a8f87576b",
+    "vite-test.config.mts": "6035deca1cc39df93fb93c4216d4ce4774e849b0721ccb53335cceaf5788d946"
+  },
+  "privateConfigsSha256": {
+    "vite-test.config.mts": "45b7f4130c88712828dea4148449920937d07ebf5bd77d2631f539c8759504ff",
+    "vite-build.config.mts": "3001d9f5fd7ba2bf179ac23aa87b0c6e7c65452bb1c38c702943d09cef3a0ca9"
+  }
+}

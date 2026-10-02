@@ -1,0 +1,280 @@
+{
+  "config": {
+    "argv": [
+      "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+      "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/playwright.config.mts"
+    ],
+    "configFile": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/playwright.config.mts",
+    "rootDir": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci/tests/connector-ui",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "desktop",
+        "name": "desktop",
+        "testDir": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci/tests/connector-ui",
+        "testIgnore": [],
+        "testMatch": [
+          "**/connector.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile",
+        "name": "mobile",
+        "testDir": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci/tests/connector-ui",
+        "testIgnore": [],
+        "testMatch": [
+          "**/connector.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/result.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.61.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "connector.spec.ts",
+      "file": "connector.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "setup and access management",
+          "file": "connector.spec.ts",
+          "line": 37,
+          "column": 6,
+          "specs": [
+            {
+              "title": "discover setup from the board account menu and copy the endpoint",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2446,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-02T14:02:24.405Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "Disposable fixture: setup",
+                          "contentType": "image/png",
+                          "path": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/results/connector-setup-and-access-594eb--menu-and-copy-the-endpoint-desktop/attachments/Disposable-fixture-setup-5183ae49dda231f5738a5ea53859a63d2d98ea3a.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5ff9bcade184a6f16c0a-f7a29ba540e1057c99f9",
+              "file": "connector.spec.ts",
+              "line": 40,
+              "column": 3
+            },
+            {
+              "title": "discover setup from the board account menu and copy the endpoint",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1537,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-02T14:02:30.002Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "Disposable fixture: setup",
+                          "contentType": "image/png",
+                          "path": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/results/connector-setup-and-access-594eb--menu-and-copy-the-endpoint-mobile/attachments/Disposable-fixture-setup-8e81e61cf46049617da4119486c28f2fb780c9c9.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5ff9bcade184a6f16c0a-ae9a852b06a447c44b1e",
+              "file": "connector.spec.ts",
+              "line": 40,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "OAuth consent",
+          "file": "connector.spec.ts",
+          "line": 196,
+          "column": 6,
+          "specs": [
+            {
+              "title": "shares only explicitly selected editable boards and returns to the client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 867,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-02T14:02:27.966Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "Disposable fixture: consent-selected",
+                          "contentType": "image/png",
+                          "path": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/results/connector-OAuth-consent-sh-8ea71-s-and-returns-to-the-client-desktop/attachments/Disposable-fixture-consent-selected-9203ff7b98dd2b6f94417109f2b36d4056bec7e1.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5ff9bcade184a6f16c0a-56bce1c6e1e8881705b7",
+              "file": "connector.spec.ts",
+              "line": 205,
+              "column": 3
+            },
+            {
+              "title": "shares only explicitly selected editable boards and returns to the client",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 547,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-02T14:02:31.756Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "Disposable fixture: consent-selected",
+                          "contentType": "image/png",
+                          "path": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/results/connector-OAuth-consent-sh-8ea71-s-and-returns-to-the-client-mobile/attachments/Disposable-fixture-consent-selected-0fd3c43de85e1862af6a1b9d04c94c5aaa721c6f.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5ff9bcade184a6f16c0a-d6349d2c36da3ed15b36",
+              "file": "connector.spec.ts",
+              "line": 205,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-02T14:02:23.399Z",
+    "duration": 8964.767,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

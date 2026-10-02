@@ -1,0 +1,222 @@
+[WebServer] (node:89804) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+  ✘  1 [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:34:1 › Account logout failure stays visible and an explicit retry succeeds (7.6s)
+  ✘  2 [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:58:1 › a held Account logout exposes pending state and prevents repeated activation (34.9s)
+  ✘  3 [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:82:1 › the public account menu shows failed logout and allows a keyboard retry (30.2s)
+  ✘  4 [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:34:1 › Account logout failure stays visible and an explicit retry succeeds (7.0s)
+  ✘  5 [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:58:1 › a held Account logout exposes pending state and prevents repeated activation (30.7s)
+  ✘  6 [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:82:1 › the public account menu shows failed logout and allows a keyboard retry (30.3s)
+
+
+  1) [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:34:1 › Account logout failure stays visible and an explicit retry succeeds 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Account', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Account', exact: true })
+
+
+      40 |   });
+      41 |   await page.goto('/account');
+    > 42 |   await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+         |                                                                             ^
+      43 |   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+      44 |   await expect(page.getByText(errorMessage, { exact: true })).toBeVisible();
+      45 |   await expect(page).toHaveURL(/\/account$/);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:42:77
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:58:1 › a held Account logout exposes pending state and prevents repeated activation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Sign out', exact: true })
+
+
+      67 |   try {
+      68 |     await page.goto('/account');
+    > 69 |     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+         |                                                                       ^
+      70 |     const pending = page.getByRole('button', { name: 'Signing out...', exact: true });
+      71 |     await expect(pending).toBeDisabled();
+      72 |     await pending.press('Enter');
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:69:71
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:82:1 › the public account menu shows failed logout and allows a keyboard retry 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Account menu' })
+
+
+      88 |   });
+      89 |   await page.goto('/terms');
+    > 90 |   await page.getByRole('button', { name: 'Account menu' }).click();
+         |                                                            ^
+      91 |   await page.getByRole('menuitem', { name: 'Sign out', exact: true }).press('Enter');
+      92 |   await expect(page.getByText(errorMessage, { exact: true })).toBeVisible();
+      93 |   await expect(page).toHaveURL(/\/terms$/);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:90:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:34:1 › Account logout failure stays visible and an explicit retry succeeds 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Account', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Account', exact: true })
+
+
+      40 |   });
+      41 |   await page.goto('/account');
+    > 42 |   await expect(page.getByRole('heading', { name: 'Account', exact: true })).toBeVisible();
+         |                                                                             ^
+      43 |   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+      44 |   await expect(page.getByText(errorMessage, { exact: true })).toBeVisible();
+      45 |   await expect(page).toHaveURL(/\/account$/);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:42:77
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace outputs/gauntlet/fourteenth-signout-race/browser/results/signout-Account-logout-fai-7de5a--an-explicit-retry-succeeds-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:58:1 › a held Account logout exposes pending state and prevents repeated activation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Sign out', exact: true })
+
+
+      67 |   try {
+      68 |     await page.goto('/account');
+    > 69 |     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+         |                                                                       ^
+      70 |     const pending = page.getByRole('button', { name: 'Signing out...', exact: true });
+      71 |     await expect(pending).toBeDisabled();
+      72 |     await pending.press('Enter');
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:69:71
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace outputs/gauntlet/fourteenth-signout-race/browser/results/signout-a-held-Account-log-33d3c-revents-repeated-activation-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:82:1 › the public account menu shows failed logout and allows a keyboard retry 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Account menu' })
+
+
+      88 |   });
+      89 |   await page.goto('/terms');
+    > 90 |   await page.getByRole('button', { name: 'Account menu' }).click();
+         |                                                            ^
+      91 |   await page.getByRole('menuitem', { name: 'Sign out', exact: true }).press('Enter');
+      92 |   await expect(page.getByText(errorMessage, { exact: true })).toBeVisible();
+      93 |   await expect(page).toHaveURL(/\/terms$/);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:90:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace outputs/gauntlet/fourteenth-signout-race/browser/results/signout-the-public-account-5768e-and-allows-a-keyboard-retry-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6 failed
+    [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:34:1 › Account logout failure stays visible and an explicit retry succeeds 
+    [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:58:1 › a held Account logout exposes pending state and prevents repeated activation 
+    [desktop] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:82:1 › the public account menu shows failed logout and allows a keyboard retry 
+    [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:34:1 › Account logout failure stays visible and an explicit retry succeeds 
+    [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:58:1 › a held Account logout exposes pending state and prevents repeated activation 
+    [mobile] › work/zeroboard-ai-drafts/tests/connector-ui/signout.spec.ts:82:1 › the public account menu shows failed logout and allows a keyboard retry 

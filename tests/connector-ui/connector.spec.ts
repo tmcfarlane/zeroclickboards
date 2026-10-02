@@ -87,9 +87,13 @@ test.describe('setup and access management', () => {
 });
 
 test.describe('disconnect', () => {
-  test.use({ apiHandler: async ({}, provide) => { await provide(async (route) => {
-    await json(route, route.request().method() === 'POST' ? { success: true } : { ...ready, connections: [connection] });
-  }); } });
+  test.use({ apiHandler: async ({}, provide) => {
+    let disconnected = false;
+    await provide(async (route) => {
+      if (route.request().method() === 'POST') { disconnected = true; return json(route, { success: true }); }
+      await json(route, { ...ready, connections: disconnected ? [] : [connection] });
+    });
+  } });
 
   test('keeps an existing grant until explicit disconnect confirmation', async ({ page, apiCalls }, info) => {
     await page.goto('/account#connectors');

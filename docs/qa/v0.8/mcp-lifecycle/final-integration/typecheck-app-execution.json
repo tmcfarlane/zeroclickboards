@@ -1,0 +1,17 @@
+{
+  "gate": "typecheck-app",
+  "startedAt": "2026-10-02T13:58:46.420631+00:00",
+  "endedAt": "2026-10-02T13:58:58.620122+00:00",
+  "elapsedSeconds": 12.19921829085797,
+  "exitCode": 0,
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/typescript/bin/tsc",
+    "--project",
+    "tsconfig.app.json",
+    "--incremental",
+    "false",
+    "--noEmit"
+  ],
+  "explicitEnvironment": {}
+}

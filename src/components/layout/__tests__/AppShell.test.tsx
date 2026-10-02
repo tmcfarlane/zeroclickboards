@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, Route, RouterProvider, Routes } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import { useBoardDialogs } from '@/hooks/useBoardDialogs';
 const state = vi.hoisted(() => ({
   auth: { isSignedIn: true, isLoaded: true, userId: 'current-user' as string | null },
   signOut: vi.fn(),
+  aiCallbacks: [] as Array<(hasDraft: boolean) => void>,
   activeBoard: null as Board | null,
   boards: [] as Board[],
   store: {
@@ -60,14 +61,21 @@ vi.mock('@/components/auth/AuthProvider', () => ({ useAuthContext: () => ({ sign
 vi.mock('@/hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('@/components/KeyboardShortcutsHelp', () => ({ KeyboardShortcutsHelp: () => null }));
 vi.mock('@/components/board/KanbanBoard', () => ({
-  KanbanBoard: () => {
+  KanbanBoard: ({ onAIClick }: { onAIClick: () => void }) => {
     const { openTextDialog } = useBoardDialogs();
-    return <><p>Kanban board content</p><button onClick={() => openTextDialog({ kind: 'rename-board', boardId: 'current-board' })}>Open board rename</button></>;
+    return <><p>Kanban board content</p><button onClick={onAIClick}>Open AI</button><button onClick={() => openTextDialog({ kind: 'rename-board', boardId: 'current-board' })}>Open board rename</button></>;
   },
 }));
 vi.mock('@/components/board/BoardSkeleton', () => ({ BoardSkeleton: () => <p>Loading board content</p> }));
 vi.mock('@/components/timeline/TimelineView', () => ({ TimelineView: () => <p>Timeline board content</p> }));
-vi.mock('@/components/ai/AIAssistant', () => ({ AIAssistant: () => null }));
+vi.mock('@/components/ai/AIAssistant', () => ({
+  AIAssistant: ({ isOpen, onClose, onDraftChange }: { isOpen: boolean; onClose: () => void; onDraftChange?: (hasDraft: boolean) => void }) => {
+    const [input, setInput] = useState('');
+    useEffect(() => { if (onDraftChange) state.aiCallbacks.push(onDraftChange); }, [onDraftChange]);
+    if (!isOpen) return null;
+    return <><input aria-label="Controlled AI draft" value={input} onChange={(event) => { setInput(event.target.value); onDraftChange?.(event.target.value.length > 0); }} /><button onClick={onClose}>Hide controlled AI</button></>;
+  },
+}));
 vi.mock('@/components/auth/UserProfile', () => ({ UserProfile: ({ onSignOutClick }: { onSignOutClick: () => void }) => <button onClick={onSignOutClick}>Request sign out</button> }));
 vi.mock('@/components/auth/SignInModal', () => ({ SignInModal: () => null }));
 vi.mock('@/components/board/CreateBoardDialog', () => ({ CreateBoardDialog: () => null }));
@@ -97,6 +105,7 @@ function attemptToLeave() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  state.aiCallbacks = [];
   state.auth = { isSignedIn: true, isLoaded: true, userId: 'current-user' };
   state.signOut.mockResolvedValue({ error: null });
   state.store.currentUserId = 'current-user';
@@ -331,5 +340,98 @@ describe('AppShell board synchronization', () => {
     expect(state.store.activeBoardId).toBe('other-board'); expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(); expect(input).toHaveValue('Original board renamed');
     await user.click(screen.getByRole('button', { name: /^Rename$/ }));
     expect(state.store.renameBoard).toHaveBeenCalledExactlyOnceWith('current-board', 'Original board renamed');
+  });
+});
+
+
+describe('AppShell unsent AI drafts', () => {
+  it('guards AI-only text before unload and pathname navigation, retaining it on Stay', async () => {
+    const user = userEvent.setup(); const { router } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    const input = screen.getByRole('textbox', { name: 'Controlled AI draft' });
+    await user.type(input, 'Keep this unsent question'); await user.click(input);
+    expect(attemptToLeave().defaultPrevented).toBe(true);
+    await act(async () => { await router.navigate('/account'); });
+    const alert = screen.getByRole('alertdialog', { name: 'Leave this page?' });
+    expect(alert).toHaveTextContent('Your unsent AI text will be discarded');
+    expect(alert).not.toHaveTextContent('Open forms will close');
+    await user.click(screen.getByRole('button', { name: 'Stay' }));
+    await waitFor(() => expect(input).toHaveFocus()); expect(input).toHaveValue('Keep this unsent question');
+    await user.clear(input); expect(attemptToLeave().defaultPrevented).toBe(false);
+    await act(async () => { await router.navigate('/account'); });
+    expect(await screen.findByRole('heading', { name: 'Account route' })).toBeVisible();
+    expect(state.signOut).not.toHaveBeenCalled();
+  });
+
+  it('keeps a hidden AI draft guarded and requires a sign-out decision before calling auth', async () => {
+    const user = userEvent.setup(); renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    await user.type(screen.getByRole('textbox', { name: 'Controlled AI draft' }), 'Keep hidden text');
+    await user.click(screen.getByRole('button', { name: 'Hide controlled AI' }));
+    expect(screen.queryByRole('textbox', { name: 'Controlled AI draft' })).not.toBeInTheDocument();
+    expect(attemptToLeave().defaultPrevented).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Request sign out' }));
+    expect(screen.getByRole('alertdialog', { name: 'Sign out with unfinished work?' })).toHaveTextContent('Your unsent AI text');
+    expect(state.signOut).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Stay' }));
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    expect(screen.getByRole('textbox', { name: 'Controlled AI draft' })).toHaveValue('Keep hidden text');
+    expect(state.signOut).not.toHaveBeenCalled();
+  });
+
+  it('retains unsent text and its guard after a same-account sign-out failure', async () => {
+    state.signOut.mockResolvedValue({ error: 'Disposable logout failure' });
+    const errorToast = vi.spyOn(toast, 'error'); const user = userEvent.setup(); renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    await user.type(screen.getByRole('textbox', { name: 'Controlled AI draft' }), 'Retry after failed sign-out');
+    await user.click(screen.getByRole('button', { name: 'Request sign out' }));
+    expect(state.signOut).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /^Sign out$/ }));
+    await waitFor(() => expect(errorToast).toHaveBeenCalledExactlyOnceWith('Could not sign out. Try again.'));
+    expect(screen.getByRole('textbox', { name: 'Controlled AI draft' })).toHaveValue('Retry after failed sign-out');
+    expect(attemptToLeave().defaultPrevented).toBe(true);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Request sign out' }));
+    expect(screen.getByRole('alertdialog')).toBeVisible(); expect(state.signOut).toHaveBeenCalledOnce();
+  });
+
+  it('retains the same-owner signal on rerender and ignores an obsolete owner report after replacement', async () => {
+    const user = userEvent.setup(); const { router, rerender } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    await user.type(screen.getByRole('textbox', { name: 'Controlled AI draft' }), 'Account A private text');
+    const oldReport = state.aiCallbacks.at(-1); expect(oldReport).toBeTypeOf('function');
+    state.auth = { ...state.auth }; rerender(<AppShell />);
+    expect(screen.getByRole('textbox', { name: 'Controlled AI draft' })).toHaveValue('Account A private text');
+    expect(attemptToLeave().defaultPrevented).toBe(true); expect(state.aiCallbacks.at(-1)).toBe(oldReport);
+    await act(async () => { await router.navigate('/account'); });
+    expect(screen.getByRole('alertdialog')).toBeVisible();
+    state.auth = { isSignedIn: true, isLoaded: true, userId: 'account-b' };
+    state.activeBoard!.userId = 'account-b'; rerender(<AppShell />);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(); expect(router.state.location.pathname).toBe('/app');
+    expect(attemptToLeave().defaultPrevented).toBe(false);
+    act(() => oldReport!(true)); expect(attemptToLeave().defaultPrevented).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    const successorInput = screen.getByRole('textbox', { name: 'Controlled AI draft' }); expect(successorInput).toHaveValue('');
+    await user.type(successorInput, 'Account B private text'); expect(attemptToLeave().defaultPrevented).toBe(true);
+    act(() => oldReport!(false)); expect(attemptToLeave().defaultPrevented).toBe(true); expect(successorInput).toHaveValue('Account B private text');
+    await user.clear(successorInput); expect(attemptToLeave().defaultPrevented).toBe(false);
+    state.auth = { isSignedIn: true, isLoaded: true, userId: 'current-user' };
+    state.activeBoard!.userId = 'current-user'; rerender(<AppShell />);
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    const returnedAccountInput = screen.getByRole('textbox', { name: 'Controlled AI draft' }); expect(returnedAccountInput).toHaveValue('');
+    await user.type(returnedAccountInput, 'Account A new session text');
+    act(() => oldReport!(false)); expect(attemptToLeave().defaultPrevented).toBe(true); expect(returnedAccountInput).toHaveValue('Account A new session text');
+  });
+
+  it('clears old AI-only work on auth loss without preserving an old sign-out intent', async () => {
+    const user = userEvent.setup(); const { rerender } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    await user.type(screen.getByRole('textbox', { name: 'Controlled AI draft' }), 'Private signed-in text');
+    await user.click(screen.getByRole('button', { name: 'Request sign out' }));
+    expect(screen.getByRole('alertdialog')).toBeVisible();
+    state.auth = { isSignedIn: false, isLoaded: true, userId: null }; rerender(<AppShell />);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Controlled AI draft' })).not.toBeInTheDocument();
+    expect(attemptToLeave().defaultPrevented).toBe(false); expect(state.signOut).not.toHaveBeenCalled();
   });
 });

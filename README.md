@@ -70,7 +70,17 @@ Tell it what to do in plain English — create cards, move tasks, organize your 
 
 ### MCP Server
 
-Manage your boards from any MCP-compatible coding agent — Claude Code, Claude Desktop, Cursor, Zed, or Windsurf. Authenticate once with your ZeroBoard account, then create, move, search, and organize cards conversationally without leaving your editor. Runnable via `npx @zeroclickdev/zeroboard-mcp` (with a read-only mode for untrusted agents).
+#### ChatGPT & Codex
+
+[Open Account → ChatGPT & Codex](https://board.zeroclickdev.ai/account#connectors) to set up a hosted connection. Use the Connection URL and public OAuth client ID shown there, or copy the provided Codex command when available. No client secret is required. Sign in with your ZeroBoard account, select the boards to share, and allow access. Return to your client and try a board read to confirm setup completed.
+
+Read selected boards and turn meeting notes into new cards: review the preview, then explicitly approve adding the cards. Hosted connections cannot edit existing cards or delete your work. Access lasts up to 15 minutes; reconnect in your client after it expires, or disconnect from Account at any time. Availability depends on your client's plan and workspace settings. See the [hosted connector guide](mcp-server/HOSTED.md) for deployment details.
+
+#### Local stdio server
+
+Manage your boards from MCP-compatible coding agents such as Claude Code, Claude Desktop, Cursor, Zed, or Windsurf. Authenticate with your ZeroBoard account, then create, move, search, and organize cards without leaving your editor. The published server runs via `npx @zeroclickdev/zeroboard-mcp`, with a read-only mode. See the [local MCP setup](mcp-server/README.md).
+
+The published 0.1.0 package lacks this checkout's scoped plugin. For the selected-board preview/commit workflow, build the runtime from this checkout and use the [local Codex plugin instructions](codex-plugin/README.md).
 
 ### Timeline View
 

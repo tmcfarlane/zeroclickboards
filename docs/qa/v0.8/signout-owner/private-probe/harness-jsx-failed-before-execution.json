@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules/vitest/vitest.mjs",
+    "run",
+    "--config",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/vitest-before.config.mts",
+    "--maxWorkers=1",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile.json=/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/before.json"
+  ],
+  "node": "20.20.2",
+  "startedAt": "2026-10-02T13:38:24.451192+00:00",
+  "elapsedSeconds": 2.5473700419533998,
+  "exitCode": 1,
+  "explicitEnvironment": {
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://disposable-signout-probe.invalid",
+    "VITE_SUPABASE_ANON_KEY": "disposable-key"
+  }
+}

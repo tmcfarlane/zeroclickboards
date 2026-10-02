@@ -1,0 +1,22 @@
+{
+  "phase": "candidate-static-before-after-gate",
+  "base": "f8cfd718a867e90be26609fd392ec6129d05def9",
+  "node": "20.20.2",
+  "checks": {
+    "mcpStrictTypes": true,
+    "apiNodeTypes": true,
+    "scopedLint": true,
+    "diffCheck": true
+  },
+  "afterPGlite": "held pending root resource release",
+  "testProvenance": "full16v1 + strengthened5HTTPsubsetv2 are distinct baseline gates; candidate v3 adds explicit vi.unmock only, assertions equal v2",
+  "artifacts": {
+    "work/zeroboard-ai-ci/mcp-server/src/oauth.ts": "b74de20b3770aff5d4880e581bb8073accd72f926c13fed90b63824cd2ab9099",
+    "work/zeroboard-ai-ci/mcp-server/src/oauth-store.ts": "53f46643435e99cdc693a9bf192eff43102f6a9a8b6893379f1ffa95456df1d9",
+    "work/zeroboard-ai-ci/api/_lib/__tests__/connector-lifecycle.test.ts": "1a2071bb3b04bc25d7ab1ae1017504d9255a404e336db7e65b8de6ada74449e5",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-types-mcp.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-types-api.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before-receipt.json": "f19e4b467bfb1fda586f9c82b45fa5e235ae9542fa3ba18cf062314c4f62330f"
+  }
+}

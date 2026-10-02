@@ -8,7 +8,7 @@ import { ConnectorConsentPage } from '@/pages/ConnectorConsentPage';
 
 const state = vi.hoisted(() => ({
   fetch: vi.fn(),
-  auth: { isSignedIn: true, isLoaded: true, session: { access_token: 'account-token' } as Session | null, user: { email: 'owner@example.com' } },
+  auth: { isSignedIn: true, isLoaded: true, session: { access_token: 'account-token', user: { id: 'account-owner', email: 'owner@example.com' } } as Session | null, user: { id: 'account-owner', email: 'owner@example.com' } },
 }));
 
 vi.mock('@/lib/apiFetch', () => ({ apiFetch: state.fetch }));
@@ -40,7 +40,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.auth.isSignedIn = true;
   state.auth.isLoaded = true;
-  state.auth.session = { access_token: 'account-token' } as Session;
+  state.auth.user = { id: 'account-owner', email: 'owner@example.com' };
+  state.auth.session = { access_token: 'account-token', user: state.auth.user } as Session;
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -174,7 +175,7 @@ describe('connector consent', () => {
     expect(screen.getByText('Sign-in dialog')).toBeInTheDocument();
     expect(state.fetch).not.toHaveBeenCalled();
     state.auth.isSignedIn = true;
-    state.auth.session = { access_token: 'account-token' } as Session;
+    state.auth.session = { access_token: 'account-token', user: state.auth.user } as Session;
     view.rerender(<MemoryRouter initialEntries={['/auth/connector?request=pending-1']}><ConnectorConsentPage /></MemoryRouter>);
     expect(await screen.findByRole('heading', { name: 'Connect ChatGPT to ZeroBoard' })).toBeInTheDocument();
     expect(state.fetch.mock.calls[0][0]).toBe('/api/connector?action=consent&request=pending-1');
@@ -238,7 +239,8 @@ describe('connection settings', () => {
     state.fetch.mockResolvedValueOnce(response(status)).mockResolvedValueOnce(response({ ...status, endpoint: 'https://new.example.com/mcp' }));
     const view = render(<ConnectorSettings />);
     await user.click(await screen.findByRole('button', { name: 'Copy URL' }));
-    state.auth.session = { access_token: 'new-account-token' } as Session;
+    state.auth.user = { id: 'account-successor', email: 'successor@example.com' };
+    state.auth.session = { access_token: 'new-account-token', user: state.auth.user } as Session;
     view.rerender(<ConnectorSettings />);
     await waitFor(() => expect(screen.getByLabelText('Connection URL')).toHaveValue('https://new.example.com/mcp'));
     await act(async () => finish());
@@ -307,7 +309,7 @@ describe('connection settings', () => {
   });
 
   it('asks before revoking and removes the connection only after server confirmation', async () => {
-    state.fetch.mockResolvedValueOnce(response({ ...status, connections: [connection] })).mockResolvedValueOnce(response({ success: true }));
+    state.fetch.mockResolvedValueOnce(response({ ...status, connections: [connection] })).mockResolvedValueOnce(response({ success: true })).mockResolvedValueOnce(response(status));
     const user = userEvent.setup();
     render(<ConnectorSettings />);
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));
@@ -319,7 +321,7 @@ describe('connection settings', () => {
   });
 
   it('keeps the connection and confirmation dialog when revocation fails', async () => {
-    state.fetch.mockResolvedValueOnce(response({ ...status, connections: [connection] })).mockResolvedValueOnce(response({ error: 'Unable to disconnect right now.' }, 503));
+    state.fetch.mockResolvedValueOnce(response({ ...status, connections: [connection] })).mockResolvedValueOnce(response({ error: 'Unable to disconnect right now.' }, 503)).mockResolvedValueOnce(response({ ...status, connections: [connection] }));
     const user = userEvent.setup();
     render(<ConnectorSettings />);
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));

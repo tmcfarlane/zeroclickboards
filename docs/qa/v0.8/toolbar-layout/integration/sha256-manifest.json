@@ -1,0 +1,16 @@
+{
+  "README.md": "7bfa51db41cfec22c14ec40664baab01085dea69af50a7f21d9407ed2f15f813",
+  "built-artifact-sha256.json": "450800424b27da9bcabc1878b0152cd819f11289db49b05c7afce55fcc8611e8",
+  "execution.json": "1192bc972c97c5ffc35dcdc0d1665119a3c7f1d3c960c65a6e276df38e7abc4f",
+  "full-test-execution.json": "74aea6215729029ba7eee620d2e7ef917e3bf6dd018e2e99f2e07cce81aaec84",
+  "metrics/desktop-1280-open.json": "ae1d465bc92689e6d23a69acf6e258b0a740afcd35287528c5e11b8417b7a39a",
+  "metrics/desktop-640-open.json": "1a02bd2989e0bffa5374d3794da99faa939580ed18e165cfcb253f14557a6d71",
+  "metrics/mobile-390-closed.json": "1cd45b8302631eb7f71ff8c10fea071d753e850c03c42aabd515b745b693fa21",
+  "playwright.config.mts.txt": "79b10d2388e065f2d0f45811149ed1fab354ad1c5a85fdaa7294d11fb1c3878f",
+  "screenshots/desktop-1280-open.png": "2ec926c3ef3d11686150c35f2251d142568b577a3287728ec3befdd1e85697d2",
+  "screenshots/desktop-640-open.png": "a1d7afa11fd8e19297ff1a592f7e3ac03108fbfb30472e485c6380470acb636c",
+  "screenshots/mobile-390-closed.png": "99425eef3e43ad8fcfc1afbafced9535234d84e0f140b46ad55939e9c0a6a177",
+  "tests.log": "3e25bdf2f2cb1a88720e1135f2bbbcf0dd83f2f9756516a6185ab84ac7f59f68",
+  "toolbar.spec.ts.txt": "e0262d94a936324716bba64ebdac7c8245da72e2bc8bfe3c47fa967a8c56d681",
+  "verification.json": "43fd73c0d5c2084ed99f1137beea705b3ef979ab7dbe2290ee344e42717e3694"
+}

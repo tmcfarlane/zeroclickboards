@@ -1,0 +1,17 @@
+{
+  "gate": "scoped-lint",
+  "startedAt": "2026-10-02T13:33:42.875531+00:00",
+  "endedAt": "2026-10-02T13:33:44.360776+00:00",
+  "elapsedSeconds": 1.4849987921770662,
+  "exitCode": 0,
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/eslint/bin/eslint.js",
+    "--no-ignore",
+    "--max-warnings=0",
+    "mcp-server/src/oauth.ts",
+    "mcp-server/src/oauth-store.ts",
+    "api/_lib/__tests__/connector-lifecycle.test.ts"
+  ],
+  "explicitEnvironment": {}
+}

@@ -7,7 +7,7 @@ import { AppRoutes } from './routes'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { AuthProvider } from '@/components/auth/AuthProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
+import { AppToaster } from '@/components/layout/AppToaster'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,12 +29,7 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <RouterProvider router={router} />
         </AuthProvider>
-        <Toaster
-          theme="dark"
-          position="bottom-right"
-          offset={{ bottom: 80 }}
-          toastOptions={{ style: { background: '#111515', border: '1px solid rgba(255,255,255,0.1)', color: '#F2F7F7' } }}
-        />
+        <AppToaster />
         <Analytics />
       </QueryClientProvider>
     </ErrorBoundary>

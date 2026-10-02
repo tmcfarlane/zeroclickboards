@@ -1,0 +1,58 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci
+
+ × src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry 259ms
+   → Controlled fixture abort after held SDK logout
+ × src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > supports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry 10014ms
+   → Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ × src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > normalizes an unexpected rejected SDK call into the intentional sign-out contract 10027ms
+   → Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ × src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > does not let a failed departed Account action redirect or notify the newly visited route 10007ms
+   → Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ × src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > renders an existing billing error through one host that survives Account-to-public navigation 10005ms
+   → Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ × src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > delegates the optional draft intent without calling or starting the default sign-out action 10006ms
+   → Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry
+Error: Controlled fixture abort after held SDK logout
+ ❯ src/components/auth/__tests__/signOut.test.tsx:119:1
+    117|     await act(async () => { button.click(); button.click(); });
+    118|     await waitFor(() => expect(fixture.logoutCalls).toBe(1));
+    119|     throw new Error('Controlled fixture abort after held SDK logout');
+       | ^
+    120|     expect(screen.getByRole('button', { name: 'Signing out...' })).toB…
+    121|     await act(async () => { held.resolve(json({ code: 'unexpected_fail…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > supports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry
+ FAIL  src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > normalizes an unexpected rejected SDK call into the intentional sign-out contract
+ FAIL  src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > does not let a failed departed Account action redirect or notify the newly visited route
+ FAIL  src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > renders an existing billing error through one host that survives Account-to-public navigation
+ FAIL  src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > delegates the optional draft intent without calling or starting the default sign-out action
+Error: Hook timed out in 10000ms.
+If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+ ❯ src/components/auth/__tests__/signOut.test.tsx:83:1
+     81| }
+     82|
+     83| beforeEach(async () => {
+       | ^
+     84|   fixture.storage.clear(); fixture.responses.length = 0; fixture.logou…
+     85|   fixture.user = { id: accountId, aud: 'authenticated', role: 'authent…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed (6)
+   Start at  05:26:38
+   Duration  57.27s (transform 1.58s, setup 513ms, import 2.48s, tests 50.34s, environment 3.52s)
+

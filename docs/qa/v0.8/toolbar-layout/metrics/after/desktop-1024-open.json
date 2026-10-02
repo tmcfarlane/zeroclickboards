@@ -1,0 +1,80 @@
+{
+  "scenario": {
+    "label": "desktop-1024-open",
+    "width": 1024,
+    "height": 720,
+    "open": true
+  },
+  "metrics": [
+    {
+      "name": "selector",
+      "x": 368,
+      "y": 60,
+      "width": 198.734375,
+      "height": 40,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "board",
+      "x": 582.734375,
+      "y": 66,
+      "width": 82.09375,
+      "height": 28,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "timeline",
+      "x": 668.828125,
+      "y": 66,
+      "width": 95.953125,
+      "height": 28,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "ask-ai",
+      "x": 376,
+      "y": 108,
+      "width": 98.703125,
+      "height": 36,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "search",
+      "x": 488.703125,
+      "y": 108,
+      "width": 256,
+      "height": 36,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "filters",
+      "x": 750.703125,
+      "y": 108,
+      "width": 36,
+      "height": 36,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "share",
+      "x": 792.703125,
+      "y": 108,
+      "width": 94.578125,
+      "height": 36,
+      "centerHitsSelf": true
+    },
+    {
+      "name": "actions",
+      "x": 893.28125,
+      "y": 108,
+      "width": 36,
+      "height": 36,
+      "centerHitsSelf": true
+    }
+  ],
+  "body": {
+    "viewport": 1024,
+    "documentWidth": 1024,
+    "bodyWidth": 1024
+  },
+  "askLines": 1
+}

@@ -1,0 +1,12 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/private-after
+
+ ✓ src/hooks/__tests__/useSignOutAction.test.tsx (7 tests) 235ms
+ ✓ src/hooks/__tests__/commit-order.test.tsx (7 tests) 253ms
+
+ Test Files  2 passed (2)
+      Tests  14 passed (14)
+   Start at  06:39:29
+   Duration  2.44s (transform 116ms, setup 184ms, import 401ms, tests 488ms, environment 1.11s)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/after.json
