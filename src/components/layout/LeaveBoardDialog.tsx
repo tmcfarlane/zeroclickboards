@@ -6,13 +6,14 @@ interface LeaveBoardDialogProps {
   signingOut: boolean;
   busy: boolean;
   hasForms: boolean;
+  hasAIDraft: boolean;
   saveState: 'saving' | 'attention' | null;
   onStay: () => void;
   onLeave: () => void;
   restoreFocus: () => void;
 }
 
-export function LeaveBoardDialog({ open, signingOut, busy, hasForms, saveState, onStay, onLeave, restoreFocus }: LeaveBoardDialogProps) {
+export function LeaveBoardDialog({ open, signingOut, busy, hasForms, hasAIDraft, saveState, onStay, onLeave, restoreFocus }: LeaveBoardDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen && !busy) onStay(); }}>
       <AlertDialogContent
@@ -29,9 +30,10 @@ export function LeaveBoardDialog({ open, signingOut, busy, hasForms, saveState, 
           <AlertDialogDescription className="text-[#A8B2B2] space-y-2" asChild>
             <div>
               {hasForms && <p>Open forms will close. Unsaved form text will be discarded. Stay to finish or copy it.</p>}
+              {hasAIDraft && <p>Your unsent AI text will be discarded. Stay to keep it.</p>}
               {saveState === 'saving' && <p>{signingOut ? 'Some board changes have not finished saving. Stay to check their status before signing out.' : 'Some board changes have not finished saving. Saving can continue while you stay signed in.'}</p>}
               {saveState === 'attention' && <p>Some board changes need attention. Stay to review their save status or recovery options.</p>}
-              {!hasForms && !saveState && <p>Choose Stay to remain here or {signingOut ? 'Sign out' : 'Leave'} to continue.</p>}
+              {!hasForms && !hasAIDraft && !saveState && <p>Choose Stay to remain here or {signingOut ? 'Sign out' : 'Leave'} to continue.</p>}
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

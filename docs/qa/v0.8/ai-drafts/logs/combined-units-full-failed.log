@@ -1,0 +1,81 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts
+
+ ❯ api/_lib/__tests__/connector-sql.test.ts (3 tests | 2 failed) 24311ms
+     × detects the same-socket pipelining made by the unreserved driver 11342ms
+     × does not pipeline on either socket with max=2 and releases errors 9890ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  api/_lib/__tests__/connector-sql.test.ts > connector executor with the actual postgres.js wire protocol > detects the same-socket pipelining made by the unreserved driver
+Error: write CONNECT_TIMEOUT 127.0.0.1:64383
+ ❯ connectTimedOut ../zeroclickboards/node_modules/postgres/src/connection.js:262:20
+ ❯ Timeout.done [as _onTimeout] ../zeroclickboards/node_modules/postgres/src/connection.js:1059:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  api/_lib/__tests__/connector-sql.test.ts > connector executor with the actual postgres.js wire protocol > does not pipeline on either socket with max=2 and releases errors
+Error: write CONNECT_TIMEOUT 127.0.0.1:64476
+ ❯ connectTimedOut ../zeroclickboards/node_modules/postgres/src/connection.js:262:20
+ ❯ Timeout.done [as _onTimeout] ../zeroclickboards/node_modules/postgres/src/connection.js:1059:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 3 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: PGlite is closed
+ ❯ L._checkReady ../zeroclickboards/node_modules/@electric-sql/pglite/dist/index.js:3:187361
+ ❯ L.exec ../zeroclickboards/node_modules/@electric-sql/pglite/dist/chunk-F2DQ4FIK.js:8:474
+ ❯ catalogFixture api/_lib/__tests__/connector-sql.test.ts:34:14
+     32|   const files = await readdir(directory)
+     33|   for (const suffix of ['plugin_oauth_records.sql', 'plugin_connector_…
+     34|     await pg.exec(await readFile(new URL(files.find(name => name.endsW…
+       |              ^
+     35|   }
+     36|   await pg.exec('grant zeroboard_connector to connector_fixture; set s…
+
+This error originated in "api/_lib/__tests__/connector-sql.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "does not pipeline on either socket with max=1 and releases errors". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: PGlite is closed
+ ❯ L._checkReady ../zeroclickboards/node_modules/@electric-sql/pglite/dist/index.js:3:187361
+ ❯ L.exec ../zeroclickboards/node_modules/@electric-sql/pglite/dist/chunk-F2DQ4FIK.js:8:474
+ ❯ catalogFixture api/_lib/__tests__/connector-sql.test.ts:34:14
+     32|   const files = await readdir(directory)
+     33|   for (const suffix of ['plugin_oauth_records.sql', 'plugin_connector_…
+     34|     await pg.exec(await readFile(new URL(files.find(name => name.endsW…
+       |              ^
+     35|   }
+     36|   await pg.exec('grant zeroboard_connector to connector_fixture; set s…
+
+This error originated in "api/_lib/__tests__/connector-sql.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: PGlite is closed
+ ❯ L._checkReady ../zeroclickboards/node_modules/@electric-sql/pglite/dist/index.js:3:187361
+ ❯ L.exec ../zeroclickboards/node_modules/@electric-sql/pglite/dist/chunk-F2DQ4FIK.js:8:474
+ ❯ catalogFixture api/_lib/__tests__/connector-sql.test.ts:34:14
+     32|   const files = await readdir(directory)
+     33|   for (const suffix of ['plugin_oauth_records.sql', 'plugin_connector_…
+     34|     await pg.exec(await readFile(new URL(files.find(name => name.endsW…
+       |              ^
+     35|   }
+     36|   await pg.exec('grant zeroboard_connector to connector_fixture; set s…
+
+This error originated in "api/_lib/__tests__/connector-sql.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed | 44 passed (45)
+      Tests  2 failed | 970 passed (972)
+     Errors  3 errors
+   Start at  04:51:28
+   Duration  128.11s (transform 6.41s, setup 6.12s, import 73.23s, tests 103.59s, environment 51.72s)
+

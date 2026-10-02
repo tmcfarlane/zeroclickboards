@@ -58,6 +58,7 @@ export function AppShell() {
   const viewerSearchRef = useRef<HTMLInputElement>(null);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [hasAIDraft, setHasAIDraft] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isUpgradePromptOpen, setIsUpgradePromptOpen] = useState(false);
   const { isSignedIn, isLoaded, userId } = useAuth();
@@ -67,6 +68,14 @@ export function AppShell() {
   const accountRef = useRef(userId);
   accountRef.current = userId;
   const draftOwnerRef = useRef(userId);
+  // Reject old reports even when a previous account later signs back in.
+  const aiDraftOwner = useMemo(() => ({ userId }), [userId]);
+  const aiDraftOwnerRef = useRef(aiDraftOwner);
+  aiDraftOwnerRef.current = aiDraftOwner;
+  const handleAIDraftChange = useCallback((hasDraft: boolean) => {
+    if (aiDraftOwnerRef.current !== aiDraftOwner || accountRef.current !== aiDraftOwner.userId) return;
+    setHasAIDraft(hasDraft);
+  }, [aiDraftOwner]);
   const signOutAttemptRef = useRef<{ userId: string } | null>(null);
   const focusBeforeLeaveRef = useRef<HTMLElement | null>(null);
   const accountMenuTriggerRef = useRef<HTMLButtonElement>(null);
@@ -77,7 +86,7 @@ export function AppShell() {
   const userBoards = getBoardsForUser();
   const hasOpenForms = !!cardEditorSession || !!newCardTarget || isCreateDialogOpen || !!textDialogRequest || hasShareDraft;
   const syncStates = Object.values(boardSyncStates);
-  const hasUnsavedChanges = hasOpenForms || syncStates.some((state) => state.status !== 'saved');
+  const hasUnsavedChanges = hasOpenForms || hasAIDraft || syncStates.some((state) => state.status !== 'saved');
   const saveState = syncStates.some((state) => ['error', 'conflict', 'deleted', 'readonly'].includes(state.status)) ? 'attention' : syncStates.some((state) => state.status !== 'saved') ? 'saving' : null;
   const sameDraftAccount = isLoaded && isSignedIn && userId === draftOwnerRef.current;
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
@@ -156,6 +165,7 @@ export function AppShell() {
       setSearchBoardId(null);
       setViewerSearch('');
       setIsAIOpen(false);
+      setHasAIDraft(false);
       setIsShortcutsOpen(false);
       setIsSignInModalOpen(false);
       setIsUpgradePromptOpen(false);
@@ -335,7 +345,7 @@ export function AppShell() {
 
       {/* Main Content Area with AI Side Panel */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        <AIAssistant key={userId ?? 'signed-out'} isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} onUpgrade={() => setIsUpgradePromptOpen(true)} />
+        <AIAssistant key={userId ?? 'signed-out'} isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} onUpgrade={() => setIsUpgradePromptOpen(true)} onDraftChange={handleAIDraftChange} />
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           {activeBoard ? <BoardSyncNotice boardId={activeBoard.id} /> : null}
           <main className="flex-1 min-h-0 overflow-hidden">
@@ -427,6 +437,7 @@ export function AppShell() {
         signingOut={blocker.state !== 'blocked' && signOutIntent !== null}
         busy={isSigningOut}
         hasForms={hasOpenForms}
+        hasAIDraft={hasAIDraft}
         saveState={saveState}
         onStay={stayHere}
         onLeave={leavePage}
