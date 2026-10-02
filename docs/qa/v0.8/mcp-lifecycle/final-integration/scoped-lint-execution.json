@@ -1,0 +1,20 @@
+{
+  "gate": "scoped-lint",
+  "startedAt": "2026-10-02T13:59:11.699363+00:00",
+  "endedAt": "2026-10-02T13:59:14.236911+00:00",
+  "elapsedSeconds": 2.5374646249692887,
+  "exitCode": 0,
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/eslint/bin/eslint.js",
+    "--no-ignore",
+    "--max-warnings=0",
+    "api/_lib/__tests__/connector-lifecycle.test.ts",
+    "mcp-server/src/oauth-store.ts",
+    "mcp-server/src/oauth.ts",
+    "src/components/board/KanbanBoard.tsx",
+    "src/hooks/__tests__/useSignOutAction.test.tsx",
+    "src/hooks/useSignOutAction.ts"
+  ],
+  "explicitEnvironment": {}
+}

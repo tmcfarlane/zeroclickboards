@@ -1,0 +1,331 @@
+{
+  "recordedAt": "2026-10-02T14:09:20.427464+00:00",
+  "head": "54a767abfb0dc1fedbe61cb637cebac1ecbd6f1c",
+  "integratedLocalCommits": {
+    "auth": "eabdcb3",
+    "toolbar": "2650da7"
+  },
+  "node": {
+    "path": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "version": "v20.20.2",
+    "sha256": "38de4fc456c0c439bac48c727d378f749abb4e31f4116703bb1ee9a746fccbb6"
+  },
+  "dependencySymlinks": {
+    "root": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-response-limit/node_modules",
+    "mcp": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroclickboards/mcp-server/node_modules"
+  },
+  "installedRootVersions": {
+    "ai": "6.0.214",
+    "@ai-sdk/openai": "3.0.77",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@supabase/supabase-js": "2.97.0",
+    "@electric-sql/pglite": "0.3.14",
+    "vitest": "4.1.4",
+    "vite": "7.3.0",
+    "typescript": "5.9.3",
+    "zod": "4.3.5"
+  },
+  "frozenSourceSha256": {
+    "mcp-server/src/oauth.ts": "b74de20b3770aff5d4880e581bb8073accd72f926c13fed90b63824cd2ab9099",
+    "mcp-server/src/oauth-store.ts": "53f46643435e99cdc693a9bf192eff43102f6a9a8b6893379f1ffa95456df1d9",
+    "api/_lib/__tests__/connector-lifecycle.test.ts": "fa6043110df2c528eca6603f9734580d482db21dc59c697e79c793235819e53e",
+    "src/components/board/KanbanBoard.tsx": "cc6a4b31dd3b59f97b2719cee61bae56de44ac43a045f40e35bb08497e56ae63",
+    "src/hooks/__tests__/useSignOutAction.test.tsx": "7aa61a2ac3f2f5a85148ccc83823bd637d3d8b1f098fa7ae21d1734059420a09",
+    "src/hooks/useSignOutAction.ts": "002734c4cded40d44a9d35d495a0e2ab61a809859d9b722137c7615ce767fd52"
+  },
+  "freeze": {
+    "trackedCodeConfigCount": 431,
+    "allMatchHeadBefore": true,
+    "allUnchangedAfterFullAndBrowsers": true,
+    "candidateThreeUnchanged": true,
+    "priorFailedEvidenceFiles": 21,
+    "priorFailedEvidenceUnchanged": true,
+    "beforeSha256": "a0c5486cff5890db07249df9fef595f5387d88401e8e77a29314278e8990b04f",
+    "afterFullSha256": "f272f3d77bb127d58b1812e3fa3cb693afb0fea36b417cacb6e71de413a7acbc",
+    "afterFinalSha256": "14f06e41f15c6899ddd96358f9e8b68738ac926ceccdbeafe34f9dfc07f1bf14"
+  },
+  "fullSuite": {
+    "tests": 989,
+    "passed": 989,
+    "failed": 0,
+    "skipped": 0,
+    "files": 47,
+    "passedFiles": 47,
+    "lifecycleCasesPassed": 16,
+    "retryCount": 0
+  },
+  "executions": {
+    "typecheck-app": {
+      "gate": "typecheck-app",
+      "startedAt": "2026-10-02T13:58:46.420631+00:00",
+      "endedAt": "2026-10-02T13:58:58.620122+00:00",
+      "elapsedSeconds": 12.19921829085797,
+      "exitCode": 0,
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--project",
+        "tsconfig.app.json",
+        "--incremental",
+        "false",
+        "--noEmit"
+      ],
+      "explicitEnvironment": {}
+    },
+    "full-test": {
+      "gate": "full-test",
+      "startedAt": "2026-10-02T13:56:04.883156+00:00",
+      "endedAt": "2026-10-02T13:57:59.228509+00:00",
+      "elapsedSeconds": 114.34393904102035,
+      "exitCode": 0,
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--config",
+        "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/vite-test.config.mts",
+        "--maxWorkers=2",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile.json=/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/full-test.json"
+      ],
+      "explicitEnvironment": {
+        "CI": "true",
+        "VITE_SUPABASE_URL": "https://placeholder.supabase.co",
+        "VITE_SUPABASE_ANON_KEY": "placeholder-key"
+      }
+    },
+    "scoped-lint": {
+      "gate": "scoped-lint",
+      "startedAt": "2026-10-02T13:59:11.699363+00:00",
+      "endedAt": "2026-10-02T13:59:14.236911+00:00",
+      "elapsedSeconds": 2.5374646249692887,
+      "exitCode": 0,
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "--no-ignore",
+        "--max-warnings=0",
+        "api/_lib/__tests__/connector-lifecycle.test.ts",
+        "mcp-server/src/oauth-store.ts",
+        "mcp-server/src/oauth.ts",
+        "src/components/board/KanbanBoard.tsx",
+        "src/hooks/__tests__/useSignOutAction.test.tsx",
+        "src/hooks/useSignOutAction.ts"
+      ],
+      "explicitEnvironment": {}
+    },
+    "typecheck-node": {
+      "gate": "typecheck-node",
+      "startedAt": "2026-10-02T13:59:06.347553+00:00",
+      "endedAt": "2026-10-02T13:59:11.579158+00:00",
+      "elapsedSeconds": 5.231305999914184,
+      "exitCode": 0,
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--project",
+        "tsconfig.node.json",
+        "--incremental",
+        "false",
+        "--noEmit"
+      ],
+      "explicitEnvironment": {}
+    },
+    "build": {
+      "gate": "build",
+      "startedAt": "2026-10-02T13:59:14.344355+00:00",
+      "endedAt": "2026-10-02T13:59:21.062599+00:00",
+      "elapsedSeconds": 6.717833375092596,
+      "exitCode": 0,
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/vite/bin/vite.js",
+        "build",
+        "--config",
+        "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/vite-build.config.mts"
+      ],
+      "explicitEnvironment": {
+        "VITE_SUPABASE_URL": "https://connector-fixture.invalid",
+        "VITE_SUPABASE_ANON_KEY": "disposable-fixture-public-key"
+      }
+    }
+  },
+  "privateConfigSha256": {
+    "vite-test.config.mts": "45b7f4130c88712828dea4148449920937d07ebf5bd77d2631f539c8759504ff",
+    "vite-build.config.mts": "3001d9f5fd7ba2bf179ac23aa87b0c6e7c65452bb1c38c702943d09cef3a0ca9"
+  },
+  "compiledBuild": {
+    "directory": "/private/tmp/zeroboard-mcp-final-integrated-built-smoke/dist",
+    "artifactCount": 41,
+    "manifestSha256": "450800424b27da9bcabc1878b0152cd819f11289db49b05c7afce55fcc8611e8",
+    "allArtifactsUnchangedAfterBrowsers": true,
+    "exactFixtureEnvironment": {
+      "VITE_SUPABASE_URL": "https://connector-fixture.invalid",
+      "VITE_SUPABASE_ANON_KEY": "disposable-fixture-public-key"
+    },
+    "noPerformanceClaim": true
+  },
+  "compiledBrowser": {
+    "connectors": {
+      "stats": {
+        "startTime": "2026-10-02T14:02:23.399Z",
+        "duration": 8964.767,
+        "expected": 4,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "execution": {
+        "gate": "connectors",
+        "start": "2026-10-02T14:02:19.293102+00:00",
+        "end": "2026-10-02T14:02:32.379442+00:00",
+        "elapsedSeconds": 13.084836541907862,
+        "exitCode": 0,
+        "command": [
+          "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+          "node_modules/@playwright/test/cli.js",
+          "test",
+          "--config",
+          "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/playwright.config.mts"
+        ],
+        "explicitEnvironment": {
+          "CI": "true",
+          "CONNECTOR_SCREENSHOT_DIR": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/screenshots"
+        },
+        "retries": 0
+      },
+      "projects": "Existing desktop and iPhone 13 mobile on Chromium",
+      "canonicalPngCount": 4
+    },
+    "toolbar": {
+      "stats": {
+        "startTime": "2026-10-02T14:03:28.705Z",
+        "duration": 9755.004,
+        "expected": 3,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "errors": [],
+      "execution": {
+        "gate": "toolbar",
+        "start": "2026-10-02T14:03:28.063771+00:00",
+        "end": "2026-10-02T14:03:38.485903+00:00",
+        "elapsedSeconds": 10.42192754196003,
+        "exitCode": 0,
+        "command": [
+          "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+          "node_modules/@playwright/test/cli.js",
+          "test",
+          "--config",
+          "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-toolbar/playwright.config.mts"
+        ],
+        "explicitEnvironment": {
+          "CI": "true",
+          "TOOLBAR_PHASE": "after"
+        },
+        "retries": 0
+      },
+      "scenarios": [
+        "desktop-1280-open",
+        "desktop-640-open",
+        "mobile-390-closed"
+      ],
+      "deviceScope": "Chromium CSS viewport geometry, not mobile browser interoperability",
+      "canonicalPngCount": 3,
+      "initialBootstrap": "Preserved zero-test selection invocation; only private grep suffix corrected; no prior toolbar assertion executed"
+    },
+    "retries": 0,
+    "fixtureSources": {
+      "tests/connector-ui/fixtures.ts": "f2b9ed7075bd7bfc5b76b6709473f23fa1319760ab04ac5baded8a3911e563f4",
+      "tests/connector-ui/connector.spec.ts": "a12a2c0da60ca65bc56dc7dbf763a24a5e9ec06c7991e89bdf72efbb832fcc4a"
+    },
+    "sameBuildForAllSeven": true
+  },
+  "images": {
+    "browser-connectors/screenshots/consent-selected-desktop.png": {
+      "sha256": "4c9d7d9b599e97501dc9c1f90635415a24331d35f88d9569530c628560bef98f",
+      "bytes": 68421,
+      "width": 1280,
+      "height": 857,
+      "kind": "compiled disposable UI fixture",
+      "visuallyReviewed": true
+    },
+    "browser-connectors/screenshots/consent-selected-mobile.png": {
+      "sha256": "1ab8a80fdf95b520caa3365b2050dd0e58ccfb062802ca207872de413f8473c2",
+      "bytes": 61929,
+      "width": 390,
+      "height": 895,
+      "kind": "compiled disposable UI fixture",
+      "visuallyReviewed": true
+    },
+    "browser-connectors/screenshots/setup-desktop.png": {
+      "sha256": "54ea526de813336170a3f898356ba8893a348770fafc61aa9183ef5974e12e4b",
+      "bytes": 160198,
+      "width": 1280,
+      "height": 1655,
+      "kind": "compiled disposable UI fixture",
+      "visuallyReviewed": true
+    },
+    "browser-connectors/screenshots/setup-mobile.png": {
+      "sha256": "dfbaac4cb87227a1cac4d1e6ee62a70039726487eb7fcba1b593fa69ef382cbf",
+      "bytes": 116979,
+      "width": 358,
+      "height": 1395,
+      "kind": "compiled disposable UI fixture",
+      "visuallyReviewed": true
+    },
+    "browser-toolbar/artifacts/after-screenshots/desktop-1280-open.png": {
+      "sha256": "2ec926c3ef3d11686150c35f2251d142568b577a3287728ec3befdd1e85697d2",
+      "bytes": 125008,
+      "width": 1280,
+      "height": 720,
+      "kind": "compiled disposable UI fixture",
+      "visuallyReviewed": true
+    },
+    "browser-toolbar/artifacts/after-screenshots/desktop-640-open.png": {
+      "sha256": "a1d7afa11fd8e19297ff1a592f7e3ac03108fbfb30472e485c6380470acb636c",
+      "bytes": 121389,
+      "width": 640,
+      "height": 720,
+      "kind": "compiled disposable UI fixture",
+      "visuallyReviewed": true
+    },
+    "browser-toolbar/artifacts/after-screenshots/mobile-390-closed.png": {
+      "sha256": "99425eef3e43ad8fcfc1afbafced9535234d84e0f140b46ad55939e9c0a6a177",
+      "bytes": 22749,
+      "width": 390,
+      "height": 664,
+      "kind": "compiled disposable UI fixture",
+      "visuallyReviewed": true
+    },
+    "preview-landing.png": {
+      "sha256": "85b79e6af7c58c256fde0aea218ec5b299ec5eaa5d2eb91ebb60a10706eb8632",
+      "bytes": 145738,
+      "width": 1280,
+      "height": 720,
+      "kind": "anonymous compiled preview",
+      "visuallyReviewed": true
+    }
+  },
+  "agentBrowser": "Initial anonymous compiled landing rendered; no page errors/overlay; local analytics 404 explicitly recorded; owned browser closed",
+  "resources": {
+    "pgSlotReleasedImmediatelyAfterFullRun": true,
+    "previewStopped": true,
+    "previewPort4262Closed": true,
+    "allOwnedProcessesExited": true,
+    "ownedAgentBrowserClosed": true,
+    "sharedDistUnchanged": true,
+    "dependencyTargetsUnchanged": true
+  },
+  "scope": [
+    "Local public fixtures only",
+    "No full or build retry",
+    "No product/source change by verifier",
+    "No production credentials/data/service contact",
+    "No commit/push",
+    "Parent-owned exact-head CI/hosted gates remain separate"
+  ]
+}
