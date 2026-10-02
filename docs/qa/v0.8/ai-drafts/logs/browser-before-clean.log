@@ -1,0 +1,377 @@
+[WebServer] (node:86055) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 1 worker
+
+(node:86058) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [BABEL] Note: The code generator has deoptimised the styling of /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-vite-cache/deps/react-dom_client.js?v=378139fc as it exceeds the max of 500KB.
+  ✘   1 [desktop] › tests/connector-ui/ai-drafts.spec.ts:97:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly (12.9s)
+(node:86369) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   2 [desktop] › tests/connector-ui/ai-drafts.spec.ts:117:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning (2.4s)
+(node:86431) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   3 [desktop] › tests/connector-ui/ai-drafts.spec.ts:136:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry (6.8s)
+(node:86475) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   4 [desktop] › tests/connector-ui/ai-drafts.spec.ts:155:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent (1.3s)
+(node:86480) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   5 [desktop] › tests/connector-ui/ai-drafts.spec.ts:169:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (1.4s)
+(node:86486) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   6 [mobile] › tests/connector-ui/ai-drafts.spec.ts:97:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly (6.4s)
+(node:86492) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   7 [mobile] › tests/connector-ui/ai-drafts.spec.ts:117:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning (1.9s)
+(node:86497) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   8 [mobile] › tests/connector-ui/ai-drafts.spec.ts:136:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry (6.9s)
+(node:86530) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   9 [mobile] › tests/connector-ui/ai-drafts.spec.ts:155:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent (1.9s)
+(node:86626) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  10 [mobile] › tests/connector-ui/ai-drafts.spec.ts:169:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (1.7s)
+
+
+  1) [desktop] › tests/connector-ui/ai-drafts.spec.ts:97:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alertdialog', { name: 'Leave this page?' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('alertdialog', { name: 'Leave this page?' })
+
+
+      100 |   await page.goBack();
+      101 |   const alert = page.getByRole('alertdialog', { name: 'Leave this page?' });
+    > 102 |   await expect(alert).toBeVisible(); await expect(page).toHaveURL('/app');
+          |                       ^
+      103 |   await expect(alert).toContainText('Your unsent AI text will be discarded');
+      104 |   await expect(alert).not.toContainText('Open forms will close');
+      105 |   await screenshot(page, info, 'visible-draft-warning');
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:102:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [desktop] › tests/connector-ui/ai-drafts.spec.ts:117:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      120 |   await page.getByRole('button', { name: 'Clear chat', exact: true }).click();
+      121 |   await expect(input).toHaveValue(prompt); await closeAI(page);
+    > 122 |   expect(await preventsUnload(page)).toBe(true);
+          |                                      ^
+      123 |   await requestAccount(page);
+      124 |   const alert = page.getByRole('alertdialog', { name: 'Leave this page?' });
+      125 |   await expect(alert).toBeVisible(); await expect(alert).toContainText('Your unsent AI text');
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:122:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [desktop] › tests/connector-ui/ai-drafts.spec.ts:136:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alertdialog', { name: 'Sign out with unfinished work?' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('alertdialog', { name: 'Sign out with unfinished work?' })
+
+
+      139 |   await requestSignOut(page);
+      140 |   const alert = page.getByRole('alertdialog', { name: 'Sign out with unfinished work?' });
+    > 141 |   await expect(alert).toBeVisible(); expect(fixture.logoutAttempts).toBe(0);
+          |                       ^
+      142 |   await alert.getByRole('button', { name: 'Stay', exact: true }).click();
+      143 |   await expect(page.getByRole('button', { name: 'Account menu' })).toBeFocused();
+      144 |   expect(fixture.logoutAttempts).toBe(0);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:141:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [desktop] › tests/connector-ui/ai-drafts.spec.ts:155:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      156 |   const fixture = await draftFixture(page); await accountThenBoard(page);
+      157 |   const input = await openAI(page); await input.fill(prompt);
+    > 158 |   expect(await preventsUnload(page)).toBe(true);
+          |                                      ^
+      159 |   await fixture.authEvent(false); await expect(input).toHaveValue(prompt); expect(await preventsUnload(page)).toBe(true);
+      160 |   await requestAccount(page); await expect(page.getByRole('alertdialog')).toBeVisible();
+      161 |   await fixture.authEvent(true);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:158:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [desktop] › tests/connector-ui/ai-drafts.spec.ts:169:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      175 |     await input.dispatchEvent('keydown', { key: 'Enter', isComposing: true });
+      176 |     await input.dispatchEvent('keydown', { key: 'Enter', keyCode: 229 });
+    > 177 |     await expect(input).toHaveValue(prompt); expect(requests).toBe(0); expect(await preventsUnload(page)).toBe(true);
+          |                                                                                                           ^
+      178 |     await input.press('Enter'); await expect(input).toHaveValue('');
+      179 |     await expect.poll(() => requests).toBe(1); expect(await preventsUnload(page)).toBe(false);
+      180 |     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:177:107
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [mobile] › tests/connector-ui/ai-drafts.spec.ts:97:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alertdialog', { name: 'Leave this page?' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('alertdialog', { name: 'Leave this page?' })
+
+
+      100 |   await page.goBack();
+      101 |   const alert = page.getByRole('alertdialog', { name: 'Leave this page?' });
+    > 102 |   await expect(alert).toBeVisible(); await expect(page).toHaveURL('/app');
+          |                       ^
+      103 |   await expect(alert).toContainText('Your unsent AI text will be discarded');
+      104 |   await expect(alert).not.toContainText('Open forms will close');
+      105 |   await screenshot(page, info, 'visible-draft-warning');
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:102:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-AI-only-text-blo-4439b--Stay-and-leaves-explicitly-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [mobile] › tests/connector-ui/ai-drafts.spec.ts:117:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      120 |   await page.getByRole('button', { name: 'Clear chat', exact: true }).click();
+      121 |   await expect(input).toHaveValue(prompt); await closeAI(page);
+    > 122 |   expect(await preventsUnload(page)).toBe(true);
+          |                                      ^
+      123 |   await requestAccount(page);
+      124 |   const alert = page.getByRole('alertdialog', { name: 'Leave this page?' });
+      125 |   await expect(alert).toBeVisible(); await expect(alert).toContainText('Your unsent AI text');
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:122:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-Clear-chat-and-c-a9dd5-nd-truthful-Account-warning-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [mobile] › tests/connector-ui/ai-drafts.spec.ts:136:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alertdialog', { name: 'Sign out with unfinished work?' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('alertdialog', { name: 'Sign out with unfinished work?' })
+
+
+      139 |   await requestSignOut(page);
+      140 |   const alert = page.getByRole('alertdialog', { name: 'Sign out with unfinished work?' });
+    > 141 |   await expect(alert).toBeVisible(); expect(fixture.logoutAttempts).toBe(0);
+          |                       ^
+      142 |   await alert.getByRole('button', { name: 'Stay', exact: true }).click();
+      143 |   await expect(page.getByRole('button', { name: 'Account menu' })).toBeFocused();
+      144 |   expect(fixture.logoutAttempts).toBe(0);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:141:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-hidden-AI-draft--35798--explicit-attempt-for-retry-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [mobile] › tests/connector-ui/ai-drafts.spec.ts:155:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      156 |   const fixture = await draftFixture(page); await accountThenBoard(page);
+      157 |   const input = await openAI(page); await input.fill(prompt);
+    > 158 |   expect(await preventsUnload(page)).toBe(true);
+          |                                      ^
+      159 |   await fixture.authEvent(false); await expect(input).toHaveValue(prompt); expect(await preventsUnload(page)).toBe(true);
+      160 |   await requestAccount(page); await expect(page.getByRole('alertdialog')).toBeVisible();
+      161 |   await fixture.authEvent(true);
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:158:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-same-owner-token-2f143-ement-clears-the-old-intent-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [mobile] › tests/connector-ui/ai-drafts.spec.ts:169:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      175 |     await input.dispatchEvent('keydown', { key: 'Enter', isComposing: true });
+      176 |     await input.dispatchEvent('keydown', { key: 'Enter', keyCode: 229 });
+    > 177 |     await expect(input).toHaveValue(prompt); expect(requests).toBe(0); expect(await preventsUnload(page)).toBe(true);
+          |                                                                                                           ^
+      178 |     await input.press('Enter'); await expect(input).toHaveValue('');
+      179 |     await expect.poll(() => requests).toBe(1); expect(await preventsUnload(page)).toBe(false);
+      180 |     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts/tests/connector-ui/ai-drafts.spec.ts:177:107
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/eighth-ai-browser-before-clean/ai-drafts-composing-Enter--7e4b5-ears-only-the-unsent-reason-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10 failed
+    [desktop] › tests/connector-ui/ai-drafts.spec.ts:97:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly 
+    [desktop] › tests/connector-ui/ai-drafts.spec.ts:117:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning 
+    [desktop] › tests/connector-ui/ai-drafts.spec.ts:136:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry 
+    [desktop] › tests/connector-ui/ai-drafts.spec.ts:155:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent 
+    [desktop] › tests/connector-ui/ai-drafts.spec.ts:169:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason 
+    [mobile] › tests/connector-ui/ai-drafts.spec.ts:97:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly 
+    [mobile] › tests/connector-ui/ai-drafts.spec.ts:117:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning 
+    [mobile] › tests/connector-ui/ai-drafts.spec.ts:136:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry 
+    [mobile] › tests/connector-ui/ai-drafts.spec.ts:155:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent 
+    [mobile] › tests/connector-ui/ai-drafts.spec.ts:169:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason 

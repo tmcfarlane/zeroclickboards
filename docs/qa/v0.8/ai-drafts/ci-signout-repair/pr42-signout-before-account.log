@@ -1,0 +1,15 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci
+
+ ✓ src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry 411ms
+ ↓ src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > supports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry
+ ↓ src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > normalizes an unexpected rejected SDK call into the intentional sign-out contract
+ ↓ src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > does not let a failed departed Account action redirect or notify the newly visited route
+ ↓ src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > renders an existing billing error through one host that survives Account-to-public navigation
+ ↓ src/components/auth/__tests__/signOut.test.tsx > sign-out feedback through actual SDK and the persistent toast host > delegates the optional draft intent without calling or starting the default sign-out action
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 5 skipped (6)
+   Start at  05:25:26
+   Duration  5.16s (transform 1.15s, setup 351ms, import 1.92s, tests 414ms, environment 2.21s)
+

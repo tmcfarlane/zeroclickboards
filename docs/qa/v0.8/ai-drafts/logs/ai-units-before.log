@@ -1,0 +1,121 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts
+
+ ❯ src/components/ai/__tests__/AIAssistant.test.tsx (20 tests | 5 failed) 2001ms
+     × reports retained input through Clear chat, hidden panels, quota changes and a newly bound hidden callback 54ms
+     × keeps whitespace and composing text dirty without submitting, and reports an actual input clear 18ms
+     × clears an accepted draft before HTTP settles and does not restore it after success 26ms
+     × clears an accepted draft before HTTP settles and does not restore it after network failure 23ms
+     × reports the actual composer after idle and processing quick actions, including completion while hidden 39ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/ai/__tests__/AIAssistant.test.tsx > AI unsent draft reporting > reports retained input through Clear chat, hidden panels, quota changes and a newly bound hidden callback
+AssertionError: expected [ undefined, undefined, …(3) ] to deeply equal [ false, true, true, true, true ]
+
+- Expected
++ Received
+
+  [
+-   false,
+-   true,
+-   true,
+-   true,
+-   true,
++   undefined,
++   undefined,
++   undefined,
++   undefined,
++   undefined,
+  ]
+
+ ❯ src/components/ai/__tests__/AIAssistant.test.tsx:233:1
+    231|     view.rerender(<DraftAssistant isOpen onClose={onClose} onDraftChan…
+    232|     expect(screen.getByPlaceholderText(composerPlaceholder)).toHaveVal…
+    233|     expect(signals).toEqual([false, true, true, true, true]);
+       | ^
+    234|     expect(reboundWhileHidden).toBe(true);
+    235|     expect(rebound).toHaveBeenLastCalledWith(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/components/ai/__tests__/AIAssistant.test.tsx > AI unsent draft reporting > keeps whitespace and composing text dirty without submitting, and reports an actual input clear
+AssertionError: expected [ undefined, undefined, …(2) ] to deeply equal [ true, true, true, false ]
+
+- Expected
++ Received
+
+  [
+-   true,
+-   true,
+-   true,
+-   false,
++   undefined,
++   undefined,
++   undefined,
++   undefined,
+  ]
+
+ ❯ src/components/ai/__tests__/AIAssistant.test.tsx:264:1
+    262|     expect(input).toHaveValue('');
+    263|     signals.push(onDraftChange.mock.lastCall?.[0]);
+    264|     expect(signals).toEqual([true, true, true, false]);
+       | ^
+    265|   });
+    266|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/components/ai/__tests__/AIAssistant.test.tsx > AI unsent draft reporting > clears an accepted draft before HTTP settles and does not restore it after success
+ FAIL  src/components/ai/__tests__/AIAssistant.test.tsx > AI unsent draft reporting > clears an accepted draft before HTTP settles and does not restore it after network failure
+AssertionError: expected [ undefined ] to deeply equal [ false ]
+
+- Expected
++ Received
+
+  [
+-   false,
++   undefined,
+  ]
+
+ ❯ src/components/ai/__tests__/AIAssistant.test.tsx:294:1
+    292|       expect(input).toBeEnabled();
+    293|       expect(JSON.parse(String(fetch.mock.calls[0][1]?.body)).text).to…
+    294|       expect(atRequestStart).toEqual([false]);
+       | ^
+    295|       expect(whileHeld).toBe(false);
+    296|       expect(onDraftChange).toHaveBeenLastCalledWith(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/components/ai/__tests__/AIAssistant.test.tsx > AI unsent draft reporting > reports the actual composer after idle and processing quick actions, including completion while hidden
+AssertionError: expected [ undefined, undefined, undefined ] to deeply equal [ false, true, true ]
+
+- Expected
++ Received
+
+  [
+-   false,
+-   true,
+-   true,
++   undefined,
++   undefined,
++   undefined,
+  ]
+
+ ❯ src/components/ai/__tests__/AIAssistant.test.tsx:327:1
+    325|       expect(screen.getByPlaceholderText(composerPlaceholder)).toHaveV…
+    326|       expect(screen.getByPlaceholderText(composerPlaceholder)).toBeEna…
+    327|       expect([idleAccepted, processingAssigned, onDraftChange.mock.las…
+       | ^
+    328|       expect(fetch).toHaveBeenCalledOnce();
+    329|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 15 passed (20)
+   Start at  04:10:04
+   Duration  7.88s (transform 780ms, setup 196ms, import 2.62s, tests 2.00s, environment 2.49s)
+

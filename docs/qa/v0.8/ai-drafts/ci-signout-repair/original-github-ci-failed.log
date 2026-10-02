@@ -1,0 +1,1346 @@
+Tests	Set up job	﻿2026-10-02T12:09:31.8246802Z Current runner version: '2.337.0'
+Tests	Set up job	2026-10-02T12:09:31.8266838Z ##[group]Runner Image Provisioner
+Tests	Set up job	2026-10-02T12:09:31.8267671Z Hosted Compute Agent
+Tests	Set up job	2026-10-02T12:09:31.8268173Z Version: 20260901.588
+Tests	Set up job	2026-10-02T12:09:31.8268691Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+Tests	Set up job	2026-10-02T12:09:31.8269427Z Build Date: 2026-09-01T19:56:44Z
+Tests	Set up job	2026-10-02T12:09:31.8270014Z Worker ID: {9d9e835e-f8a1-49cd-97cd-10a7c7088fbb}
+Tests	Set up job	2026-10-02T12:09:31.8270663Z Azure Region: westus3
+Tests	Set up job	2026-10-02T12:09:31.8271164Z ##[endgroup]
+Tests	Set up job	2026-10-02T12:09:31.8272189Z ##[group]Operating System
+Tests	Set up job	2026-10-02T12:09:31.8272808Z Ubuntu
+Tests	Set up job	2026-10-02T12:09:31.8273258Z 24.04.5
+Tests	Set up job	2026-10-02T12:09:31.8273726Z LTS
+Tests	Set up job	2026-10-02T12:09:31.8274182Z ##[endgroup]
+Tests	Set up job	2026-10-02T12:09:31.8274654Z ##[group]Runner Image
+Tests	Set up job	2026-10-02T12:09:31.8275437Z Image: ubuntu-24.04
+Tests	Set up job	2026-10-02T12:09:31.8275928Z Version: 20260927.320.1
+Tests	Set up job	2026-10-02T12:09:31.8276831Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+Tests	Set up job	2026-10-02T12:09:31.8278280Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+Tests	Set up job	2026-10-02T12:09:31.8279167Z ##[endgroup]
+Tests	Set up job	2026-10-02T12:09:31.8280136Z ##[group]GITHUB_TOKEN Permissions
+Tests	Set up job	2026-10-02T12:09:31.8281723Z Contents: read
+Tests	Set up job	2026-10-02T12:09:31.8282240Z Metadata: read
+Tests	Set up job	2026-10-02T12:09:31.8282807Z Packages: read
+Tests	Set up job	2026-10-02T12:09:31.8283300Z ##[endgroup]
+Tests	Set up job	2026-10-02T12:09:31.8285394Z Secret source: Actions
+Tests	Set up job	2026-10-02T12:09:31.8286281Z Cache mode: write
+Tests	Set up job	2026-10-02T12:09:31.8286884Z Prepare workflow directory
+Tests	Set up job	2026-10-02T12:09:31.8550113Z Prepare all required actions
+Tests	Set up job	2026-10-02T12:09:31.8603094Z Getting action download info
+Tests	Set up job	2026-10-02T12:09:32.1802659Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+Tests	Set up job	2026-10-02T12:09:32.2530530Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Tests	Set up job	2026-10-02T12:09:32.4585961Z Complete job name: Tests
+Tests	Run actions/checkout@v4	﻿2026-10-02T12:09:32.5172016Z ##[group]Run actions/checkout@v4
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5172722Z with:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5173108Z   repository: tmcfarlane/zeroclickboards
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5176368Z   token: ***
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5176746Z   ssh-strict: true
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5177122Z   ssh-user: git
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5177500Z   persist-credentials: true
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5177917Z   clean: true
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5178292Z   sparse-checkout-cone-mode: true
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5178726Z   fetch-depth: 1
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5179098Z   fetch-tags: false
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5179479Z   show-progress: true
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5179856Z   lfs: false
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5180200Z   submodules: false
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5180573Z   set-safe-directory: true
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5180995Z   allow-unsafe-pr-checkout: false
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5181585Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5987363Z Syncing repository: tmcfarlane/zeroclickboards
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5989224Z ##[group]Getting Git version info
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5990073Z Working directory is '/home/runner/work/zeroclickboards/zeroclickboards'
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.5991463Z [command]/usr/bin/git version
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6026058Z git version 2.55.0
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6041480Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6052996Z Temporarily overriding HOME='/home/runner/work/_temp/9f3cced3-7c2a-43f3-a001-2c1d3a75987d' before making global git config changes
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6054827Z Adding repository directory to the temporary git global config as a safe directory
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6057405Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/zeroclickboards/zeroclickboards
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6102085Z Deleting the contents of '/home/runner/work/zeroclickboards/zeroclickboards'
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6109103Z ##[group]Initializing the repository
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6110089Z [command]/usr/bin/git init /home/runner/work/zeroclickboards/zeroclickboards
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6181889Z hint: Using 'master' as the name for the initial branch. This default branch name
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6183183Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6184250Z hint: to use in all of your new repositories, which will suppress this warning,
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6184855Z hint: call:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6185380Z hint:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6185812Z hint: 	git config --global init.defaultBranch <name>
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6186331Z hint:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6186816Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6187555Z hint: 'development'. The just-created branch can be renamed via this command:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6188154Z hint:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6188512Z hint: 	git branch -m <name>
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6188908Z hint:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6189429Z hint: Disable this message with "git config set advice.defaultBranchName false"
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6194011Z Initialized empty Git repository in /home/runner/work/zeroclickboards/zeroclickboards/.git/
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6201246Z [command]/usr/bin/git remote add origin https://github.com/tmcfarlane/zeroclickboards
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6239153Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6240116Z ##[group]Disabling automatic garbage collection
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6242733Z [command]/usr/bin/git config --local gc.auto 0
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6271321Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6272350Z ##[group]Setting up auth
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6277626Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6305802Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6626237Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6653410Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6839223Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.6868163Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.7058400Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.7093098Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.7094103Z ##[group]Fetching the repository
+Tests	Run actions/checkout@v4	2026-10-02T12:09:32.7101818Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2292c9f52cb364b62960f7a88a15e05386d8decf:refs/remotes/pull/42/merge
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1702909Z From https://github.com/tmcfarlane/zeroclickboards
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1704875Z  * [new ref]         2292c9f52cb364b62960f7a88a15e05386d8decf -> pull/42/merge
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1708611Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1710069Z ##[group]Determining the checkout info
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1711424Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1712380Z [command]/usr/bin/git sparse-checkout disable
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1757037Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1786358Z ##[group]Checking out the ref
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.1788422Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/42/merge
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2420104Z Note: switching to 'refs/remotes/pull/42/merge'.
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2421310Z 
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2422116Z You are in 'detached HEAD' state. You can look around, make experimental
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2424064Z changes and commit them, and you can discard any commits you make in this
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2425914Z state without impacting any branches by switching back to a branch.
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2426851Z 
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2427477Z If you want to create a new branch to retain commits you create, you may
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2428836Z do so (now or later) by using -c with the switch command. Example:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2429901Z 
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2430257Z   git switch -c <new-branch-name>
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2430912Z 
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2431421Z Or undo this operation with:
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2432171Z 
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2432588Z   git switch -
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2433134Z 
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2433910Z Turn off this advice by setting config variable advice.detachedHead to false
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2435272Z 
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2436645Z HEAD is now at 2292c9f Merge fa6476c70cbd25ba32dcb677bfc7ff5ee94c8025 into 63efb43fe37ddc312a9b76b7ee1f875901389e7f
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2440804Z ##[endgroup]
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2471367Z [command]/usr/bin/git log -1 --format=%H
+Tests	Run actions/checkout@v4	2026-10-02T12:09:34.2493772Z 2292c9f52cb364b62960f7a88a15e05386d8decf
+Tests	Run actions/setup-node@v4	﻿2026-10-02T12:09:34.2821903Z ##[group]Run actions/setup-node@v4
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.2823038Z with:
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.2823886Z   node-version: 20
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.2824791Z   cache: npm
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.2825772Z   always-auth: false
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.2826723Z   check-latest: false
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.2834817Z   token: ***
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.2835823Z ##[endgroup]
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.4015600Z Attempting to download 20...
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.4098093Z (node:2073) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:34.4100570Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:35.4171502Z Acquiring 20.20.2 - x64 from https://github.com/actions/node-versions/releases/download/20.20.2-23521894959/node-20.20.2-linux-x64.tar.gz
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:35.9352750Z Extracting ...
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:35.9450405Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/1db91576-72b2-4c02-b92a-3447ea7a40ee -f /home/runner/work/_temp/0139a4f5-097b-4b12-91f3-41d569baaedd
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:36.8010476Z Adding to the cache ...
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:39.6447083Z ##[group]Environment details
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:39.8161549Z node: v20.20.2
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:39.8162122Z npm: 10.8.2
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:39.8162452Z yarn: 1.22.22
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:39.8163012Z ##[endgroup]
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:39.8180873Z [command]/opt/hostedtoolcache/node/20.20.2/x64/bin/npm config get cache
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:39.8996679Z /home/runner/.npm
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:40.1166670Z Cache hit for: node-cache-Linux-x64-npm-63a7add7f6eddfadbcdaf75a2e7dad75a79ca36a3267bf2dae92fb86b2802434
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:40.1255192Z (node:2073) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:41.3387038Z Received 33554432 of 76987443 (43.6%), 32.0 MBs/sec
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:41.5535483Z Received 76987443 of 76987443 (100.0%), 60.4 MBs/sec
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:41.5536276Z Cache Size: ~73 MB (76987443 B)
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:41.5596811Z [command]/usr/bin/tar -xf /home/runner/work/_temp/c0b068f7-766c-437f-947c-8cf5fc649dab/cache.tzst -P -C /home/runner/work/zeroclickboards/zeroclickboards --use-compress-program unzstd
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:41.9231416Z Cache restored successfully
+Tests	Run actions/setup-node@v4	2026-10-02T12:09:41.9268644Z Cache restored from key: node-cache-Linux-x64-npm-63a7add7f6eddfadbcdaf75a2e7dad75a79ca36a3267bf2dae92fb86b2802434
+Tests	Run npm ci	﻿2026-10-02T12:09:41.9451759Z ##[group]Run npm ci
+Tests	Run npm ci	2026-10-02T12:09:41.9452052Z ^[[36;1mnpm ci^[[0m
+Tests	Run npm ci	2026-10-02T12:09:41.9669285Z shell: /usr/bin/bash -e {0}
+Tests	Run npm ci	2026-10-02T12:09:41.9669571Z ##[endgroup]
+Tests	Run npm ci	2026-10-02T12:09:49.5730658Z 
+Tests	Run npm ci	2026-10-02T12:09:49.5737819Z added 703 packages, and audited 704 packages in 8s
+Tests	Run npm ci	2026-10-02T12:09:49.5738135Z 
+Tests	Run npm ci	2026-10-02T12:09:49.5738316Z 128 packages are looking for funding
+Tests	Run npm ci	2026-10-02T12:09:49.5738698Z   run `npm fund` for details
+Tests	Run npm ci	2026-10-02T12:09:49.6862642Z 
+Tests	Run npm ci	2026-10-02T12:09:49.6863606Z 29 vulnerabilities (6 low, 8 moderate, 15 high)
+Tests	Run npm ci	2026-10-02T12:09:49.6864015Z 
+Tests	Run npm ci	2026-10-02T12:09:49.6864217Z To address all issues, run:
+Tests	Run npm ci	2026-10-02T12:09:49.6864762Z   npm audit fix
+Tests	Run npm ci	2026-10-02T12:09:49.6865204Z 
+Tests	Run npm ci	2026-10-02T12:09:49.6865597Z Run `npm audit` for details.
+Tests	Run npm test	﻿2026-10-02T12:09:49.7370367Z ##[group]Run npm test
+Tests	Run npm test	2026-10-02T12:09:49.7370617Z ^[[36;1mnpm test^[[0m
+Tests	Run npm test	2026-10-02T12:09:49.7431925Z shell: /usr/bin/bash -e {0}
+Tests	Run npm test	2026-10-02T12:09:49.7432175Z env:
+Tests	Run npm test	2026-10-02T12:09:49.7432426Z   VITE_SUPABASE_URL: https://placeholder.supabase.co
+Tests	Run npm test	2026-10-02T12:09:49.7432733Z   VITE_SUPABASE_ANON_KEY: placeholder-key
+Tests	Run npm test	2026-10-02T12:09:49.7432971Z ##[endgroup]
+Tests	Run npm test	2026-10-02T12:09:49.9087350Z 
+Tests	Run npm test	2026-10-02T12:09:49.9088126Z > zeroclickboards@0.0.0 test
+Tests	Run npm test	2026-10-02T12:09:49.9088722Z > vitest run
+Tests	Run npm test	2026-10-02T12:09:49.9089086Z 
+Tests	Run npm test	2026-10-02T12:09:50.2816088Z 
+Tests	Run npm test	2026-10-02T12:09:50.2818730Z ^[[1m^[[30m^[[46m RUN ^[[49m^[[39m^[[22m ^[[36mv4.1.4 ^[[39m^[[90m/home/runner/work/zeroclickboards/zeroclickboards^[[39m
+Tests	Run npm test	2026-10-02T12:09:50.2819342Z 
+Tests	Run npm test	2026-10-02T12:09:51.2037534Z ^[[90mstdout^[[2m | api/_lib/__tests__/connector.test.ts
+Tests	Run npm test	2026-10-02T12:09:51.2038853Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790942991202}
+Tests	Run npm test	2026-10-02T12:09:51.2048103Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+Tests	Run npm test	2026-10-02T12:09:51.2048987Z 
+Tests	Run npm test	2026-10-02T12:09:51.9910229Z  ^[[32m✓^[[39m src/lib/__tests__/board-merge.test.ts ^[[2m(^[[22m^[[2m63 tests^[[22m^[[2m)^[[22m^[[32m 238^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:09:52.5864520Z  ^[[32m✓^[[39m src/store/__tests__/boardSyncIntegration.test.ts ^[[2m(^[[22m^[[2m70 tests^[[22m^[[2m)^[[22m^[[32m 279^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:09:53.6069714Z  ^[[32m✓^[[39m src/lib/__tests__/board-sync.test.ts ^[[2m(^[[22m^[[2m51 tests^[[22m^[[2m)^[[22m^[[32m 110^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:09:57.6328002Z ^[[90mstderr^[[2m | src/components/layout/__tests__/AppShell.test.tsx^[[2m > ^[[22m^[[2mAppShell board synchronization^[[2m > ^[[22m^[[2mkeeps an entered rename and its focus after a blocked route is cancelled, then leaves once explicitly allowed
+Tests	Run npm test	2026-10-02T12:09:57.6331619Z ^[[22m^[[39mAn update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6355346Z 
+Tests	Run npm test	2026-10-02T12:09:57.6388996Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6433833Z 
+Tests	Run npm test	2026-10-02T12:09:57.6435578Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6436187Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6436684Z });
+Tests	Run npm test	2026-10-02T12:09:57.6437080Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6437390Z 
+Tests	Run npm test	2026-10-02T12:09:57.6438297Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6458563Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6469732Z 
+Tests	Run npm test	2026-10-02T12:09:57.6479232Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6479720Z 
+Tests	Run npm test	2026-10-02T12:09:57.6479920Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6480360Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6480670Z });
+Tests	Run npm test	2026-10-02T12:09:57.6480987Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6481248Z 
+Tests	Run npm test	2026-10-02T12:09:57.6482430Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6483818Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6484332Z 
+Tests	Run npm test	2026-10-02T12:09:57.6485093Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6485717Z 
+Tests	Run npm test	2026-10-02T12:09:57.6486018Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6486476Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6486963Z });
+Tests	Run npm test	2026-10-02T12:09:57.6487390Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6487728Z 
+Tests	Run npm test	2026-10-02T12:09:57.6488633Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6489911Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6490465Z 
+Tests	Run npm test	2026-10-02T12:09:57.6491035Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6491626Z 
+Tests	Run npm test	2026-10-02T12:09:57.6492246Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6493013Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6493522Z });
+Tests	Run npm test	2026-10-02T12:09:57.6493936Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6494281Z 
+Tests	Run npm test	2026-10-02T12:09:57.6495338Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6496514Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6497026Z 
+Tests	Run npm test	2026-10-02T12:09:57.6497599Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6498181Z 
+Tests	Run npm test	2026-10-02T12:09:57.6498443Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6498913Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6499427Z });
+Tests	Run npm test	2026-10-02T12:09:57.6499851Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6500195Z 
+Tests	Run npm test	2026-10-02T12:09:57.6501080Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6502214Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6502707Z 
+Tests	Run npm test	2026-10-02T12:09:57.6503267Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6503842Z 
+Tests	Run npm test	2026-10-02T12:09:57.6504098Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6504561Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6505327Z });
+Tests	Run npm test	2026-10-02T12:09:57.6505702Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6505916Z 
+Tests	Run npm test	2026-10-02T12:09:57.6506676Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6507678Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6508042Z 
+Tests	Run npm test	2026-10-02T12:09:57.6508480Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6508912Z 
+Tests	Run npm test	2026-10-02T12:09:57.6509022Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6509349Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6509727Z });
+Tests	Run npm test	2026-10-02T12:09:57.6510012Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6510221Z 
+Tests	Run npm test	2026-10-02T12:09:57.6510979Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6512031Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6512431Z 
+Tests	Run npm test	2026-10-02T12:09:57.6512866Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6513308Z 
+Tests	Run npm test	2026-10-02T12:09:57.6513428Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6513752Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6514102Z });
+Tests	Run npm test	2026-10-02T12:09:57.6514387Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6514597Z 
+Tests	Run npm test	2026-10-02T12:09:57.6515590Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6516626Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6517016Z 
+Tests	Run npm test	2026-10-02T12:09:57.6517466Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6517910Z 
+Tests	Run npm test	2026-10-02T12:09:57.6518060Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6518382Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6518744Z });
+Tests	Run npm test	2026-10-02T12:09:57.6519037Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6519252Z 
+Tests	Run npm test	2026-10-02T12:09:57.6520022Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6521040Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6521410Z 
+Tests	Run npm test	2026-10-02T12:09:57.6521864Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6522306Z 
+Tests	Run npm test	2026-10-02T12:09:57.6522420Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6522761Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6523177Z });
+Tests	Run npm test	2026-10-02T12:09:57.6523679Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6524019Z 
+Tests	Run npm test	2026-10-02T12:09:57.6524767Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6525884Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6526246Z 
+Tests	Run npm test	2026-10-02T12:09:57.6526689Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6527131Z 
+Tests	Run npm test	2026-10-02T12:09:57.6527251Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6527569Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6527922Z });
+Tests	Run npm test	2026-10-02T12:09:57.6528192Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6528393Z 
+Tests	Run npm test	2026-10-02T12:09:57.6529141Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6530210Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6530621Z 
+Tests	Run npm test	2026-10-02T12:09:57.6531071Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6531510Z 
+Tests	Run npm test	2026-10-02T12:09:57.6531616Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6531933Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6532287Z });
+Tests	Run npm test	2026-10-02T12:09:57.6532562Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6532764Z 
+Tests	Run npm test	2026-10-02T12:09:57.6533514Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6534522Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6534886Z 
+Tests	Run npm test	2026-10-02T12:09:57.6565378Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6565882Z 
+Tests	Run npm test	2026-10-02T12:09:57.6566016Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6566345Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6566692Z });
+Tests	Run npm test	2026-10-02T12:09:57.6566977Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6567183Z 
+Tests	Run npm test	2026-10-02T12:09:57.6567889Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6568842Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6569174Z 
+Tests	Run npm test	2026-10-02T12:09:57.6569592Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6569989Z 
+Tests	Run npm test	2026-10-02T12:09:57.6570123Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6570416Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6570746Z });
+Tests	Run npm test	2026-10-02T12:09:57.6570983Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6571168Z 
+Tests	Run npm test	2026-10-02T12:09:57.6571790Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6572699Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6573012Z 
+Tests	Run npm test	2026-10-02T12:09:57.6573425Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6573841Z 
+Tests	Run npm test	2026-10-02T12:09:57.6573951Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6574265Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6574599Z });
+Tests	Run npm test	2026-10-02T12:09:57.6574865Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6575219Z 
+Tests	Run npm test	2026-10-02T12:09:57.6575914Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6576864Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:57.6577256Z 
+Tests	Run npm test	2026-10-02T12:09:57.6577682Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:57.6578098Z 
+Tests	Run npm test	2026-10-02T12:09:57.6578214Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:57.6578517Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:57.6578856Z });
+Tests	Run npm test	2026-10-02T12:09:57.6579131Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:57.6579334Z 
+Tests	Run npm test	2026-10-02T12:09:57.6580052Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:57.6581028Z 
+Tests	Run npm test	2026-10-02T12:09:57.6582714Z ^[[90mstderr^[[2m | src/components/layout/__tests__/AppShell.test.tsx^[[2m > ^[[22m^[[2mAppShell board synchronization^[[2m > ^[[22m^[[2mkeeps an entered rename and its focus after a blocked route is cancelled, then leaves once explicitly allowed
+Tests	Run npm test	2026-10-02T12:09:57.6585106Z ^[[22m^[[39mA component suspended inside an `act` scope, but the `act` call was not awaited. When testing React components that depend on asynchronous data, you must await the result:
+Tests	Run npm test	2026-10-02T12:09:57.6585945Z 
+Tests	Run npm test	2026-10-02T12:09:57.6586150Z await act(() => ...)
+Tests	Run npm test	2026-10-02T12:09:57.6586322Z 
+Tests	Run npm test	2026-10-02T12:09:58.3007602Z ^[[90mstderr^[[2m | src/components/layout/__tests__/AppShell.test.tsx^[[2m > ^[[22m^[[2mAppShell board synchronization^[[2m > ^[[22m^[[2mclears private local forms and an old blocked navigation when the account changes
+Tests	Run npm test	2026-10-02T12:09:58.3009484Z ^[[22m^[[39mAn update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3010200Z 
+Tests	Run npm test	2026-10-02T12:09:58.3010967Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3011672Z 
+Tests	Run npm test	2026-10-02T12:09:58.3011979Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3012480Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3013021Z });
+Tests	Run npm test	2026-10-02T12:09:58.3013476Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3013849Z 
+Tests	Run npm test	2026-10-02T12:09:58.3014772Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3016169Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3016732Z 
+Tests	Run npm test	2026-10-02T12:09:58.3017336Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3017973Z 
+Tests	Run npm test	2026-10-02T12:09:58.3018265Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3018774Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3019294Z });
+Tests	Run npm test	2026-10-02T12:09:58.3019749Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3020134Z 
+Tests	Run npm test	2026-10-02T12:09:58.3021060Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3022364Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3022941Z 
+Tests	Run npm test	2026-10-02T12:09:58.3023557Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3024193Z 
+Tests	Run npm test	2026-10-02T12:09:58.3024481Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3025153Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3025683Z });
+Tests	Run npm test	2026-10-02T12:09:58.3026137Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3026510Z 
+Tests	Run npm test	2026-10-02T12:09:58.3027400Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3028661Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3029288Z 
+Tests	Run npm test	2026-10-02T12:09:58.3029883Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3030522Z 
+Tests	Run npm test	2026-10-02T12:09:58.3030827Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3031326Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3031862Z });
+Tests	Run npm test	2026-10-02T12:09:58.3032331Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3032723Z 
+Tests	Run npm test	2026-10-02T12:09:58.3033629Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3034829Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3035569Z 
+Tests	Run npm test	2026-10-02T12:09:58.3036184Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3036817Z 
+Tests	Run npm test	2026-10-02T12:09:58.3037113Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3037617Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3038161Z });
+Tests	Run npm test	2026-10-02T12:09:58.3039147Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3039696Z 
+Tests	Run npm test	2026-10-02T12:09:58.3040611Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3041800Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3042328Z 
+Tests	Run npm test	2026-10-02T12:09:58.3042962Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3043593Z 
+Tests	Run npm test	2026-10-02T12:09:58.3043885Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3044412Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3045077Z });
+Tests	Run npm test	2026-10-02T12:09:58.3045511Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3045896Z 
+Tests	Run npm test	2026-10-02T12:09:58.3046779Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3047913Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3048442Z 
+Tests	Run npm test	2026-10-02T12:09:58.3049059Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3049678Z 
+Tests	Run npm test	2026-10-02T12:09:58.3049942Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3050411Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3050907Z });
+Tests	Run npm test	2026-10-02T12:09:58.3051475Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3051872Z 
+Tests	Run npm test	2026-10-02T12:09:58.3052793Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3053979Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3054555Z 
+Tests	Run npm test	2026-10-02T12:09:58.3055275Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3055896Z 
+Tests	Run npm test	2026-10-02T12:09:58.3056177Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3056639Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3057146Z });
+Tests	Run npm test	2026-10-02T12:09:58.3057577Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3057952Z 
+Tests	Run npm test	2026-10-02T12:09:58.3058854Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3060031Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3060553Z 
+Tests	Run npm test	2026-10-02T12:09:58.3061144Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3061740Z 
+Tests	Run npm test	2026-10-02T12:09:58.3062008Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3062487Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3062989Z });
+Tests	Run npm test	2026-10-02T12:09:58.3063433Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3063789Z 
+Tests	Run npm test	2026-10-02T12:09:58.3064692Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3066019Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3066531Z 
+Tests	Run npm test	2026-10-02T12:09:58.3067125Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3067737Z 
+Tests	Run npm test	2026-10-02T12:09:58.3068001Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3068480Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3068977Z });
+Tests	Run npm test	2026-10-02T12:09:58.3069405Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3069763Z 
+Tests	Run npm test	2026-10-02T12:09:58.3070660Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3071790Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3072295Z 
+Tests	Run npm test	2026-10-02T12:09:58.3072975Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3073567Z 
+Tests	Run npm test	2026-10-02T12:09:58.3073846Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3074352Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3074855Z });
+Tests	Run npm test	2026-10-02T12:09:58.3075443Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3075809Z 
+Tests	Run npm test	2026-10-02T12:09:58.3076729Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3078272Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3078864Z 
+Tests	Run npm test	2026-10-02T12:09:58.3079445Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3080078Z 
+Tests	Run npm test	2026-10-02T12:09:58.3080369Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3080851Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3081372Z });
+Tests	Run npm test	2026-10-02T12:09:58.3081825Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3082449Z 
+Tests	Run npm test	2026-10-02T12:09:58.3091661Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3092927Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3093462Z 
+Tests	Run npm test	2026-10-02T12:09:58.3094041Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3094681Z 
+Tests	Run npm test	2026-10-02T12:09:58.3095130Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3095581Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3096081Z });
+Tests	Run npm test	2026-10-02T12:09:58.3096536Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3096907Z 
+Tests	Run npm test	2026-10-02T12:09:58.3097820Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3099004Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3099503Z 
+Tests	Run npm test	2026-10-02T12:09:58.3100237Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3100891Z 
+Tests	Run npm test	2026-10-02T12:09:58.3101149Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3101622Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3102124Z });
+Tests	Run npm test	2026-10-02T12:09:58.3102575Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3102955Z 
+Tests	Run npm test	2026-10-02T12:09:58.3103791Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3105131Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3106016Z 
+Tests	Run npm test	2026-10-02T12:09:58.3106632Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3107240Z 
+Tests	Run npm test	2026-10-02T12:09:58.3107537Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3108045Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3108569Z });
+Tests	Run npm test	2026-10-02T12:09:58.3109021Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3109397Z 
+Tests	Run npm test	2026-10-02T12:09:58.3110299Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3111504Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.3112079Z 
+Tests	Run npm test	2026-10-02T12:09:58.3112693Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.3113312Z 
+Tests	Run npm test	2026-10-02T12:09:58.3113593Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.3114096Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.3114619Z });
+Tests	Run npm test	2026-10-02T12:09:58.3115239Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.3115641Z 
+Tests	Run npm test	2026-10-02T12:09:58.3116547Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.3117425Z 
+Tests	Run npm test	2026-10-02T12:09:58.8591639Z ^[[90mstderr^[[2m | src/components/layout/__tests__/AppShell.test.tsx^[[2m > ^[[22m^[[2mAppShell unsent AI drafts^[[2m > ^[[22m^[[2mguards AI-only text before unload and pathname navigation, retaining it on Stay
+Tests	Run npm test	2026-10-02T12:09:58.8616413Z ^[[22m^[[39mAn update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8655288Z 
+Tests	Run npm test	2026-10-02T12:09:58.8699260Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8699787Z 
+Tests	Run npm test	2026-10-02T12:09:58.8699902Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8700243Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8701097Z });
+Tests	Run npm test	2026-10-02T12:09:58.8701543Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8701751Z 
+Tests	Run npm test	2026-10-02T12:09:58.8702488Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8703444Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8703769Z 
+Tests	Run npm test	2026-10-02T12:09:58.8704162Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8704557Z 
+Tests	Run npm test	2026-10-02T12:09:58.8704672Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8705151Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8705476Z });
+Tests	Run npm test	2026-10-02T12:09:58.8705730Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8705923Z 
+Tests	Run npm test	2026-10-02T12:09:58.8706605Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8707488Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8707831Z 
+Tests	Run npm test	2026-10-02T12:09:58.8708244Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8708637Z 
+Tests	Run npm test	2026-10-02T12:09:58.8708735Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8708989Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8709325Z });
+Tests	Run npm test	2026-10-02T12:09:58.8709609Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8709817Z 
+Tests	Run npm test	2026-10-02T12:09:58.8710520Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8711527Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8711881Z 
+Tests	Run npm test	2026-10-02T12:09:58.8712313Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8712736Z 
+Tests	Run npm test	2026-10-02T12:09:58.8712833Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8713128Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8713429Z });
+Tests	Run npm test	2026-10-02T12:09:58.8713694Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8713903Z 
+Tests	Run npm test	2026-10-02T12:09:58.8750168Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8751313Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8751696Z 
+Tests	Run npm test	2026-10-02T12:09:58.8752128Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8752578Z 
+Tests	Run npm test	2026-10-02T12:09:58.8752699Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8753006Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8753332Z });
+Tests	Run npm test	2026-10-02T12:09:58.8753598Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8753810Z 
+Tests	Run npm test	2026-10-02T12:09:58.8754545Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8755657Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8756011Z 
+Tests	Run npm test	2026-10-02T12:09:58.8756442Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8756877Z 
+Tests	Run npm test	2026-10-02T12:09:58.8756991Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8757292Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8757624Z });
+Tests	Run npm test	2026-10-02T12:09:58.8757902Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8758096Z 
+Tests	Run npm test	2026-10-02T12:09:58.8758830Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8759789Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8760129Z 
+Tests	Run npm test	2026-10-02T12:09:58.8760552Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8760968Z 
+Tests	Run npm test	2026-10-02T12:09:58.8761084Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8761378Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8761713Z });
+Tests	Run npm test	2026-10-02T12:09:58.8761977Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8762175Z 
+Tests	Run npm test	2026-10-02T12:09:58.8763248Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8764421Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:58.8764811Z 
+Tests	Run npm test	2026-10-02T12:09:58.8783044Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:58.8783687Z 
+Tests	Run npm test	2026-10-02T12:09:58.8783883Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:58.8784329Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:58.8784815Z });
+Tests	Run npm test	2026-10-02T12:09:58.8785339Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:58.8785640Z 
+Tests	Run npm test	2026-10-02T12:09:58.8786437Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:58.8787109Z 
+Tests	Run npm test	2026-10-02T12:09:59.4537533Z ^[[90mstderr^[[2m | src/components/layout/__tests__/AppShell.test.tsx^[[2m > ^[[22m^[[2mAppShell unsent AI drafts^[[2m > ^[[22m^[[2mretains the same-owner signal on rerender and ignores an obsolete owner report after replacement
+Tests	Run npm test	2026-10-02T12:09:59.4676621Z ^[[22m^[[39mAn update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4677273Z 
+Tests	Run npm test	2026-10-02T12:09:59.4705920Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4706623Z 
+Tests	Run npm test	2026-10-02T12:09:59.4735524Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4765467Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4765887Z });
+Tests	Run npm test	2026-10-02T12:09:59.4795541Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4825278Z 
+Tests	Run npm test	2026-10-02T12:09:59.4826602Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4853657Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4853971Z 
+Tests	Run npm test	2026-10-02T12:09:59.4854265Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4854541Z 
+Tests	Run npm test	2026-10-02T12:09:59.4854653Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4854889Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4855372Z });
+Tests	Run npm test	2026-10-02T12:09:59.4855635Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4855780Z 
+Tests	Run npm test	2026-10-02T12:09:59.4856227Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4856837Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4857050Z 
+Tests	Run npm test	2026-10-02T12:09:59.4857307Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4857565Z 
+Tests	Run npm test	2026-10-02T12:09:59.4857647Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4857860Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4858080Z });
+Tests	Run npm test	2026-10-02T12:09:59.4858272Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4858400Z 
+Tests	Run npm test	2026-10-02T12:09:59.4858823Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4859440Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4859681Z 
+Tests	Run npm test	2026-10-02T12:09:59.4859931Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4860176Z 
+Tests	Run npm test	2026-10-02T12:09:59.4860258Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4860458Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4860684Z });
+Tests	Run npm test	2026-10-02T12:09:59.4860869Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4860997Z 
+Tests	Run npm test	2026-10-02T12:09:59.4861404Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4861973Z An update to FocusScope inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4862202Z 
+Tests	Run npm test	2026-10-02T12:09:59.4862443Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4862692Z 
+Tests	Run npm test	2026-10-02T12:09:59.4862771Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4863582Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4864020Z });
+Tests	Run npm test	2026-10-02T12:09:59.4864257Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4864424Z 
+Tests	Run npm test	2026-10-02T12:09:59.4865179Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4866006Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4866294Z 
+Tests	Run npm test	2026-10-02T12:09:59.4866684Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4867088Z 
+Tests	Run npm test	2026-10-02T12:09:59.4867200Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4867493Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4867826Z });
+Tests	Run npm test	2026-10-02T12:09:59.4868085Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4868275Z 
+Tests	Run npm test	2026-10-02T12:09:59.4868968Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4869903Z An update to Presence inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4870252Z 
+Tests	Run npm test	2026-10-02T12:09:59.4870664Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4871075Z 
+Tests	Run npm test	2026-10-02T12:09:59.4871179Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4871486Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4871825Z });
+Tests	Run npm test	2026-10-02T12:09:59.4872100Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4872305Z 
+Tests	Run npm test	2026-10-02T12:09:59.4872981Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4873941Z An update to DismissableLayer inside a test was not wrapped in act(...).
+Tests	Run npm test	2026-10-02T12:09:59.4874214Z 
+Tests	Run npm test	2026-10-02T12:09:59.4874467Z When testing, code that causes React state updates should be wrapped into act(...):
+Tests	Run npm test	2026-10-02T12:09:59.4874730Z 
+Tests	Run npm test	2026-10-02T12:09:59.4874807Z act(() => {
+Tests	Run npm test	2026-10-02T12:09:59.4875406Z   /* fire events that update state */
+Tests	Run npm test	2026-10-02T12:09:59.4875663Z });
+Tests	Run npm test	2026-10-02T12:09:59.4875865Z /* assert on the output */
+Tests	Run npm test	2026-10-02T12:09:59.4875998Z 
+Tests	Run npm test	2026-10-02T12:09:59.4876441Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+Tests	Run npm test	2026-10-02T12:09:59.4876820Z 
+Tests	Run npm test	2026-10-02T12:09:59.8096947Z  ^[[32m✓^[[39m src/components/layout/__tests__/AppShell.test.tsx ^[[2m(^[[22m^[[2m27 tests^[[22m^[[2m)^[[22m^[[33m 3645^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:09:59.8126370Z      ^[[33m^[[2m✓^[[22m^[[39m warns for an open text draft and removes the warning after explicit cancellation ^[[33m 384^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:09:59.8127873Z      ^[[33m^[[2m✓^[[22m^[[39m keeps an entered rename and its focus after a blocked route is cancelled, then leaves once explicitly allowed ^[[33m 476^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:09:59.8129305Z      ^[[33m^[[2m✓^[[22m^[[39m allows board query cleanup while retaining the entered text and original save target ^[[33m 336^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:09:59.8130673Z      ^[[33m^[[2m✓^[[22m^[[39m retains the same-owner signal on rerender and ignores an obsolete owner report after replacement ^[[33m 321^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:01.5972636Z  ^[[32m✓^[[39m src/lib/__tests__/recurrence.test.ts ^[[2m(^[[22m^[[2m78 tests^[[22m^[[2m)^[[22m^[[33m 528^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:01.6026294Z      ^[[33m^[[2m✓^[[22m^[[39m matches repeated next dates for every weekday subset, including off-selected initial dates ^[[33m 498^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1578801Z  ^[[32m✓^[[39m src/components/board/__tests__/CardEditor.test.tsx ^[[2m(^[[22m^[[2m53 tests^[[22m^[[2m)^[[22m^[[33m 11043^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1626262Z      ^[[33m^[[2m✓^[[22m^[[39m waits before adding a checklist item with {"isComposing":true,"keyCode":13} ^[[33m 584^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1627911Z      ^[[33m^[[2m✓^[[22m^[[39m keeps the attachment name draft for composing Enter and Escape with {"isComposing":true,"keyCode":13} ^[[33m 398^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1629240Z      ^[[33m^[[2m✓^[[22m^[[39m keeps a checklist separate when its description is edited ^[[33m 553^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1631158Z      ^[[33m^[[2m✓^[[22m^[[39m edits a checklist body without changing its items or description ^[[33m 307^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1632160Z      ^[[33m^[[2m✓^[[22m^[[39m keeps a body draft when adding a checklist ^[[33m 460^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1633279Z      ^[[33m^[[2m✓^[[22m^[[39m keeps an invalid interval draft open (0) and saves after correction ^[[33m 335^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1634382Z      ^[[33m^[[2m✓^[[22m^[[39m keeps an invalid interval draft open (100) and saves after correction ^[[33m 310^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1635694Z      ^[[33m^[[2m✓^[[22m^[[39m keeps an invalid interval draft open (1.5) and saves after correction ^[[33m 348^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.1636929Z      ^[[33m^[[2m✓^[[22m^[[39m sorts and deduplicates weekdays only after a deliberate schedule edit ^[[33m 302^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.5918935Z  ^[[32m✓^[[39m src/components/connectors/__tests__/connector-ownership.test.tsx ^[[2m(^[[22m^[[2m30 tests^[[22m^[[2m)^[[22m^[[33m 3385^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:06.5944079Z      ^[[33m^[[2m✓^[[22m^[[39m ignores success approval after exit replacement ^[[33m 325^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8128801Z  ^[[32m✓^[[39m api/_lib/__tests__/connector.test.ts ^[[2m(^[[22m^[[2m21 tests^[[22m^[[2m)^[[22m^[[33m 16700^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8130044Z      ^[[33m^[[2m✓^[[22m^[[39m stores ciphertext, rejects tampering/expiry and denies browser roles ^[[33m 1672^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8131242Z      ^[[33m^[[2m✓^[[22m^[[39m requires every storage privilege and matching backend policies for availability ^[[33m 1215^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8131986Z      ^[[33m^[[2m✓^[[22m^[[39m authenticates status and reports unavailable configuration honestly ^[[33m 908^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8132796Z      ^[[33m^[[2m✓^[[22m^[[39m reports callback capabilities without relying on public client names or exposing callbacks ^[[33m 923^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8133680Z      ^[[33m^[[2m✓^[[22m^[[39m shows only owned/member boards, denies foreign/viewer writes, cross-site approval and refresh-token input ^[[33m 1025^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8134684Z      ^[[33m^[[2m✓^[[22m^[[39m persists consent/token flow, one-time PKCE exchange and authenticated revocation (preparsed=false) ^[[33m 1004^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8135710Z      ^[[33m^[[2m✓^[[22m^[[39m persists consent/token flow, one-time PKCE exchange and authenticated revocation (preparsed=true) ^[[33m 982^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8136652Z      ^[[33m^[[2m✓^[[22m^[[39m native form authorization and approval preserve active callback ports through the Vercel adapter (preparsed=false) ^[[33m 808^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8137676Z      ^[[33m^[[2m✓^[[22m^[[39m native form authorization and approval preserve active callback ports through the Vercel adapter (preparsed=true) ^[[33m 885^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8138510Z      ^[[33m^[[2m✓^[[22m^[[39m cancels once and returns only the stored callback with state and access_denied ^[[33m 809^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8139310Z      ^[[33m^[[2m✓^[[22m^[[39m rejects durable pending requests and codes after their exact registered callback is removed ^[[33m 884^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8140069Z      ^[[33m^[[2m✓^[[22m^[[39m bounds valid SDK payloads and preserves OAuth forms (preparsed=false) ^[[33m 1420^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8140880Z      ^[[33m^[[2m✓^[[22m^[[39m bounds valid SDK payloads and preserves OAuth forms (preparsed=true) ^[[33m 1344^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8141582Z      ^[[33m^[[2m✓^[[22m^[[39m bounds valid SDK payloads and preserves OAuth forms (preparsed=restored) ^[[33m 1436^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:08.8142283Z      ^[[33m^[[2m✓^[[22m^[[39m bounds valid SDK payloads and preserves OAuth forms (preparsed=raw-buffer) ^[[33m 1366^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:09.2631611Z  ^[[32m✓^[[39m src/lib/__tests__/supabase-auth-lock.test.ts ^[[2m(^[[22m^[[2m15 tests^[[22m^[[2m)^[[22m^[[32m 138^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:09.9327080Z  ^[[32m✓^[[39m src/components/connectors/__tests__/connector-ui.test.tsx ^[[2m(^[[22m^[[2m31 tests^[[22m^[[2m)^[[22m^[[33m 2142^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:09.9330874Z      ^[[33m^[[2m✓^[[22m^[[39m requires explicit board selection and submits only selected eligible boards ^[[33m 389^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:10.6933402Z  ^[[32m✓^[[39m src/components/ai/__tests__/AIAssistant.test.tsx ^[[2m(^[[22m^[[2m20 tests^[[22m^[[2m)^[[22m^[[33m 2282^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:10.6938459Z      ^[[33m^[[2m✓^[[22m^[[39m checks access between commands in an AI batch ^[[33m 377^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:11.2752467Z  ^[[32m✓^[[39m src/lib/__tests__/board-io.test.ts ^[[2m(^[[22m^[[2m50 tests^[[22m^[[2m)^[[22m^[[32m 40^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:12.0111875Z  ^[[32m✓^[[39m src/store/__tests__/useBoardStore.test.ts ^[[2m(^[[22m^[[2m34 tests^[[22m^[[2m)^[[22m^[[32m 21^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:13.3906376Z  ^[[32m✓^[[39m src/store/__tests__/boardConcurrentMutations.test.ts ^[[2m(^[[22m^[[2m21 tests^[[22m^[[2m)^[[22m^[[32m 44^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:14.7417628Z  ^[[32m✓^[[39m src/components/board/__tests__/CreateBoardDialog.async.test.tsx ^[[2m(^[[22m^[[2m16 tests^[[22m^[[2m)^[[22m^[[33m 1880^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:14.7419655Z      ^[[33m^[[2m✓^[[22m^[[39m aborts cancellation and preserves a reopened prompt even if the transport still succeeds ^[[33m 379^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.0542576Z ^[[90mstdout^[[2m | api/invite/__tests__/send.test.ts
+Tests	Run npm test	2026-10-02T12:10:15.0556855Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943015052}
+Tests	Run npm test	2026-10-02T12:10:15.0557820Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:15.0558387Z 
+Tests	Run npm test	2026-10-02T12:10:15.0986994Z  ^[[32m✓^[[39m api/invite/__tests__/send.test.ts ^[[2m(^[[22m^[[2m26 tests^[[22m^[[2m)^[[22m^[[32m 25^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.6177040Z  ^[[32m✓^[[39m src/components/board/__tests__/ActiveCardEditor.test.tsx ^[[2m(^[[22m^[[2m17 tests^[[22m^[[2m)^[[22m^[[33m 4685^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.6178912Z      ^[[33m^[[2m✓^[[22m^[[39m keeps a typed draft open across a remote move and saves only changed fields onto the moved card ^[[33m 745^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.6180668Z      ^[[33m^[[2m✓^[[22m^[[39m opens a fresh session with the newest values after a draft is cancelled ^[[33m 385^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.6182182Z      ^[[33m^[[2m✓^[[22m^[[39m retains the legacy image as an attachment when the user starts a text body ^[[33m 395^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.6183724Z      ^[[33m^[[2m✓^[[22m^[[39m saves an edited Description independently from an incoming change to the other field ^[[33m 408^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.6185474Z      ^[[33m^[[2m✓^[[22m^[[39m saves an edited Body text independently from an incoming change to the other field ^[[33m 316^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:15.6187072Z      ^[[33m^[[2m✓^[[22m^[[39m opens the persistent editor from the timeline and keeps it open if the timeline unmounts ^[[33m 412^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:16.2170453Z ^[[90mstdout^[[2m | api/_lib/__tests__/connector-readiness.test.ts
+Tests	Run npm test	2026-10-02T12:10:16.2196094Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943016215}
+Tests	Run npm test	2026-10-02T12:10:16.2213459Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:16.2214374Z 
+Tests	Run npm test	2026-10-02T12:10:16.7027552Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mdescribes checklist visibility separately from competing body text
+Tests	Run npm test	2026-10-02T12:10:16.7032817Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:16.7036380Z 
+Tests	Run npm test	2026-10-02T12:10:16.9137113Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mdescribes complete recurrence choices using readable schedules
+Tests	Run npm test	2026-10-02T12:10:16.9163985Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:16.9265302Z 
+Tests	Run npm test	2026-10-02T12:10:17.0766834Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mreviews each field and both values without resolving changes on dismissal
+Tests	Run npm test	2026-10-02T12:10:17.0768476Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:17.0775763Z 
+Tests	Run npm test	2026-10-02T12:10:17.1602824Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mresolves conflicting values with "'Keep my edits'"
+Tests	Run npm test	2026-10-02T12:10:17.1604611Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:17.1606798Z 
+Tests	Run npm test	2026-10-02T12:10:17.2527604Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mresolves conflicting values with "'Use incoming edits'"
+Tests	Run npm test	2026-10-02T12:10:17.2536032Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:17.2565489Z 
+Tests	Run npm test	2026-10-02T12:10:17.3349623Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mrenders incoming markup as plain text and makes missing or structured values readable
+Tests	Run npm test	2026-10-02T12:10:17.3366331Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:17.3366881Z 
+Tests	Run npm test	2026-10-02T12:10:17.3712122Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mcloses the review when switching boards, so an old decision cannot affect another board
+Tests	Run npm test	2026-10-02T12:10:17.3713827Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:17.3714360Z 
+Tests	Run npm test	2026-10-02T12:10:17.4219549Z ^[[90mstderr^[[2m | src/components/board/__tests__/BoardSyncNotice.test.tsx^[[2m > ^[[22m^[[2mBoardSyncNotice^[[2m > ^[[22m^[[2mcloses the review when switching boards, so an old decision cannot affect another board
+Tests	Run npm test	2026-10-02T12:10:17.4221537Z ^[[22m^[[39mWarning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Tests	Run npm test	2026-10-02T12:10:17.4222281Z 
+Tests	Run npm test	2026-10-02T12:10:17.4795593Z  ^[[32m✓^[[39m src/components/board/__tests__/BoardSyncNotice.test.tsx ^[[2m(^[[22m^[[2m13 tests^[[22m^[[2m)^[[22m^[[33m 1030^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:17.4796893Z      ^[[33m^[[2m✓^[[22m^[[39m describes checklist visibility separately from competing body text ^[[33m 365^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:18.9851891Z  ^[[32m✓^[[39m api/_lib/__tests__/connector-readiness.test.ts ^[[2m(^[[22m^[[2m60 tests^[[22m^[[2m)^[[22m^[[33m 2743^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:18.9852868Z      ^[[33m^[[2m✓^[[22m^[[39m accepts the dedicated login with matching current/session identity and unrelated shared-project functions ^[[33m 722^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:19.0279626Z  ^[[32m✓^[[39m src/pages/__tests__/SharedBoardPage.test.tsx ^[[2m(^[[22m^[[2m10 tests^[[22m^[[2m)^[[22m^[[33m 443^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:20.6543461Z  ^[[32m✓^[[39m src/hooks/__tests__/useSignOutAction.test.tsx ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[33m 516^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:21.5291681Z  ^[[32m✓^[[39m src/lib/__tests__/templates.test.ts ^[[2m(^[[22m^[[2m19 tests^[[22m^[[2m)^[[22m^[[32m 11^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:22.3319187Z  ^[[32m✓^[[39m src/lib/__tests__/apiFetch.test.ts ^[[2m(^[[22m^[[2m13 tests^[[22m^[[2m)^[[22m^[[32m 66^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:23.7697032Z  ^[[32m✓^[[39m src/components/board/__tests__/CardActivityFeed.test.tsx ^[[2m(^[[22m^[[2m8 tests^[[22m^[[2m)^[[22m^[[32m 267^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:24.3211557Z  ^[[32m✓^[[39m api/_lib/__tests__/connector-sql.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[33m 4753^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:24.3212377Z      ^[[33m^[[2m✓^[[22m^[[39m detects the same-socket pipelining made by the unreserved driver ^[[33m 1492^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:24.3213085Z      ^[[33m^[[2m✓^[[22m^[[39m does not pipeline on either socket with max=1 and releases errors ^[[33m 1459^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:24.3213769Z      ^[[33m^[[2m✓^[[22m^[[39m does not pipeline on either socket with max=2 and releases errors ^[[33m 1800^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:24.6021080Z  ^[[32m✓^[[39m src/hooks/__tests__/useKeyboardShortcuts.test.ts ^[[2m(^[[22m^[[2m18 tests^[[22m^[[2m)^[[22m^[[32m 50^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:25.1530435Z  ^[[32m✓^[[39m src/lib/__tests__/claude.test.ts ^[[2m(^[[22m^[[2m15 tests^[[22m^[[2m)^[[22m^[[32m 8^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:25.6945828Z  ^[[32m✓^[[39m src/components/board/__tests__/ReadOnlyBoard.test.tsx ^[[2m(^[[22m^[[2m13 tests^[[22m^[[2m)^[[22m^[[32m 118^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:26.0245291Z ^[[90mstdout^[[2m | src/lib/__tests__/stripe-webhook.test.ts^[[2m > ^[[22m^[[2mstripe webhook handler^[[2m > ^[[22m^[[2mrejects non-POST requests
+Tests	Run npm test	2026-10-02T12:10:26.0246634Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026021}
+Tests	Run npm test	2026-10-02T12:10:26.0266952Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.0295354Z 
+Tests	Run npm test	2026-10-02T12:10:26.0306337Z ^[[90mstdout^[[2m | src/lib/__tests__/stripe-webhook.test.ts^[[2m > ^[[22m^[[2mstripe webhook handler^[[2m > ^[[22m^[[2mrejects missing stripe-signature
+Tests	Run npm test	2026-10-02T12:10:26.0335816Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026026}
+Tests	Run npm test	2026-10-02T12:10:26.0365926Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.0374910Z 
+Tests	Run npm test	2026-10-02T12:10:26.0376195Z ^[[90mstdout^[[2m | src/lib/__tests__/stripe-webhook.test.ts^[[2m > ^[[22m^[[2mstripe webhook handler^[[2m > ^[[22m^[[2mrejects invalid signature
+Tests	Run npm test	2026-10-02T12:10:26.0377434Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026028}
+Tests	Run npm test	2026-10-02T12:10:26.0378378Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.0379016Z 
+Tests	Run npm test	2026-10-02T12:10:26.0379986Z ^[[90mstdout^[[2m | src/lib/__tests__/stripe-webhook.test.ts^[[2m > ^[[22m^[[2mstripe webhook handler^[[2m > ^[[22m^[[2mhandles checkout.session.completed
+Tests	Run npm test	2026-10-02T12:10:26.0381136Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026029}
+Tests	Run npm test	2026-10-02T12:10:26.0382125Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.0382700Z 
+Tests	Run npm test	2026-10-02T12:10:26.0383662Z ^[[90mstdout^[[2m | src/lib/__tests__/stripe-webhook.test.ts^[[2m > ^[[22m^[[2mstripe webhook handler^[[2m > ^[[22m^[[2mhandles customer.subscription.updated
+Tests	Run npm test	2026-10-02T12:10:26.0384694Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026032}
+Tests	Run npm test	2026-10-02T12:10:26.0385788Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.0386385Z 
+Tests	Run npm test	2026-10-02T12:10:26.0387315Z ^[[90mstdout^[[2m | src/lib/__tests__/stripe-webhook.test.ts^[[2m > ^[[22m^[[2mstripe webhook handler^[[2m > ^[[22m^[[2mhandles customer.subscription.deleted
+Tests	Run npm test	2026-10-02T12:10:26.0388384Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026033}
+Tests	Run npm test	2026-10-02T12:10:26.0389294Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.0389938Z 
+Tests	Run npm test	2026-10-02T12:10:26.0390877Z ^[[90mstdout^[[2m | src/lib/__tests__/stripe-webhook.test.ts^[[2m > ^[[22m^[[2mstripe webhook handler^[[2m > ^[[22m^[[2mhandles invoice.payment_failed
+Tests	Run npm test	2026-10-02T12:10:26.0391921Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026035}
+Tests	Run npm test	2026-10-02T12:10:26.0392786Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":true,"urlHost":"test.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.0393350Z 
+Tests	Run npm test	2026-10-02T12:10:26.0394038Z  ^[[32m✓^[[39m src/lib/__tests__/stripe-webhook.test.ts ^[[2m(^[[22m^[[2m7 tests^[[22m^[[2m)^[[22m^[[32m 30^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:26.5157593Z  ^[[32m✓^[[39m src/store/__tests__/useUndoStore.test.ts ^[[2m(^[[22m^[[2m15 tests^[[22m^[[2m)^[[22m^[[32m 12^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:26.8576721Z ^[[90mstdout^[[2m | src/lib/__tests__/auth-helpers.test.ts^[[2m > ^[[22m^[[2mAPI auth helpers^[[2m > ^[[22m^[[2mgetHeader^[[2m > ^[[22m^[[2mextracts header from Web Request-like object
+Tests	Run npm test	2026-10-02T12:10:26.8578154Z ^[[22m^[[39m{"step":"auth-module:loaded","ts":1790943026856}
+Tests	Run npm test	2026-10-02T12:10:26.8580000Z {"step":"auth-module:env","hasUrl":true,"hasAnonKey":true,"hasServiceKey":false,"urlHost":"placeholder.supabase.co"}
+Tests	Run npm test	2026-10-02T12:10:26.8580769Z 
+Tests	Run npm test	2026-10-02T12:10:26.8667422Z  ^[[32m✓^[[39m src/lib/__tests__/auth-helpers.test.ts ^[[2m(^[[22m^[[2m12 tests^[[22m^[[2m)^[[22m^[[32m 13^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:27.3028105Z  ^[[32m✓^[[39m api/_lib/__tests__/resolve-commands.test.ts ^[[2m(^[[22m^[[2m11 tests^[[22m^[[2m)^[[22m^[[32m 7^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:27.7056950Z  ^[[32m✓^[[39m src/components/connectors/__tests__/connector-api.test.ts ^[[2m(^[[22m^[[2m25 tests^[[22m^[[2m)^[[22m^[[32m 21^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:28.6506342Z  ^[[32m✓^[[39m src/lib/__tests__/calendar-date.test.ts ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 9^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:29.2262119Z  ^[[32m✓^[[39m api/_lib/__tests__/connector-config.test.ts ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 25^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:30.2851918Z  ^[[32m✓^[[39m src/components/auth/__tests__/SignInModal.test.tsx ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[33m 1850^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:30.2874310Z      ^[[33m^[[2m✓^[[22m^[[39m allows sign-in with a short (pre-existing) password — no 8-char lockout ^[[33m 360^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:30.2875805Z      ^[[33m^[[2m✓^[[22m^[[39m submits sign-in via the form and closes on success ^[[33m 368^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:30.2876984Z      ^[[33m^[[2m✓^[[22m^[[39m enforces the 8-char minimum only on the sign-up tab ^[[33m 314^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:30.2878249Z      ^[[33m^[[2m✓^[[22m^[[39m stays open with a confirmation notice when sign-up needs email verification ^[[33m 303^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:30.5748699Z  ^[[32m✓^[[39m src/components/board/__tests__/KanbanCard.test.tsx ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m)^[[22m^[[32m 198^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:31.1850343Z  ^[[32m✓^[[39m src/components/auth/__tests__/AuthRedirect.test.tsx ^[[2m(^[[22m^[[2m5 tests^[[22m^[[2m)^[[22m^[[32m 48^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:31.5192460Z  ^[[32m✓^[[39m src/lib/__tests__/utils.test.ts ^[[2m(^[[22m^[[2m13 tests^[[22m^[[2m)^[[22m^[[32m 9^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:32.6567857Z  ^[[32m✓^[[39m src/components/board/__tests__/BoardSelector.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 278^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:32.9802008Z  ^[[32m✓^[[39m src/pages/__tests__/LandingPage.test.tsx ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[33m 542^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:32.9803165Z      ^[[33m^[[2m✓^[[22m^[[39m renders without crashing and shows heading ^[[33m 540^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:33.8752248Z  ^[[32m✓^[[39m src/components/__tests__/ErrorBoundary.test.tsx ^[[2m(^[[22m^[[2m3 tests^[[22m^[[2m)^[[22m^[[32m 161^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:33.9059296Z  ^[[32m✓^[[39m src/lib/__tests__/ci-guard.test.ts ^[[2m(^[[22m^[[2m32 tests^[[22m^[[2m)^[[22m^[[32m 106^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:10:34.0601858Z  ^[[32m✓^[[39m src/components/connectors/__tests__/connector-setup.test.ts ^[[2m(^[[22m^[[2m1 test^[[22m^[[2m)^[[22m^[[32m 28^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5849719Z  ^[[31m❯^[[39m src/components/auth/__tests__/signOut.test.tsx ^[[2m(^[[22m^[[2m6 tests^[[22m^[[2m | ^[[22m^[[31m6 failed^[[39m^[[2m)^[[22m^[[33m 50348^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5851557Z ^[[31m     ^[[31m×^[[31m keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry^[[39m^[[33m 310^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5852661Z ^[[31m     ^[[31m×^[[31m supports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry^[[39m^[[33m 10002^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5853581Z ^[[31m     ^[[31m×^[[31m normalizes an unexpected rejected SDK call into the intentional sign-out contract^[[39m^[[33m 10006^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5854460Z ^[[31m     ^[[31m×^[[31m does not let a failed departed Account action redirect or notify the newly visited route^[[39m^[[33m 10007^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5855607Z ^[[31m     ^[[31m×^[[31m renders an existing billing error through one host that survives Account-to-public navigation^[[39m^[[33m 10010^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5857026Z ^[[31m     ^[[31m×^[[31m delegates the optional draft intent without calling or starting the default sign-out action^[[39m^[[33m 10009^[[2mms^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5884066Z 
+Tests	Run npm test	2026-10-02T12:11:05.5884721Z ^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m^[[1m^[[41m Failed Tests 6 ^[[49m^[[22m^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5885142Z 
+Tests	Run npm test	2026-10-02T12:11:05.5889030Z ^[[41m^[[1m FAIL ^[[22m^[[49m src/components/auth/__tests__/signOut.test.tsx^[[2m > ^[[22msign-out feedback through actual SDK and the persistent toast host^[[2m > ^[[22mkeeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry
+Tests	Run npm test	2026-10-02T12:11:05.5894423Z ^[[31m^[[1mTestingLibraryElementError^[[22m^[[39m: Unable to find an accessible element with the role "button" and name "Signing out..."
+Tests	Run npm test	2026-10-02T12:11:05.5895292Z 
+Tests	Run npm test	2026-10-02T12:11:05.5895509Z Here are the accessible roles:
+Tests	Run npm test	2026-10-02T12:11:05.5895742Z 
+Tests	Run npm test	2026-10-02T12:11:05.5895885Z   link:
+Tests	Run npm test	2026-10-02T12:11:05.5896039Z 
+Tests	Run npm test	2026-10-02T12:11:05.5896183Z   Name "Back to boards":
+Tests	Run npm test	2026-10-02T12:11:05.5896604Z   ^[[36m<a^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5897481Z     ^[[33mclass^[[39m=^[[32m"inline-flex items-center gap-1.5 text-sm text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors mb-8"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5898497Z     ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:87:9"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5899073Z     ^[[33mdata-discover^[[39m=^[[32m"true"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5899549Z     ^[[33mhref^[[39m=^[[32m"/app"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5900081Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5900312Z 
+Tests	Run npm test	2026-10-02T12:11:05.5900639Z   --------------------------------------------------
+Tests	Run npm test	2026-10-02T12:11:05.5901079Z   heading:
+Tests	Run npm test	2026-10-02T12:11:05.5901219Z 
+Tests	Run npm test	2026-10-02T12:11:05.5901342Z   Name "Account":
+Tests	Run npm test	2026-10-02T12:11:05.5901640Z   ^[[36m<h1^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5902085Z     ^[[33mclass^[[39m=^[[32m"text-2xl font-bold mb-8"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5902714Z     ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:95:9"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5903182Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5903350Z 
+Tests	Run npm test	2026-10-02T12:11:05.5903475Z   Name "Profile":
+Tests	Run npm test	2026-10-02T12:11:05.5903753Z   ^[[36m<h2^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5904399Z     ^[[33mclass^[[39m=^[[32m"text-sm font-medium text-[#A8B2B2] uppercase tracking-wider mb-4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5905407Z     ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:101:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5905880Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5906033Z 
+Tests	Run npm test	2026-10-02T12:11:05.5906154Z   Name "Subscription":
+Tests	Run npm test	2026-10-02T12:11:05.5906462Z   ^[[36m<h2^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5907083Z     ^[[33mclass^[[39m=^[[32m"text-sm font-medium text-[#A8B2B2] uppercase tracking-wider mb-4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5907865Z     ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:128:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5908344Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5908483Z 
+Tests	Run npm test	2026-10-02T12:11:05.5908687Z   --------------------------------------------------
+Tests	Run npm test	2026-10-02T12:11:05.5909078Z   paragraph:
+Tests	Run npm test	2026-10-02T12:11:05.5909241Z 
+Tests	Run npm test	2026-10-02T12:11:05.5909360Z   Name "":
+Tests	Run npm test	2026-10-02T12:11:05.5909667Z   ^[[36m<p^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5910155Z     ^[[33mclass^[[39m=^[[32m"text-sm text-[#A8B2B2] truncate"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5910845Z     ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:121:15"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5911332Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5911485Z 
+Tests	Run npm test	2026-10-02T12:11:05.5911591Z   Name "":
+Tests	Run npm test	2026-10-02T12:11:05.5911879Z   ^[[36m<p^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5912477Z     ^[[33mcode-path^[[39m=^[[32m"src/components/auth/__tests__/signOut.test.tsx:68:10"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5913138Z     ^[[33mdata-testid^[[39m=^[[32m"auth-user"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5913532Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5913684Z 
+Tests	Run npm test	2026-10-02T12:11:05.5913880Z   --------------------------------------------------
+Tests	Run npm test	2026-10-02T12:11:05.5914232Z   button:
+Tests	Run npm test	2026-10-02T12:11:05.5914376Z 
+Tests	Run npm test	2026-10-02T12:11:05.5914609Z   Name "Upgrade to Pro — $3/mo":
+Tests	Run npm test	2026-10-02T12:11:05.5915166Z   ^[[36m<button^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5918736Z     ^[[33mclass^[[39m=^[[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-semibold"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5922295Z     ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:226:19"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5922909Z     ^[[33mdata-size^[[39m=^[[32m"default"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5923371Z     ^[[33mdata-slot^[[39m=^[[32m"button"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5923842Z     ^[[33mdata-variant^[[39m=^[[32m"default"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5924242Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5924394Z 
+Tests	Run npm test	2026-10-02T12:11:05.5924515Z   Name "Sign out":
+Tests	Run npm test	2026-10-02T12:11:05.5924828Z   ^[[36m<button^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5929248Z     ^[[33mclass^[[39m=^[[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3 border-white/10 text-[#A8B2B2] hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/5"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5932716Z     ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:274:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5933298Z     ^[[33mdata-size^[[39m=^[[32m"default"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5933752Z     ^[[33mdata-slot^[[39m=^[[32m"button"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5934215Z     ^[[33mdata-variant^[[39m=^[[32m"outline"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5934607Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5934763Z 
+Tests	Run npm test	2026-10-02T12:11:05.5935116Z   --------------------------------------------------
+Tests	Run npm test	2026-10-02T12:11:05.5935492Z   region:
+Tests	Run npm test	2026-10-02T12:11:05.5935638Z 
+Tests	Run npm test	2026-10-02T12:11:05.5935779Z   Name "Notifications alt+T":
+Tests	Run npm test	2026-10-02T12:11:05.5936156Z   ^[[36m<section^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5936546Z     ^[[33maria-atomic^[[39m=^[[32m"false"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5937076Z     ^[[33maria-label^[[39m=^[[32m"Notifications alt+T"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5937585Z     ^[[33maria-live^[[39m=^[[32m"polite"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5938101Z     ^[[33maria-relevant^[[39m=^[[32m"additions text"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5938592Z     ^[[33mtabindex^[[39m=^[[32m"-1"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5938952Z   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5939105Z 
+Tests	Run npm test	2026-10-02T12:11:05.5939292Z   --------------------------------------------------
+Tests	Run npm test	2026-10-02T12:11:05.5939557Z 
+Tests	Run npm test	2026-10-02T12:11:05.5939766Z Ignored nodes: comments, script, style
+Tests	Run npm test	2026-10-02T12:11:05.5940143Z ^[[36m<body>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5940437Z   ^[[36m<div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5940742Z     ^[[36m<div^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5941260Z       ^[[33mclass^[[39m=^[[32m"min-h-screen bg-[#0B0F0F] text-[#F2F7F7]"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5941943Z       ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:84:5"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5942417Z     ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5942710Z       ^[[36m<div^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5943173Z         ^[[33mclass^[[39m=^[[32m"max-w-2xl mx-auto px-4 py-8"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5943824Z         ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:85:7"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5944290Z       ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5944587Z         ^[[36m<a^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5945625Z           ^[[33mclass^[[39m=^[[32m"inline-flex items-center gap-1.5 text-sm text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors mb-8"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5946596Z           ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:87:9"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5947174Z           ^[[33mdata-discover^[[39m=^[[32m"true"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5947650Z           ^[[33mhref^[[39m=^[[32m"/app"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5948587Z         ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5948888Z           ^[[36m<svg^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5949292Z             ^[[33maria-hidden^[[39m=^[[32m"true"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5949887Z             ^[[33mclass^[[39m=^[[32m"lucide lucide-arrow-left w-4 h-4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5950565Z             ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:91:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5951137Z             ^[[33mfill^[[39m=^[[32m"none"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5951571Z             ^[[33mheight^[[39m=^[[32m"24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5952048Z             ^[[33mstroke^[[39m=^[[32m"currentColor"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5952571Z             ^[[33mstroke-linecap^[[39m=^[[32m"round"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5953090Z             ^[[33mstroke-linejoin^[[39m=^[[32m"round"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5953581Z             ^[[33mstroke-width^[[39m=^[[32m"2"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5954061Z             ^[[33mviewBox^[[39m=^[[32m"0 0 24 24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5954521Z             ^[[33mwidth^[[39m=^[[32m"24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5955316Z             ^[[33mxmlns^[[39m=^[[32m"http://www.w3.org/2000/svg"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5955781Z           ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5956111Z             ^[[36m<path^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5956540Z               ^[[33md^[[39m=^[[32m"m12 19-7-7 7-7"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5956946Z             ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5957286Z             ^[[36m<path^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5957685Z               ^[[33md^[[39m=^[[32m"M19 12H5"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5958063Z             ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5958376Z           ^[[36m</svg>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5958736Z           ^[[0mBack to boards^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.5959089Z         ^[[36m</a>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5959412Z         ^[[36m<h1^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5959862Z           ^[[33mclass^[[39m=^[[32m"text-2xl font-bold mb-8"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5960504Z           ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:95:9"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5960984Z         ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5961306Z           ^[[0mAccount^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.5961640Z         ^[[36m</h1>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5961960Z         ^[[36m<section^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5962612Z           ^[[33mcode-path^[[39m=^[[32m"src/components/auth/__tests__/signOut.test.tsx:51:88"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5963173Z         ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5963521Z           ^[[0mConnector fixture^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.5963909Z         ^[[36m</section>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5964266Z         ^[[36m<section^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5965066Z           ^[[33mclass^[[39m=^[[32m"rounded-xl border border-white/10 bg-[#111515] p-6 mb-6"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5965845Z           ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:100:9"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5966333Z         ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5966624Z           ^[[36m<h2^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5967307Z             ^[[33mclass^[[39m=^[[32m"text-sm font-medium text-[#A8B2B2] uppercase tracking-wider mb-4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5968122Z             ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:101:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5968622Z           ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5968934Z             ^[[0mProfile^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.5969270Z           ^[[36m</h2>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5969602Z           ^[[36m<div^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5970087Z             ^[[33mclass^[[39m=^[[32m"flex items-center gap-4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5970689Z             ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:104:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5971146Z           ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5971451Z             ^[[36m<span^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5972473Z               ^[[33mclass^[[39m=^[[32m"w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5973260Z               ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:105:13"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5973642Z             ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5973871Z               ^[[36m<svg^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5974157Z                 ^[[33maria-hidden^[[39m=^[[32m"true"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5974839Z                 ^[[33mclass^[[39m=^[[32m"lucide lucide-user w-5 h-5 text-[#A8B2B2]"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5975509Z                 ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:114:17"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5976089Z                 ^[[33mfill^[[39m=^[[32m"none"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5976683Z                 ^[[33mheight^[[39m=^[[32m"24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5977233Z                 ^[[33mstroke^[[39m=^[[32m"currentColor"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5977821Z                 ^[[33mstroke-linecap^[[39m=^[[32m"round"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5978375Z                 ^[[33mstroke-linejoin^[[39m=^[[32m"round"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5978896Z                 ^[[33mstroke-width^[[39m=^[[32m"2"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5979391Z                 ^[[33mviewBox^[[39m=^[[32m"0 0 24 24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5979869Z                 ^[[33mwidth^[[39m=^[[32m"24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5980425Z                 ^[[33mxmlns^[[39m=^[[32m"http://www.w3.org/2000/svg"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5980901Z               ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5981291Z                 ^[[36m<path^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5981858Z                   ^[[33md^[[39m=^[[32m"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5982348Z                 ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5982740Z                 ^[[36m<circle^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5983168Z                   ^[[33mcx^[[39m=^[[32m"12"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5983628Z                   ^[[33mcy^[[39m=^[[32m"7"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5984075Z                   ^[[33mr^[[39m=^[[32m"4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5984467Z                 ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5984841Z               ^[[36m</svg>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5985369Z             ^[[36m</span>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5985727Z             ^[[36m<div^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5986142Z               ^[[33mclass^[[39m=^[[32m"min-w-0"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5986765Z               ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:117:13"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5987287Z             ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5987629Z               ^[[36m<p^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5988163Z                 ^[[33mclass^[[39m=^[[32m"text-sm text-[#A8B2B2] truncate"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5988877Z                 ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:121:15"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5989399Z               ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5989827Z                 ^[[0maccount@example.invalid^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.5990256Z               ^[[36m</p>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5990618Z             ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5990962Z           ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5991323Z         ^[[36m</section>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5991669Z         ^[[36m<section^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5992299Z           ^[[33mclass^[[39m=^[[32m"rounded-xl border border-white/10 bg-[#111515] p-6 mb-6"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5993112Z           ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:127:9"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5993618Z         ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5993916Z           ^[[36m<h2^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5994630Z             ^[[33mclass^[[39m=^[[32m"text-sm font-medium text-[#A8B2B2] uppercase tracking-wider mb-4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5995638Z             ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:128:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5996158Z           ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5996539Z             ^[[0mSubscription^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.5996913Z           ^[[36m</h2>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5997249Z           ^[[36m<div^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5997669Z             ^[[33mclass^[[39m=^[[32m"space-y-5"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5998270Z             ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:138:13"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5998762Z           ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5999093Z             ^[[36m<div^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.5999568Z               ^[[33mclass^[[39m=^[[32m"flex items-center gap-3"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6000240Z               ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:140:15"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6000728Z             ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6001351Z               ^[[36m<span^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6001843Z                 ^[[33mclass^[[39m=^[[32m"text-sm text-[#A8B2B2]"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6002498Z                 ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:141:17"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6003004Z               ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6003382Z                 ^[[0mCurrent plan^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.6003801Z               ^[[36m</span>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6004164Z               ^[[36m<span^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6005352Z                 ^[[33mclass^[[39m=^[[32m"inline-flex items-center px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[#A8B2B2] text-sm font-medium"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6006437Z                 ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:148:19"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6006951Z               ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6007271Z                 ^[[0mFree^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.6007620Z               ^[[36m</span>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6007949Z             ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6008292Z             ^[[36m<div^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6008674Z               ^[[33mclass^[[39m=^[[32m"pt-2"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6009296Z               ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:210:15"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6009823Z             ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6010168Z               ^[[36m<button^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6013841Z                 ^[[33mclass^[[39m=^[[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-semibold"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6017156Z                 ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:226:19"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6017812Z                 ^[[33mdata-size^[[39m=^[[32m"default"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6018329Z                 ^[[33mdata-slot^[[39m=^[[32m"button"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6018867Z                 ^[[33mdata-variant^[[39m=^[[32m"default"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6019320Z               ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6019695Z                 ^[[36m<svg^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6020187Z                   ^[[33maria-hidden^[[39m=^[[32m"true"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6020840Z                   ^[[33mclass^[[39m=^[[32m"lucide lucide-sparkles w-4 h-4 mr-2"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6021572Z                   ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:238:25"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6022163Z                   ^[[33mfill^[[39m=^[[32m"none"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6022646Z                   ^[[33mheight^[[39m=^[[32m"24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6023159Z                   ^[[33mstroke^[[39m=^[[32m"currentColor"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6023717Z                   ^[[33mstroke-linecap^[[39m=^[[32m"round"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6024285Z                   ^[[33mstroke-linejoin^[[39m=^[[32m"round"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6024804Z                   ^[[33mstroke-width^[[39m=^[[32m"2"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6025477Z                   ^[[33mviewBox^[[39m=^[[32m"0 0 24 24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6025964Z                   ^[[33mwidth^[[39m=^[[32m"24"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6026542Z                   ^[[33mxmlns^[[39m=^[[32m"http://www.w3.org/2000/svg"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6027020Z                 ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6027398Z                   ^[[36m<path^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6029031Z                     ^[[33md^[[39m=^[[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6030265Z                   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6030962Z                   ^[[36m<path^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6031400Z                     ^[[33md^[[39m=^[[32m"M20 2v4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6031800Z                   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6032179Z                   ^[[36m<path^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6032632Z                     ^[[33md^[[39m=^[[32m"M22 4h-4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6033067Z                   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6033458Z                   ^[[36m<circle^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6033951Z                     ^[[33mcx^[[39m=^[[32m"4"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6034478Z                     ^[[33mcy^[[39m=^[[32m"20"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6035150Z                     ^[[33mr^[[39m=^[[32m"2"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6035571Z                   ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6035944Z                 ^[[36m</svg>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6036396Z                 ^[[0mUpgrade to Pro — $3/mo^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.6036834Z               ^[[36m</button>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6037193Z             ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6037566Z           ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6037903Z         ^[[36m</section>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6038252Z         ^[[36m<section^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6038867Z           ^[[33mclass^[[39m=^[[32m"rounded-xl border border-white/10 bg-[#111515] p-6"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6039645Z           ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:273:9"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6040158Z         ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6040479Z           ^[[36m<button^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6044652Z             ^[[33mclass^[[39m=^[[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3 border-white/10 text-[#A8B2B2] hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/5"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6048560Z             ^[[33mcode-path^[[39m=^[[32m"src/pages/AccountPage.tsx:274:11"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6049210Z             ^[[33mdata-size^[[39m=^[[32m"default"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6049718Z             ^[[33mdata-slot^[[39m=^[[32m"button"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6050251Z             ^[[33mdata-variant^[[39m=^[[32m"outline"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6050675Z           ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6051009Z             ^[[0mSign out^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.6051376Z           ^[[36m</button>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6051742Z         ^[[36m</section>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6052087Z       ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6052422Z     ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6052739Z     ^[[36m<p^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6053369Z       ^[[33mcode-path^[[39m=^[[32m"src/components/auth/__tests__/signOut.test.tsx:68:10"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6054092Z       ^[[33mdata-testid^[[39m=^[[32m"auth-user"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6054510Z     ^[[36m>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6055081Z       ^[[0m10000000-0000-4000-8000-000000000001^[[0m
+Tests	Run npm test	2026-10-02T12:11:05.6055488Z     ^[[36m</p>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6055806Z     ^[[36m<section^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6056214Z       ^[[33maria-atomic^[[39m=^[[32m"false"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6056752Z       ^[[33maria-label^[[39m=^[[32m"Notifications alt+T"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6057268Z       ^[[33maria-live^[[39m=^[[32m"polite"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6057797Z       ^[[33maria-relevant^[[39m=^[[32m"additions text"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6058302Z       ^[[33mtabindex^[[39m=^[[32m"-1"^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6058693Z     ^[[36m/>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6058997Z   ^[[36m</div>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6059318Z ^[[36m</body>^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6060188Z ^[[90m ^[[2m❯^[[22m Object.getElementError node_modules/@testing-library/dom/dist/config.js:^[[2m37:19^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6061601Z ^[[90m ^[[2m❯^[[22m node_modules/@testing-library/dom/dist/query-helpers.js:^[[2m76:38^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6062820Z ^[[90m ^[[2m❯^[[22m node_modules/@testing-library/dom/dist/query-helpers.js:^[[2m52:17^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6063850Z ^[[90m ^[[2m❯^[[22m node_modules/@testing-library/dom/dist/query-helpers.js:^[[2m95:19^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6064761Z ^[[36m ^[[2m❯^[[22m src/components/auth/__tests__/signOut.test.tsx:^[[2m119:1^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6066310Z     ^[[90m117|^[[39m     ^[[35mawait^[[39m ^[[34mact^[[39m(^[[35masync^[[39m () ^[[33m=>^[[39m { button^[[33m.^[[39m^[[34mclick^[[39m()^[[33m;^[[39m button^[[33m.^[[39m^[[34mclick^[[39m()^[[33m;^[[39m })^[[33m;^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6067874Z     ^[[90m118|^[[39m     ^[[35mawait^[[39m ^[[34mwaitFor^[[39m(() ^[[33m=>^[[39m ^[[34mexpect^[[39m(fixture^[[33m.^[[39mlogoutCalls)^[[33m.^[[39m^[[34mtoBe^[[39m(^[[34m1^[[39m))^[[33m;^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6068978Z     ^[[90m119|^[[39m     expect(screen.getByRole('button', { name: 'Signing out...' })).toB…
+Tests	Run npm test	2026-10-02T12:11:05.6069599Z     ^[[90m   |^[[39m ^[[31m^^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6070218Z     ^[[90m120|^[[39m     await act(async () => { held.resolve(json({ code: 'unexpected_fail…
+Tests	Run npm test	2026-10-02T12:11:05.6071373Z     ^[[90m121|^[[39m     ^[[34mexpect^[[39m(^[[35mawait^[[39m screen^[[33m.^[[39m^[[34mfindByText^[[39m(failureMessage))^[[33m.^[[39m^[[34mtoBeVisible^[[39m()^[[33m;^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6072020Z 
+Tests	Run npm test	2026-10-02T12:11:05.6072327Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6072592Z 
+Tests	Run npm test	2026-10-02T12:11:05.6074190Z ^[[41m^[[1m FAIL ^[[22m^[[49m src/components/auth/__tests__/signOut.test.tsx^[[2m > ^[[22msign-out feedback through actual SDK and the persistent toast host^[[2m > ^[[22msupports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry
+Tests	Run npm test	2026-10-02T12:11:05.6076960Z ^[[41m^[[1m FAIL ^[[22m^[[49m src/components/auth/__tests__/signOut.test.tsx^[[2m > ^[[22msign-out feedback through actual SDK and the persistent toast host^[[2m > ^[[22mnormalizes an unexpected rejected SDK call into the intentional sign-out contract
+Tests	Run npm test	2026-10-02T12:11:05.6079462Z ^[[41m^[[1m FAIL ^[[22m^[[49m src/components/auth/__tests__/signOut.test.tsx^[[2m > ^[[22msign-out feedback through actual SDK and the persistent toast host^[[2m > ^[[22mdoes not let a failed departed Account action redirect or notify the newly visited route
+Tests	Run npm test	2026-10-02T12:11:05.6082112Z ^[[41m^[[1m FAIL ^[[22m^[[49m src/components/auth/__tests__/signOut.test.tsx^[[2m > ^[[22msign-out feedback through actual SDK and the persistent toast host^[[2m > ^[[22mrenders an existing billing error through one host that survives Account-to-public navigation
+Tests	Run npm test	2026-10-02T12:11:05.6084768Z ^[[41m^[[1m FAIL ^[[22m^[[49m src/components/auth/__tests__/signOut.test.tsx^[[2m > ^[[22msign-out feedback through actual SDK and the persistent toast host^[[2m > ^[[22mdelegates the optional draft intent without calling or starting the default sign-out action
+Tests	Run npm test	2026-10-02T12:11:05.6086440Z ^[[31m^[[1mError^[[22m: Hook timed out in 10000ms.
+Tests	Run npm test	2026-10-02T12:11:05.6087478Z If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6088586Z ^[[36m ^[[2m❯^[[22m src/components/auth/__tests__/signOut.test.tsx:^[[2m83:1^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6089573Z     ^[[90m 81|^[[39m }
+Tests	Run npm test	2026-10-02T12:11:05.6090029Z     ^[[90m 82|^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6090783Z     ^[[90m 83|^[[39m ^[[34mbeforeEach^[[39m(^[[35masync^[[39m () ^[[33m=>^[[39m {
+Tests	Run npm test	2026-10-02T12:11:05.6091405Z     ^[[90m   |^[[39m ^[[31m^^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6092166Z     ^[[90m 84|^[[39m   fixture.storage.clear(); fixture.responses.length = 0; fixture.logou…
+Tests	Run npm test	2026-10-02T12:11:05.6093290Z     ^[[90m 85|^[[39m   fixture.user = { id: accountId, aud: 'authenticated', role: 'authent…
+Tests	Run npm test	2026-10-02T12:11:05.6093779Z 
+Tests	Run npm test	2026-10-02T12:11:05.6094152Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯^[[22m^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6094575Z 
+Tests	Run npm test	2026-10-02T12:11:05.6094605Z 
+Tests	Run npm test	2026-10-02T12:11:05.6095633Z ^[[2m Test Files ^[[22m ^[[1m^[[31m1 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m44 passed^[[39m^[[22m^[[90m (45)^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6097097Z ^[[2m      Tests ^[[22m ^[[1m^[[31m6 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m951 passed^[[39m^[[22m^[[90m (957)^[[39m
+Tests	Run npm test	2026-10-02T12:11:05.6098414Z ^[[2m   Start at ^[[22m 12:09:50
+Tests	Run npm test	2026-10-02T12:11:05.6110950Z ^[[2m   Duration ^[[22m 75.30s^[[2m (transform 4.53s, setup 3.09s, import 14.55s, tests 110.87s, environment 26.57s)^[[22m
+Tests	Run npm test	2026-10-02T12:11:05.6111565Z 
+Tests	Run npm test	2026-10-02T12:11:05.6111575Z 
+Tests	Run npm test	2026-10-02T12:11:05.6226812Z ##[error]TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Signing out..."
+Tests	Run npm test	
+Tests	Run npm test	Here are the accessible roles:
+Tests	Run npm test	
+Tests	Run npm test	  link:
+Tests	Run npm test	
+Tests	Run npm test	  Name "Back to boards":
+Tests	Run npm test	  <a
+Tests	Run npm test	    class="inline-flex items-center gap-1.5 text-sm text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors mb-8"
+Tests	Run npm test	    code-path="src/pages/AccountPage.tsx:87:9"
+Tests	Run npm test	    data-discover="true"
+Tests	Run npm test	    href="/app"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  --------------------------------------------------
+Tests	Run npm test	  heading:
+Tests	Run npm test	
+Tests	Run npm test	  Name "Account":
+Tests	Run npm test	  <h1
+Tests	Run npm test	    class="text-2xl font-bold mb-8"
+Tests	Run npm test	    code-path="src/pages/AccountPage.tsx:95:9"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  Name "Profile":
+Tests	Run npm test	  <h2
+Tests	Run npm test	    class="text-sm font-medium text-[#A8B2B2] uppercase tracking-wider mb-4"
+Tests	Run npm test	    code-path="src/pages/AccountPage.tsx:101:11"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  Name "Subscription":
+Tests	Run npm test	  <h2
+Tests	Run npm test	    class="text-sm font-medium text-[#A8B2B2] uppercase tracking-wider mb-4"
+Tests	Run npm test	    code-path="src/pages/AccountPage.tsx:128:11"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  --------------------------------------------------
+Tests	Run npm test	  paragraph:
+Tests	Run npm test	
+Tests	Run npm test	  Name "":
+Tests	Run npm test	  <p
+Tests	Run npm test	    class="text-sm text-[#A8B2B2] truncate"
+Tests	Run npm test	    code-path="src/pages/AccountPage.tsx:121:15"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  Name "":
+Tests	Run npm test	  <p
+Tests	Run npm test	    code-path="src/components/auth/__tests__/signOut.test.tsx:68:10"
+Tests	Run npm test	    data-testid="auth-user"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  --------------------------------------------------
+Tests	Run npm test	  button:
+Tests	Run npm test	
+Tests	Run npm test	  Name "Upgrade to Pro — $3/mo":
+Tests	Run npm test	  <button
+Tests	Run npm test	    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 gradient-cyan text-[#0B0F0F] hover:opacity-90 font-semibold"
+Tests	Run npm test	    code-path="src/pages/AccountPage.tsx:226:19"
+Tests	Run npm test	    data-size="default"
+Tests	Run npm test	    data-slot="button"
+Tests	Run npm test	    data-variant="default"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  Name "Sign out":
+Tests	Run npm test	  <button
+Tests	Run npm test	    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs dark:bg-input/30 dark:border-input dark:hover:bg-input/50 h-9 px-4 py-2 has-[>svg]:px-3 border-white/10 text-[#A8B2B2] hover:text-red-400 hover:border-red-400/30 hover:bg-red-400/5"
+Tests	Run npm test	    code-path="src/pages/AccountPage.tsx:274:11"
+Tests	Run npm test	    data-size="default"
+Tests	Run npm test	    data-slot="button"
+Tests	Run npm test	    data-variant="outline"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  --------------------------------------------------
+Tests	Run npm test	  region:
+Tests	Run npm test	
+Tests	Run npm test	  Name "Notifications alt+T":
+Tests	Run npm test	  <section
+Tests	Run npm test	    aria-atomic="false"
+Tests	Run npm test	    aria-label="Notifications alt+T"
+Tests	Run npm test	    aria-live="polite"
+Tests	Run npm test	    aria-relevant="additions text"
+Tests	Run npm test	    tabindex="-1"
+Tests	Run npm test	  />
+Tests	Run npm test	
+Tests	Run npm test	  --------------------------------------------------
+Tests	Run npm test	
+Tests	Run npm test	Ignored nodes: comments, script, style
+Tests	Run npm test	<body>
+Tests	Run npm test	  <div>
+Tests	Run npm test	    <div
+Tests	Run npm test	      class="min-h-screen bg-[#0B0F0F] text-[#F2F7F7]"
+Tests	Run npm test	      code-path="src/pages/AccountPage.tsx:84:5"
+Tests	Run npm test	    >
+Tests	Run npm test	      <div
+Tests	Run npm test	        class="max-w-2xl mx-auto px-4 py-8"
+Tests	Run npm test	        code-path="src/pages/AccountPage.tsx:85:7"
+Tests	Run npm test	      >
+Tests	Run npm test	        <a
+Tests	Run npm test	          class="inline-flex items-center gap-1.5 text-sm text-[#A8B2B2] hover:text-[#F2F7F7] transition-colors mb-8"
+Tests	Run npm test	          code-path="src/pages/AccountPage.tsx:87:9"
+Tests	Run npm test	          data-discover="true"
+Tests	Run npm test	          href="/app"
+Tests	Run npm test	        >
+Tests	Run npm test	          <svg
+Tests	Run npm test	            aria-hidden="true"
+Tests	Run npm test	            class="lucide lucide-arrow-left w-4 h-4"
+Tests	Run npm test	            code-path="src/pages/AccountPage.tsx:91:11"
+Tests	Run npm test	            fill="none"
+Tests	Run npm test	            height="24"
+Tests	Run npm test	            stroke="currentColor"
+Tests	Run npm test	            stroke-linecap="round"
+Tests	Run npm test	            stroke-linejoin="round"
+Tests	Run npm test	            stroke-width="2"
+Tests	Run npm test	            viewBox="0 0 24 24"
+Tests	Run npm test	            width="24"
+Tests	Run npm test	            xmlns="http://www.w3.org/2000/svg"
+Tests	Run npm test	        
+Tests	Run npm test	2026-10-02T12:11:05.6248735Z 
+Tests	Run npm test	2026-10-02T12:11:05.6250944Z ##[error]Error: Hook timed out in 10000ms.
+Tests	Run npm test	If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+Tests	Run npm test	 ❯ src/components/auth/__tests__/signOut.test.tsx:83:1
+Tests	Run npm test	
+Tests	Run npm test	
+Tests	Run npm test	2026-10-02T12:11:05.6252096Z 
+Tests	Run npm test	2026-10-02T12:11:05.6253694Z ##[error]Error: Hook timed out in 10000ms.
+Tests	Run npm test	If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+Tests	Run npm test	 ❯ src/components/auth/__tests__/signOut.test.tsx:83:1
+Tests	Run npm test	
+Tests	Run npm test	
+Tests	Run npm test	2026-10-02T12:11:05.6254739Z 
+Tests	Run npm test	2026-10-02T12:11:05.6256924Z ##[error]Error: Hook timed out in 10000ms.
+Tests	Run npm test	If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+Tests	Run npm test	 ❯ src/components/auth/__tests__/signOut.test.tsx:83:1
+Tests	Run npm test	
+Tests	Run npm test	
+Tests	Run npm test	2026-10-02T12:11:05.6258496Z 
+Tests	Run npm test	2026-10-02T12:11:05.6260841Z ##[error]Error: Hook timed out in 10000ms.
+Tests	Run npm test	If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+Tests	Run npm test	 ❯ src/components/auth/__tests__/signOut.test.tsx:83:1
+Tests	Run npm test	
+Tests	Run npm test	
+Tests	Run npm test	2026-10-02T12:11:05.6262276Z 
+Tests	Run npm test	2026-10-02T12:11:05.6264489Z ##[error]Error: Hook timed out in 10000ms.
+Tests	Run npm test	If this is a long-running hook, pass a timeout value as the last argument or configure it globally with "hookTimeout".
+Tests	Run npm test	 ❯ src/components/auth/__tests__/signOut.test.tsx:83:1
+Tests	Run npm test	
+Tests	Run npm test	
+Tests	Run npm test	2026-10-02T12:11:05.6427384Z ##[error]Process completed with exit code 1.
+Tests	Post Run actions/checkout@v4	﻿2026-10-02T12:11:05.6548578Z Post job cleanup.
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7229092Z [command]/usr/bin/git version
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7264860Z git version 2.55.0
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7297402Z Temporarily overriding HOME='/home/runner/work/_temp/a60c31e8-f80d-4d22-8686-eb7d696bfb17' before making global git config changes
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7298223Z Adding repository directory to the temporary git global config as a safe directory
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7302125Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/zeroclickboards/zeroclickboards
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7333823Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7362008Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7573354Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7600937Z http.https://github.com/.extraheader
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7609870Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7641588Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7848804Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+Tests	Post Run actions/checkout@v4	2026-10-02T12:11:05.7881934Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Tests	Complete job	﻿2026-10-02T12:11:05.8232093Z Cleaning up orphan processes
+Tests	Complete job	2026-10-02T12:11:05.8458899Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

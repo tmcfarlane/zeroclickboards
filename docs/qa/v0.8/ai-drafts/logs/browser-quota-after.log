@@ -1,0 +1,17 @@
+[WebServer] (node:334) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+[WebServer] Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+[WebServer]   npx update-browserslist-db@latest
+[WebServer]   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+(node:342) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] [BABEL] Note: The code generator has deoptimised the styling of /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-vite-cache/deps/react-dom_client.js?v=6a6ee157 as it exceeds the max of 500KB.
+  ✓  1 [desktop] › tests/connector-ui/ai-drafts.spec.ts:171:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (4.0s)
+(node:410) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [mobile] › tests/connector-ui/ai-drafts.spec.ts:171:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (2.5s)
+
+  2 passed (9.5s)

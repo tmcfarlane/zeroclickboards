@@ -1,0 +1,337 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-drafts
+
+ ❯ src/components/layout/__tests__/AppShell.test.tsx (27 tests | 5 failed) 5957ms
+     × guards AI-only text before unload and pathname navigation, retaining it on Stay 219ms
+     × keeps a hidden AI draft guarded and requires a sign-out decision before calling auth 344ms
+     × retains unsent text and its guard after a same-account sign-out failure 334ms
+     × retains the same-owner signal on rerender and ignores an obsolete owner report after replacement 238ms
+     × clears old AI-only work on auth loss without preserving an old sign-out intent 372ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/layout/__tests__/AppShell.test.tsx > AppShell unsent AI drafts > guards AI-only text before unload and pathname navigation, retaining it on Stay
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/components/layout/__tests__/AppShell.test.tsx:353:1
+    351|     const input = screen.getByRole('textbox', { name: 'Controlled AI d…
+    352|     await user.type(input, 'Keep this unsent question'); await user.cl…
+    353|     expect(attemptToLeave().defaultPrevented).toBe(true);
+       | ^
+    354|     await act(async () => { await router.navigate('/account'); });
+    355|     const alert = screen.getByRole('alertdialog', { name: 'Leave this …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/components/layout/__tests__/AppShell.test.tsx > AppShell unsent AI drafts > keeps a hidden AI draft guarded and requires a sign-out decision before calling auth
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/components/layout/__tests__/AppShell.test.tsx:372:1
+    370|     await user.click(screen.getByRole('button', { name: 'Hide controll…
+    371|     expect(screen.queryByRole('textbox', { name: 'Controlled AI draft'…
+    372|     expect(attemptToLeave().defaultPrevented).toBe(true);
+       | ^
+    373|     await user.click(screen.getByRole('button', { name: 'Request sign …
+    374|     expect(screen.getByRole('alertdialog', { name: 'Sign out with unfi…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/components/layout/__tests__/AppShell.test.tsx > AppShell unsent AI drafts > retains unsent text and its guard after a same-account sign-out failure
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+ ❯ src/components/layout/__tests__/AppShell.test.tsx:388:1
+    386|     await user.type(screen.getByRole('textbox', { name: 'Controlled AI…
+    387|     await user.click(screen.getByRole('button', { name: 'Request sign …
+    388|     expect(state.signOut).not.toHaveBeenCalled();
+       | ^
+    389|     await user.click(screen.getByRole('button', { name: /^Sign out$/ }…
+    390|     await waitFor(() => expect(errorToast).toHaveBeenCalledExactlyOnce…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/components/layout/__tests__/AppShell.test.tsx > AppShell unsent AI drafts > retains the same-owner signal on rerender and ignores an obsolete owner report after replacement
+AssertionError: expected undefined to be type of 'function'
+
+Expected: "function"
+Received: "undefined"
+
+ ❯ src/components/layout/__tests__/AppShell.test.tsx:402:1
+    400|     await user.click(screen.getByRole('button', { name: 'Open AI' }));
+    401|     await user.type(screen.getByRole('textbox', { name: 'Controlled AI…
+    402|     const oldReport = state.aiCallbacks.at(-1); expect(oldReport).toBe…
+       | ^
+    403|     state.auth = { ...state.auth }; rerender(<AppShell />);
+    404|     expect(screen.getByRole('textbox', { name: 'Controlled AI draft' }…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/components/layout/__tests__/AppShell.test.tsx > AppShell unsent AI drafts > clears old AI-only work on auth loss without preserving an old sign-out intent
+TestingLibraryElementError: Unable to find an accessible element with the role "alertdialog"
+
+Here are the accessible roles:
+
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"fixed top-0 left-0 right-0 z-50 bg-[#0B0F0F]/90 backdrop-blur-md border-b border-white/5"[39m
+    [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:285:7"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  img:
+
+  Name "ZeroBoard":
+  [36m<img[39m
+    [33malt[39m=[32m"ZeroBoard"[39m
+    [33mclass[39m=[32m"w-6 h-6"[39m
+    [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:288:13"[39m
+    [33msrc[39m=[32m"/logo/logo_color.svg"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "New Board":
+  [36m<button[39m
+    [33maria-label[39m=[32m"New Board"[39m
+    [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:hover:bg-accent/50 py-2 has-[>svg]:px-3 h-8 px-3 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-md text-xs"[39m
+    [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:299:13"[39m
+    [33mdata-size[39m=[32m"default"[39m
+    [33mdata-slot[39m=[32m"button"[39m
+    [33mdata-variant[39m=[32m"ghost"[39m
+  [36m/>[39m
+
+  Name "Request sign out":
+  [36m<button[39m
+    [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:79:120"[39m
+  [36m/>[39m
+
+  Name "Hide controlled AI":
+  [36m<button[39m
+    [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:76:174"[39m
+  [36m/>[39m
+
+  Name "Open AI":
+  [36m<button[39m
+    [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:66:41"[39m
+  [36m/>[39m
+
+  Name "Open board rename":
+  [36m<button[39m
+    [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:66:85"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "Controlled AI draft":
+  [36m<input[39m
+    [33maria-label[39m=[32m"Controlled AI draft"[39m
+    [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:76:14"[39m
+    [33mvalue[39m=[32m"Private signed-in text"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  main:
+
+  Name "":
+  [36m<main[39m
+    [33mclass[39m=[32m"flex-1 min-h-0 overflow-hidden"[39m
+    [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:341:11"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:66:14"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body[39m
+  [33mstyle[39m=[32m""[39m
+[36m>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"h-dvh bg-[#0B0F0F] text-[#F2F7F7] noise-overlay flex flex-col"[39m
+      [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:283:5"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"fixed top-0 left-0 right-0 z-50 bg-[#0B0F0F]/90 backdrop-blur-md border-b border-white/5"[39m
+        [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:285:7"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex items-center justify-between px-4 py-1.5"[39m
+          [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:286:9"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-2"[39m
+            [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:287:11"[39m
+          [36m>[39m
+            [36m<img[39m
+              [33malt[39m=[32m"ZeroBoard"[39m
+              [33mclass[39m=[32m"w-6 h-6"[39m
+              [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:288:13"[39m
+              [33msrc[39m=[32m"/logo/logo_color.svg"[39m
+            [36m/>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"font-semibold text-sm"[39m
+              [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:289:13"[39m
+            [36m>[39m
+              [0mZeroBoard[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex-1"[39m
+            [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:292:11"[39m
+          [36m/>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex items-center gap-3"[39m
+            [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:294:11"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"hidden sm:block h-5 w-px bg-white/10"[39m
+              [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:297:13"[39m
+            [36m/>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"New Board"[39m
+              [33mclass[39m=[32m"inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:hover:bg-accent/50 py-2 has-[>svg]:px-3 h-8 px-3 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-md text-xs"[39m
+              [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:299:13"[39m
+              [33mdata-size[39m=[32m"default"[39m
+              [33mdata-slot[39m=[32m"button"[39m
+              [33mdata-variant[39m=[32m"ghost"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-plus w-3.5 h-3.5"[39m
+                [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:305:15"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"24"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"24"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M5 12h14"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M12 5v14"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"hidden sm:inline ml-1"[39m
+                [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:306:15"[39m
+              [36m>[39m
+                [0mNew Board[0m
+              [36m</span>[39m
+            [36m</button>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ml-1"[39m
+              [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:321:13"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:79:120"[39m
+              [36m>[39m
+                [0mRequest sign out[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"pt-10"[39m
+        [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:334:7"[39m
+      [36m/>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex-1 min-h-0 flex overflow-hidden"[39m
+        [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:337:7"[39m
+      [36m>[39m
+        [36m<input[39m
+          [33maria-label[39m=[32m"Controlled AI draft"[39m
+          [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:76:14"[39m
+          [33mvalue[39m=[32m"Private signed-in text"[39m
+        [36m/>[39m
+        [36m<button[39m
+          [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:76:174"[39m
+        [36m>[39m
+          [0mHide controlled AI[0m
+        [36m</button>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex-1 min-w-0 flex flex-col overflow-hidden"[39m
+          [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:339:9"[39m
+        [36m>[39m
+          [36m<main[39m
+            [33mclass[39m=[32m"flex-1 min-h-0 overflow-hidden"[39m
+            [33mcode-path[39m=[32m"src/components/layout/AppShell.tsx:341:11"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:66:14"[39m
+            [36m>[39m
+              [0mKanban board content[0m
+            [36m</p>[39m
+            [36m<button[39m
+              [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:66:41"[39m
+            [36m>[39m
+              [0mOpen AI[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33mcode-path[39m=[32m"src/components/layout/__tests__/AppShell.test.tsx:66:85"[39m
+            [36m>[39m
+              [0mOpen board rename[0m
+            [36m</button>[39m
+          [36m</main>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError ../zeroclickboards/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ ../zeroclickboards/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ ../zeroclickboards/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ ../zeroclickboards/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/components/layout/__tests__/AppShell.test.tsx:431:1
+    429|     await user.type(screen.getByRole('textbox', { name: 'Controlled AI…
+    430|     await user.click(screen.getByRole('button', { name: 'Request sign …
+    431|     expect(screen.getByRole('alertdialog')).toBeVisible();
+       | ^
+    432|     state.auth = { isSignedIn: false, isLoaded: true, userId: null }; …
+    433|     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 22 passed (27)
+   Start at  04:14:31
+   Duration  16.35s (transform 3.07s, setup 527ms, import 6.98s, tests 5.96s, environment 2.44s)
+

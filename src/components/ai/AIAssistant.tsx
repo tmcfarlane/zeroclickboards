@@ -24,6 +24,7 @@ interface AIAssistantProps {
   isOpen: boolean;
   onClose: () => void;
   onUpgrade?: () => void;
+  onDraftChange?: (hasDraft: boolean) => void;
 }
 
 function validateCommand(v: unknown): AICommand | null {
@@ -662,7 +663,7 @@ function UpgradeButton({
   );
 }
 
-export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
+export function AIAssistant({ isOpen, onClose, onUpgrade, onDraftChange }: AIAssistantProps) {
   const {
     activeBoardId,
     createBoard,
@@ -689,6 +690,13 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastCardTitle = useRef<string | null>(null);
+  const hasDraft = input.length > 0;
+
+  const updateInput = (value: string) => {
+    setInput(value);
+    onDraftChange?.(value.length > 0);
+  };
+  useEffect(() => { onDraftChange?.(hasDraft); }, [hasDraft, onDraftChange]);
 
   const activeBoard = getActiveBoard();
   const canEditActiveBoard = activeBoardId ? useBoardStore.getState().canEditBoard(activeBoardId) : true;
@@ -1470,7 +1478,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput("");
+    updateInput("");
     setIsProcessing(true);
 
     const boardContext = (() => {
@@ -1600,7 +1608,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
   };
 
   const handleQuickAction = (action: QuickAction) => {
-    setInput(action.label);
+    updateInput(action.label);
     handleSend(action.command);
   };
 
@@ -1781,7 +1789,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
             <Input
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => updateInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !isComposingKey(e.nativeEvent) && handleSend()}
               placeholder="What should we do next?"
               className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-11 sm:h-10 text-base sm:text-sm"

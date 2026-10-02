@@ -53,17 +53,13 @@ vi.mock('@/components/connectors/ConnectorSettings', () => ({ ConnectorSettings:
 const accountId = '10000000-0000-4000-8000-000000000001';
 const failureMessage = 'Could not sign out. Try again.';
 const routers: ReturnType<typeof createMemoryRouter>[] = [];
-const heldResponses = new Set<(value: Response) => void>();
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
-function deferredResponse() {
-  let resolve!: (value: Response) => void;
-  const promise = new Promise<Response>(done => {
-    resolve = response => { heldResponses.delete(resolve); done(response); };
-  });
-  heldResponses.add(resolve);
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(done => { resolve = done; });
   return { promise, resolve };
 }
 function AuthStatus() {
@@ -108,29 +104,19 @@ beforeEach(async () => {
   expect((await supabase.auth.setSession({ access_token: token, refresh_token: 'disposable-refresh' })).error).toBeNull();
 });
 
-afterEach(async () => {
+afterEach(() => {
   cleanup(); toast.getHistory().forEach(({ id }) => toast.dismiss(id)); routers.splice(0).forEach(router => router.dispose());
-  try {
-    await act(async () => {
-      // A failed assertion can leave an actual SDK logout holding its auth lock.
-      // Unmount first, release every held transport, then drain the public SDK.
-      heldResponses.forEach(resolve => resolve(json({ code: 'unexpected_failure', msg: 'Disposable fixture cleanup' }, 500)));
-      await supabase.auth.getSession();
-    });
-  } finally {
-    supabase.auth.stopAutoRefresh(); vi.restoreAllMocks(); vi.unstubAllGlobals();
-  }
+  supabase.auth.stopAutoRefresh(); vi.restoreAllMocks(); vi.unstubAllGlobals();
 });
 
 describe('sign-out feedback through actual SDK and the persistent toast host', () => {
   it('keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry', async () => {
-    const held = deferredResponse(); fixture.responses.push(held.promise);
+    const held = deferred<Response>(); fixture.responses.push(held.promise);
     const router = renderRoot('/account');
     const button = await screen.findByRole('button', { name: 'Sign out' });
     await act(async () => { button.click(); button.click(); });
     await waitFor(() => expect(fixture.logoutCalls).toBe(1));
-    // Arrival at the HTTP fixture does not itself prove React committed the UI.
-    expect(await screen.findByRole('button', { name: 'Signing out...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Signing out...' })).toBeDisabled();
     await act(async () => { held.resolve(json({ code: 'unexpected_failure', msg: 'Disposable auth server failure' }, 500)); });
     expect(await screen.findByText(failureMessage)).toBeVisible();
     expect(router.state.location.pathname).toBe('/account'); expect(screen.getByTestId('auth-user')).toHaveTextContent(accountId);
@@ -144,13 +130,13 @@ describe('sign-out feedback through actual SDK and the persistent toast host', (
   });
 
   it('supports public-menu keyboard selection, visible failure, disabled pending selection and explicit retry', async () => {
-    const held = deferredResponse(); fixture.responses.push(held.promise);
+    const held = deferred<Response>(); fixture.responses.push(held.promise);
     const router = renderRoot('/terms'); const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Account menu' }));
     await act(async () => { screen.getByRole('menuitem', { name: 'Sign out' }).focus(); }); await user.keyboard(' ');
     await waitFor(() => expect(fixture.logoutCalls).toBe(1));
     await user.click(screen.getByRole('button', { name: 'Account menu' }));
-    const pending = await screen.findByRole('menuitem', { name: 'Signing out...' }); expect(pending).toHaveAttribute('aria-disabled', 'true');
+    const pending = screen.getByRole('menuitem', { name: 'Signing out...' }); expect(pending).toHaveAttribute('aria-disabled', 'true');
     await act(async () => { pending.focus(); }); await user.keyboard('{Enter}'); expect(fixture.logoutCalls).toBe(1);
     await act(async () => { held.resolve(json({ code: 'unexpected_failure', msg: 'Disposable auth server failure' }, 500)); });
     expect(await screen.findByText(failureMessage)).toBeVisible(); expect(router.state.location.pathname).toBe('/terms');
@@ -173,7 +159,7 @@ describe('sign-out feedback through actual SDK and the persistent toast host', (
   });
 
   it('does not let a failed departed Account action redirect or notify the newly visited route', async () => {
-    const held = deferredResponse(); fixture.responses.push(held.promise);
+    const held = deferred<Response>(); fixture.responses.push(held.promise);
     const router = renderRoot('/account'); await userEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(fixture.logoutCalls).toBe(1));
     await act(async () => { await router.navigate('/terms'); }); expect(screen.getByRole('heading', { name: 'Terms fixture' })).toBeVisible();
