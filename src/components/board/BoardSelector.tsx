@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardDialogs } from '@/hooks/useBoardDialogs';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -19,30 +20,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface BoardSelectorProps {
   onCreateBoardClick: () => void;
 }
 
 export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
-  const { boards, activeBoardId, setActiveBoard, renameBoard, deleteBoard, canEditBoard, canManageBoard } = useBoardStore();
-  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const { boards, activeBoardId, setActiveBoard, deleteBoard, canEditBoard, canManageBoard } = useBoardStore();
+  const { openTextDialog } = useBoardDialogs();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingBoard, setEditingBoard] = useState<{ id: string; name: string } | null>(null);
-  const [newName, setNewName] = useState('');
 
   const activeBoard = boards.find((b) => b.id === activeBoardId);
-
-  const handleRename = () => {
-    if (editingBoard && newName.trim() && useBoardStore.getState().canEditBoard(editingBoard.id)) {
-      renameBoard(editingBoard.id, newName.trim());
-      setIsRenameDialogOpen(false);
-      setEditingBoard(null);
-      setNewName('');
-    }
-  };
 
   const handleDelete = () => {
     if (editingBoard && useBoardStore.getState().canManageBoard(editingBoard.id)) {
@@ -52,12 +41,6 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
     }
   };
 
-  const openRenameDialog = (board: { id: string; name: string }) => {
-    setEditingBoard(board);
-    setNewName(board.name);
-    setIsRenameDialogOpen(true);
-  };
-
   const openDeleteDialog = (board: { id: string; name: string }) => {
     setEditingBoard(board);
     setIsDeleteDialogOpen(true);
@@ -65,7 +48,7 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -114,7 +97,7 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
                     <MoreHorizontal className="w-4 h-4" />
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
-                    <DropdownMenuItem onSelect={() => openRenameDialog(board)} className="focus:bg-white/5 focus:text-[#78fcd6]">
+                    <DropdownMenuItem onSelect={() => openTextDialog({ kind: 'rename-board', boardId: board.id })} className="focus:bg-white/5 focus:text-[#78fcd6]">
                       <Edit2 className="w-4 h-4" />Rename
                     </DropdownMenuItem>
                     {canManageBoard(board.id) && (
@@ -129,44 +112,6 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-
-      {/* Rename Dialog */}
-      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-        <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
-          <DialogHeader>
-            <DialogTitle>Rename Board</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            {editingBoard && !canEditBoard(editingBoard.id) && <p role="alert" className="mb-3 text-sm text-amber-100">You no longer have editing access. Your name change is kept here.</p>}
-            <Label htmlFor="rename" className="mb-2 block">
-              Board Name
-            </Label>
-            <Input
-              id="rename"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="bg-white/5 border-white/10 text-[#F2F7F7]"
-              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsRenameDialogOpen(false)}
-              className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRename}
-              disabled={!newName.trim() || !editingBoard || !canEditBoard(editingBoard.id)}
-              className="gradient-cyan text-[#0B0F0F] hover:opacity-90"
-            >
-              Rename
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

@@ -79,7 +79,8 @@ export function configuredConnectorRuntime(): ConnectorRuntime | null {
   if (!config) return null
   const signature = JSON.stringify({ ...config, vaultKey: config.vaultKey.toString('base64') })
   if (cached?.signature === signature) return cached.runtime
-  const sql = postgres(config.databaseUrl, { ssl: { rejectUnauthorized: true }, max: 2, idle_timeout: 20, connect_timeout: 5, prepare: false })
+  const sql = postgres(config.databaseUrl, { ssl: { rejectUnauthorized: true, ...(config.databaseCa ? { ca: config.databaseCa } : {}) },
+    max: 2, idle_timeout: 20, connect_timeout: 5, prepare: false })
   const executor: SqlExecutor = {
     async query(statement, values) {
       const rows = await sql.unsafe(statement, values as postgres.ParameterOrJSON<never>[])

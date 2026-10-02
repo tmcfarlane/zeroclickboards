@@ -7,7 +7,9 @@ test('portable plugin declares local scoped MCP and focused skill workflows with
   const manifest = JSON.parse(await readFile(new URL('plugin.json', plugin), 'utf8'));
   assert.equal(manifest.$schema, 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json');
   const mcp = JSON.parse(await readFile(new URL('mcp.json', plugin), 'utf8'));
-  assert.equal(mcp.mcpServers.zeroboard.type, 'stdio'); assert.ok(mcp.mcpServers.zeroboard.args.includes('--plugin'));
+  assert.equal(mcp.mcpServers.zeroboard.type, 'stdio');
+  assert.equal(mcp.mcpServers.zeroboard.command, 'node');
+  assert.deepEqual(mcp.mcpServers.zeroboard.args, ['${PLUGIN_ROOT}/scripts/serve.mjs']);
   assert.equal(mcp.mcpServers.zeroboard.env, undefined);
   const skills = await readdir(new URL('skills/', plugin)); assert.deepEqual(skills.sort(), ['meeting-actions','standup','triage']);
   const meeting = await readFile(new URL('skills/meeting-actions/SKILL.md', plugin), 'utf8');

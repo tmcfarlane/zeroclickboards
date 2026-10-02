@@ -13,7 +13,10 @@ const connection = {
   scopes: ['boards:read', 'cards:add'],
   expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
 };
-const ready = { available: true, endpoint, connections: [], clients: [{ name: 'ChatGPT', clientId: 'zeroboard-review-client' }] };
+const ready = { available: true, endpoint, connections: [], clients: [
+  { name: 'ChatGPT', clientId: 'zeroboard-review-client', callbackKinds: ['chatgpt'] },
+  { name: 'Codex native', clientId: 'zeroboard-native-client', callbackKinds: ['native'] },
+] };
 
 async function screenshot(page: Page, info: TestInfo, name: string) {
   const directory = process.env.CONNECTOR_SCREENSHOT_DIR || resolve('test-results/connector-ui-evidence');
@@ -40,14 +43,14 @@ test.describe('setup and access management', () => {
     await page.getByRole('menuitem', { name: 'ChatGPT & Codex' }).click();
     await expect(page).toHaveURL(/\/account#connectors$/);
     await expect(page.getByRole('heading', { name: 'ChatGPT & Codex', exact: true })).toBeVisible();
-    await expect(page.getByText('Ready to connect', { exact: true })).toBeVisible();
+    await expect(page.getByText('Connection service ready', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Connection URL')).toHaveValue(endpoint);
     await page.getByRole('button', { name: 'Copy URL' }).click();
-    await expect(page.getByRole('button', { name: 'Copied', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'URL copied', exact: true })).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(endpoint);
-    await page.getByText('OAuth setup details', { exact: true }).click();
     await expect(page.getByLabel('ChatGPT OAuth client ID')).toHaveValue('zeroboard-review-client');
-    await page.getByText('OAuth setup details', { exact: true }).click();
+    await expect(page.getByText(/required OAuth client ID/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ChatGPT web setup' })).toBeVisible();
     expect(apiCalls.every((call) => call.method === 'GET')).toBe(true);
     await noHorizontalOverflow(page);
     await screenshot(page, info, 'setup');
@@ -62,8 +65,24 @@ test.describe('setup and access management', () => {
     });
     await page.goto('/account#connectors');
     await page.getByRole('button', { name: 'Copy URL' }).click();
-    await expect(page.getByRole('alert')).toHaveText('Copy was blocked by your browser. Select the address above and copy it manually.');
+    await expect(page.getByRole('alert')).toHaveText('Copy was blocked by your browser. Select the text and copy it manually.');
     await expect(page.getByLabel('Connection URL')).toHaveValue(endpoint);
+  });
+
+  test('native-only setup copies the required public client command without promising ChatGPT web', async ({ page, apiCalls }, info) => {
+    await page.route('**/api/connector', route => json(route, { ...ready, clients: [
+      { name: 'ChatGPT operator label', clientId: 'native-review-client', callbackKinds: ['native'] },
+    ] }));
+    await page.goto('/account#connectors');
+    await expect(page.getByRole('heading', { name: 'Codex app & CLI setup' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ChatGPT web setup' })).toHaveCount(0);
+    await expect(page.getByLabel('ChatGPT operator label OAuth client ID')).toHaveValue('native-review-client');
+    await page.getByRole('button', { name: 'Copy Codex command' }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`codex mcp add zeroboard --url '${endpoint}' --oauth-client-id 'native-review-client' --oauth-resource '${endpoint}'`);
+    await expect(page.getByRole('status')).toContainText('Complete setup in your client');
+    expect(apiCalls.every(call => call.method === 'GET')).toBe(true);
+    await noHorizontalOverflow(page);
+    await screenshot(page, info, 'native-setup');
   });
 });
 
@@ -83,7 +102,7 @@ test.describe('disconnect', () => {
     await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await screenshot(page, info, 'disconnect-confirmation');
     await dialog.getByRole('button', { name: 'Disconnect', exact: true }).click();
-    await expect(page.getByText(/No connections yet/)).toBeVisible();
+    await expect(page.getByText(/No approved access yet/)).toBeVisible();
     expect(apiCalls.filter((call) => call.method === 'POST')).toEqual([
       { method: 'POST', path: '/api/connector', body: { action: 'revoke', connectionId: connection.id } },
     ]);
@@ -133,7 +152,7 @@ test.describe('service failure', () => {
     await page.goto('/account#connectors');
     await expect(page.getByRole('alert')).toHaveText('Connection service temporarily unavailable.');
     await page.getByRole('button', { name: 'Try again' }).click();
-    await expect(page.getByText('Ready to connect', { exact: true })).toBeVisible();
+    await expect(page.getByText('Connection service ready', { exact: true })).toBeVisible();
   });
 
   test('failed revoke retains the grant and offers another confirmation attempt', async ({ page }) => {
@@ -155,7 +174,7 @@ test.describe('service failure', () => {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('alertdialog').getByRole('alert')).toHaveText('The connection service returned an invalid response. Please try again.');
     await expect(page.getByText(/1 selected board/)).toBeVisible();
-    await expect(page.getByText(/No connections yet/)).toHaveCount(0);
+    await expect(page.getByText(/No approved access yet/)).toHaveCount(0);
   });
 });
 

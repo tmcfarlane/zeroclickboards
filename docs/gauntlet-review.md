@@ -44,4 +44,18 @@ A production ACL audit found that unrelated SQL logins inherited public access t
 
 Follow-up validation: 730 app/API tests, 164 MCP tests, and 82 disposable desktop/mobile browser checks passed. Full lint, TypeScript, build, and diff checks passed. A concurrent app/browser run hit three default-timeout failures; the isolated app rerun passed without assertion or timeout changes. Hosted runtime credentials and real client linking remain a separate deployment step.
 
-Remaining draft-retention work includes board/column text dialogs and an open share dialog when ownership falls to viewer access; content writes are blocked, but those presentation switches can still dismiss local text.
+## Sharing drafts and hosted setup
+
+Board/column text dialogs and sharing now live beside the card editor in AppShell. Their captured target and draft remain available after a presentation/access change, and submit rechecks current access and target existence. Action menus use nonmodal dropdowns so opening the global modal does not leave the page pointer-locked. Failed sharing-detail loads retain known lists and expose Retry; clipboard checks wait for success.
+
+Invitation delivery fails closed when the administrative client, ownership lookup, or required persistence cannot be confirmed. Links use the configured application origin rather than request Origin. A later mail/database failure identifies acknowledged saved access, while the dialog refreshes permissions, retains the email, and avoids claiming delivery succeeded.
+
+Connection setup exposes required public client IDs and derives ChatGPT/native instructions from validated callbacks. Native setup includes the explicit client/resource CLI flags and literal shell arguments. Approved access is distinguished from a client that completed sign-in, and unavailable storage does not claim there are no existing approvals. The local plugin launcher requires its bundled or adjacent reviewed runtime and dedicated scoped entry point; it cannot silently fall back to the published 0.1.0 legacy executable on PATH.
+
+Actual Supabase pooler TLS required its provider CA. Optional server-only PEM configuration validates a CA certificate while retaining certificate and hostname verification. Private OAuth records and encrypted sessions were provisioned with a separate restricted login; an independent inherited-privilege audit and effective Data API probes verified the private boundary. The expiry job is administrator-owned, grants no scheduler access to connector/browser roles, and its first actual scheduled run succeeded on 2026-10-02 at 06:20 UTC.
+
+The real postgres.js driver exposed an OAuth binding bug hidden by direct PGlite execution: a serialized record bound as JSONB was encoded again. Binding it as TEXT before the JSONB cast fixes the record shape. A PostgreSQL PREPARE regression fails before and passes after on the actual inferred parameter type; nested values survive insert/update/atomic consumption.
+
+Local real-service verification used two newly created disposable accounts and three boards. Both public client flows passed durable consent, issuer/state, PKCE, callback-port binding, one-time code use, selected-board scope, idempotent approved card saves, and revocation. Viewer grants omit commit; an editor downgrade blocks queued commit and direct UPDATE without changing content or timestamp. Test approvals were revoked and their vault sessions removed. Deployed runtime smoke remains a separate release gate.
+
+The stable follow-up app/API suite passed all 771 tests and the MCP suite passed all 172 tests. The final combined desktop/mobile browser run passed 120 cases; two mobile column-rename cases are skipped because that surface is desktop-only. Full lint, TypeScript, production build, and diff checks passed.

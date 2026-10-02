@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isOAuthCallbackUri, oauthCallbackMatches } from '../dist/oauth-callback.js';
+import { callbackKinds, isOAuthCallbackUri, oauthCallbackMatches } from '../dist/oauth-callback.js';
+
+test('guided client setup capabilities come from supported callbacks only', () => {
+  assert.deepEqual(callbackKinds(['http://127.0.0.1/callback']), ['native']);
+  assert.deepEqual(callbackKinds(['http://127.0.0.1:4321/callback']), ['native']);
+  assert.deepEqual(callbackKinds(['https://chatgpt.com/connector_platform_oauth_redirect']), ['chatgpt']);
+  assert.deepEqual(callbackKinds(['https://chatgpt.com/connector/oauth/saved-client_1']), []);
+  assert.deepEqual(callbackKinds(['http://127.0.0.1/callback', 'https://chatgpt.com/connector_platform_oauth_redirect']), ['native', 'chatgpt']);
+  for (const uri of ['http://127.0.0.1/custom', 'http://127.0.0.1/callback?custom=1', 'http://localhost/callback',
+    'https://chatgpt.com.evil.test/connector_platform_oauth_redirect', 'https://chatgpt.com/other',
+    'https://chatgpt.com/connector_platform_oauth_redirect?custom=1', 'https://user@chatgpt.com/connector_platform_oauth_redirect']) {
+    assert.deepEqual(callbackKinds([uri]), [], uri);
+  }
+});
 
 test('callback policy varies only a literal native HTTP listener port', () => {
   const registration = 'http://127.0.0.1/callback?native=fixture';

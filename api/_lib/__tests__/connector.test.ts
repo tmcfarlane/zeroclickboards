@@ -188,6 +188,23 @@ describe('account connector API and durable OAuth flow', () => {
     await handler({ url: '/api/connector', method: 'GET' } as IncomingMessage, res)
     expect(JSON.parse(body)).toMatchObject({ available: false, endpoint: null, connections: [] })
   })
+  it('reports callback capabilities without relying on public client names or exposing callbacks', async () => {
+    const configured = { ...config(), clients: [
+      { ...client, client_name: 'Codex misleading name', redirect_uris: ['https://chatgpt.com/connector_platform_oauth_redirect'] },
+      { ...nativeClient, client_name: 'ChatGPT misleading name' },
+      { ...client, client_id: 'custom', client_name: 'ChatGPT', redirect_uris: ['https://other.test/callback'] },
+    ] }
+    const { request } = await setup(false, configured)
+    const response = await request('/api/connector', { headers: { authorization: `Bearer ${aliceToken}` } })
+    expect(response.json().clients).toEqual([
+      { name: 'Codex misleading name', clientId: client.client_id, callbackKinds: ['chatgpt'] },
+      { name: 'ChatGPT misleading name', clientId: nativeClient.client_id, callbackKinds: ['native'] },
+      { name: 'ChatGPT', clientId: 'custom', callbackKinds: [] },
+    ])
+    expect(response.body).not.toContain('redirect_uris')
+    expect(response.body).not.toContain('connector_platform_oauth_redirect')
+    expect(response.body).not.toContain(aliceToken)
+  })
   it('shows only owned/member boards, denies foreign/viewer writes, cross-site approval and refresh-token input', async () => {
     const { request, post, authorize } = await setup()
     const pending = await authorize()
@@ -205,6 +222,9 @@ describe('account connector API and durable OAuth flow', () => {
     expect(approved.status).toBe(200)
     const redirect = new URL(approved.json().redirectUrl as string)
     expect(redirect.origin + redirect.pathname).toBe(client.redirect_uris[0]); expect(redirect.searchParams.get('state')).toBe('expected-state')
+    // Settings report approved access even before a client exchanges its code.
+    expect((await request('/api/connector', { headers: { authorization: `Bearer ${aliceToken}` } })).json().connections).toHaveLength(1)
+    expect((await pg.query<{ value: number }>("select count(*)::int as value from zeroboard_oauth.records where kind = 'token'")).rows[0].value).toBe(0)
     expect((await post({ action: 'approve', request: pending.request, boardIds: ['owned'] })).status).toBe(400)
     const exchange = (verifier: string) => request('/api/connector?route=token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: client.client_id,
       grant_type: 'authorization_code', code: redirect.searchParams.get('code')!, code_verifier: verifier, redirect_uri: client.redirect_uris[0], resource: runtime.config.resource.href }).toString() })

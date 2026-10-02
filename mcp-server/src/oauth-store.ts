@@ -9,7 +9,8 @@ export class SqlOAuthStore implements OAuthStore {
     return result.rows[0]?.value as OAuthRecords[K] | undefined;
   }
   async put<K extends keyof OAuthRecords>(kind: K, key: string, value: OAuthRecords[K]): Promise<void> {
-    await this.sql.query(`insert into zeroboard_oauth.records(kind,key,value,expires_at) values($1,$2,$3::jsonb,to_timestamp($4 / 1000.0))
+    // A TEXT parameter prevents drivers from JSON-encoding the serialized string again.
+    await this.sql.query(`insert into zeroboard_oauth.records(kind,key,value,expires_at) values($1,$2,$3::text::jsonb,to_timestamp($4 / 1000.0))
       on conflict(kind,key) do update set value = excluded.value, expires_at = excluded.expires_at`, [kind, key, JSON.stringify(value), value.expires]);
   }
   async take<K extends keyof OAuthRecords>(kind: K, key: string): Promise<OAuthRecords[K] | undefined> {

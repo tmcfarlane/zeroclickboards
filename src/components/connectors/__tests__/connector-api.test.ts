@@ -52,7 +52,7 @@ describe('connector response boundaries', () => {
   it.each([
     [status, {}],
     [{ available: false, endpoint: null, connections: [], reason: 'Not configured' }, {}],
-    [{ ...status, connections: [connection], clients: [{ name: 'ChatGPT', clientId: 'public-client' }] }, {}],
+    [{ ...status, connections: [connection], clients: [{ name: 'ChatGPT', clientId: 'public-client', callbackKinds: ['chatgpt'] }] }, {}],
     [consent, { query: consentQuery }],
     [{ ...consent, scopes: ['boards:read', 'unknown:permission'] }, { query: consentQuery }],
     [{ redirectUrl: 'https://client.example.invalid/callback' }, { body: { action: 'approve' } }],

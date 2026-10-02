@@ -11,21 +11,13 @@ import { ViewToggle } from './ViewToggle';
 import { BoardSelector } from './BoardSelector';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, Tag, Calendar, Eye, BookmarkPlus, Share2, SlidersHorizontal, MoreHorizontal, Archive, Download, Palette, Sparkles, X } from 'lucide-react';
-import { ShareBoardDialog } from './ShareBoardDialog';
+import { useBoardDialogs } from '@/hooks/useBoardDialogs';
 import { boardToTemplate, saveUserBoardTemplate } from '@/lib/templates';
 import { downloadBoardJSON } from '@/lib/board-io';
 import { matchesDueDateFilter, type DueDateFilter } from '@/lib/calendar-date';
 import { BackgroundPicker } from './BackgroundPicker';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import {
   Popover,
   PopoverContent,
@@ -56,9 +48,8 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick, searchRequested, onSearchHandled }: KanbanBoardProps) {
   const canManage = useBoardStore((state) => state.canManageBoard(board.id));
-  const { addColumn, moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
-  const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
-  const [newColumnTitle, setNewColumnTitle] = useState('');
+  const { moveCard, reorderColumns, reorderCards, setBoardBackground, setBoardHiddenColumns } = useBoardStore();
+  const { openTextDialog, openShareDialog } = useBoardDialogs();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDragData, setActiveDragData] = useState<{ cardId: string; sourceColumnId: string } | null>(null);
   const [activeDragType, setActiveDragType] = useState<'card' | 'column' | null>(null);
@@ -66,7 +57,6 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
   const dragOriginRef = useRef<{ columnId: string; index: number } | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<CardLabel[]>([]);
   const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter | null>(null);
-  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
   const hiddenColumnIds = board.hiddenColumnIds ?? [];
@@ -394,14 +384,6 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
     setDragOverColumnId(null);
   };
 
-  const handleAddColumn = () => {
-    if (newColumnTitle.trim()) {
-      addColumn(board.id, newColumnTitle.trim());
-      setNewColumnTitle('');
-      setIsAddColumnDialogOpen(false);
-    }
-  };
-
   const now = new Date();
 
   const filteredColumns = visibleColumns.map((column) => ({
@@ -487,7 +469,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
         </div>
         <div className="flex items-center gap-1">
           <ViewToggle />
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button aria-label="Board actions" variant="ghost" size="icon" className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5">
                 <MoreHorizontal className="w-5 h-5" />
@@ -505,12 +487,12 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
                   <span className="ml-auto w-2 h-2 bg-[#78fcd6] rounded-full" />
                 )}
               </DropdownMenuItem>
-              {canManage && <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+              {canManage && <DropdownMenuItem onClick={() => openShareDialog(board.id)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
                 <Share2 className="w-4 h-4" />
                 Share
               </DropdownMenuItem>}
               <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem onClick={() => setIsAddColumnDialogOpen(true)} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
+              <DropdownMenuItem onClick={() => openTextDialog({ kind: 'add-column', boardId: board.id })} className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]">
                 <Plus className="w-4 h-4" />
                 Add Column
               </DropdownMenuItem>
@@ -721,7 +703,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
           {canManage && <Button
             type="button"
             variant="ghost"
-            onClick={() => setIsShareDialogOpen(true)}
+            onClick={() => openShareDialog(board.id)}
             className="h-9 px-3 bg-white/5 hover:bg-white/10 text-[#F2F7F7] border border-white/10 rounded-lg"
           >
             <Share2 className="w-4 h-4 mr-1.5" />
@@ -729,7 +711,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
           </Button>}
 
           {/* More Options */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 aria-label="Board actions"
@@ -742,7 +724,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-[#111515] border-white/10">
               <DropdownMenuItem
-                onClick={() => setIsAddColumnDialogOpen(true)}
+                onClick={() => openTextDialog({ kind: 'add-column', boardId: board.id })}
                 className="text-[#F2F7F7] focus:bg-white/5 focus:text-[#F2F7F7]"
               >
                 <Plus className="w-4 h-4" />
@@ -841,7 +823,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
           <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 px-5 text-center text-[#A8B2B2]">
             <p className="text-sm">{hiddenColumns.length ? 'All columns are hidden' : 'No columns yet'}</p>
             <p className="text-xs">{hiddenColumns.length ? 'Show your columns to view and add cards.' : 'Add a column to start organising cards.'}</p>
-            <Button variant="outline" className="border-white/10 text-[#78fcd6]" onClick={() => hiddenColumns.length ? setBoardHiddenColumns(board.id, []) : setIsAddColumnDialogOpen(true)}>
+            <Button variant="outline" className="border-white/10 text-[#78fcd6]" onClick={() => hiddenColumns.length ? setBoardHiddenColumns(board.id, []) : openTextDialog({ kind: 'add-column', boardId: board.id })}>
               {hiddenColumns.length ? 'Show all columns' : 'Add Column'}
             </Button>
           </div>
@@ -898,54 +880,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick, onNewCardClick,
       {/* Mobile Bottom Bar */}
       <MobileBottomBar onAIClick={onAIClick} canAddCard={!!activeColumn} onAddCard={() => { if (activeColumn) onNewCardClick(activeColumn.id); }} />
 
-      {/* Share Board Dialog */}
-      <ShareBoardDialog
-        boardId={board.id}
-        boardName={board.name}
-        isPublic={board.isPublic ?? false}
-        embedEnabled={board.embedEnabled ?? false}
-        isOpen={isShareDialogOpen}
-        onOpenChange={setIsShareDialogOpen}
-      />
 
-      {/* Add Column Dialog */}
-      <Dialog open={isAddColumnDialogOpen} onOpenChange={setIsAddColumnDialogOpen}>
-        <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
-          <DialogHeader>
-            <DialogTitle>Add Column</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="column-title" className="mb-2 block">
-              Column Title
-            </Label>
-            <Input
-              id="column-title"
-              value={newColumnTitle}
-              onChange={(e) => setNewColumnTitle(e.target.value)}
-              placeholder="e.g., In Review"
-              maxLength={100}
-              className="bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddColumn()}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddColumnDialogOpen(false)}
-              className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddColumn}
-              disabled={!newColumnTitle.trim()}
-              className="gradient-cyan text-[#0B0F0F] hover:opacity-90"
-            >
-              Add Column
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

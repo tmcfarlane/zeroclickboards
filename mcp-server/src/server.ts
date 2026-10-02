@@ -347,7 +347,7 @@ function registerResources(server: McpServer, client: SupabaseClient, user: User
   );
 }
 
-export async function runServer(): Promise<void> {
+export async function runServer({ plugin = process.argv.includes('--plugin') }: { plugin?: boolean } = {}): Promise<void> {
   let client: SupabaseClient;
   let user: User;
   try {
@@ -360,7 +360,6 @@ export async function runServer(): Promise<void> {
     throw err;
   }
 
-  const plugin = process.argv.includes('--plugin');
   const boardIds = plugin ? (process.env.ZEROBOARD_BOARD_IDS ?? '').split(',').map((id) => id.trim()).filter(Boolean) : undefined;
   const server = buildServer(client, user, { plugin, boardIds });
 
