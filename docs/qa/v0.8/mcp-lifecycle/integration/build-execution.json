@@ -1,0 +1,18 @@
+{
+  "gate": "build",
+  "startedAt": "2026-10-02T13:33:55.261132+00:00",
+  "endedAt": "2026-10-02T13:34:01.494266+00:00",
+  "elapsedSeconds": 6.2329050418920815,
+  "exitCode": 0,
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/vite/bin/vite.js",
+    "build",
+    "--config",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-integration/vite-build.config.mts"
+  ],
+  "explicitEnvironment": {
+    "VITE_SUPABASE_URL": "https://connector-fixture.invalid",
+    "VITE_SUPABASE_ANON_KEY": "disposable-fixture-public-key"
+  }
+}

@@ -1,0 +1,9 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 [desktop] › tests/connector-ui/connector.spec.ts:40:3 › setup and access management › discover setup from the board account menu and copy the endpoint (2.4s)
+  ✓  2 [desktop] › tests/connector-ui/connector.spec.ts:205:3 › OAuth consent › shares only explicitly selected editable boards and returns to the client (867ms)
+  ✓  3 [mobile] › tests/connector-ui/connector.spec.ts:40:3 › setup and access management › discover setup from the board account menu and copy the endpoint (1.5s)
+  ✓  4 [mobile] › tests/connector-ui/connector.spec.ts:205:3 › OAuth consent › shares only explicitly selected editable boards and returns to the client (547ms)
+
+  4 passed (9.0s)

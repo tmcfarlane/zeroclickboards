@@ -1,0 +1,19 @@
+{
+  "gate": "connectors",
+  "start": "2026-10-02T14:02:19.293102+00:00",
+  "end": "2026-10-02T14:02:32.379442+00:00",
+  "elapsedSeconds": 13.084836541907862,
+  "exitCode": 0,
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/@playwright/test/cli.js",
+    "test",
+    "--config",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/playwright.config.mts"
+  ],
+  "explicitEnvironment": {
+    "CI": "true",
+    "CONNECTOR_SCREENSHOT_DIR": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-final-integration/browser-connectors/screenshots"
+  },
+  "retries": 0
+}

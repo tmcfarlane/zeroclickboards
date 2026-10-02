@@ -1,0 +1,47 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci
+
+stderr | ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+LIFECYCLE_PHASE {"stage":"fixture:start","elapsedMs":9.605833}
+
+stderr | ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+LIFECYCLE_PHASE {"stage":"initial-catalog-ready","elapsedMs":2001.254375}
+
+stderr | ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+LIFECYCLE_PHASE {"stage":"migration:20261001142109_plugin_oauth_records.sql","elapsedMs":2023.163708}
+
+stderr | ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+LIFECYCLE_PHASE {"stage":"migration:20261002030041_plugin_connector_vault.sql","elapsedMs":2058.9385}
+LIFECYCLE_PHASE {"stage":"runtime-ready","elapsedMs":2097.319625}
+
+stderr | ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+LIFECYCLE_PHASE {"stage":"seed-ready","elapsedMs":2359.132666}
+
+stderr | ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+LIFECYCLE_PHASE {"stage":"listener-ready","elapsedMs":2365.57725}
+
+stderr | ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+LIFECYCLE_PHASE {"stage":"tool-response","elapsedMs":2887.991375}
+
+ ✓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool 2887ms
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired pending from the actual consume statement
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired code from the actual consume statement
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid pending consumption
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid code consumption
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for pending consumption
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for code consumption
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when code consumption settles after its returned record expires
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when a consumed code expires during the later held grant lookup
+ ↓ ../../outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts > Single-use pending/code consumption > retains ordinary approval, valid code exchange and new token account resolution
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 15 skipped (16)
+   Start at  06:13:48
+   Duration  5.12s (transform 537ms, setup 0ms, import 1.31s, tests 2.89s, environment 0ms)
+

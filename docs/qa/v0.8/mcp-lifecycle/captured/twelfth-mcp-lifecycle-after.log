@@ -1,0 +1,44 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci
+
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool 6782ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser 2722ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch 3057ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch 2560ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch 2795ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired pending from the actual consume statement 1230ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired code from the actual consume statement 844ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid pending consumption 929ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid code consumption 721ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for pending consumption 933ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for code consumption 589ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires 594ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when code consumption settles after its returned record expires 528ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read 494ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when a consumed code expires during the later held grant lookup 544ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > retains ordinary approval, valid code exchange and new token account resolution 641ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:203:3
+    201|
+    202| describe('MCP authority after awaited account resolution', () => {
+    203|   it('allows a current account to dispatch the actual hosted board too…
+       |   ^
+    204|     const f = await fixture()
+    205|     const { token } = await f.seed()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 passed (16)
+   Start at  06:10:30
+   Duration  27.57s (transform 414ms, setup 0ms, import 1.12s, tests 25.97s, environment 0ms)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-lifecycle-after.json

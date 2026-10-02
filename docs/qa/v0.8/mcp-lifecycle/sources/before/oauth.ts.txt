@@ -27,10 +27,6 @@ export interface OAuthStore {
 }
 const opaque = () => randomBytes(32).toString('base64url');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
-const currentExpiry = (expires: number, now: number) => Number.isFinite(expires) && expires > now;
-const pendingBinding = (pending: Pending) => JSON.stringify([pending.clientId, pending.params.redirectUri,
-  pending.params.resource, pending.params.codeChallenge, pending.params.scopes ?? [], pending.params.state]);
-const codeBinding = (code: Code) => JSON.stringify([code.grantId, code.clientId, code.redirectUri, code.challenge, code.resource]);
 
 /** Connector OAuth only. This does not implement Sign in with ChatGPT or inference billing. */
 export class ZeroBoardOAuth implements OAuthServerProvider {
@@ -75,7 +71,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
   }
   async consentRequest(requestId: string): Promise<{ clientId: string; scopes: string[]; expires: number }> {
     const pending = await this.options.store.get('pending', hash(requestId));
-    if (!pending || !currentExpiry(pending.expires, Date.now())) throw new InvalidGrantError('Consent request expired');
+    if (!pending || pending.expires < Date.now()) throw new InvalidGrantError('Consent request expired');
     if (pending.params.resource !== this.options.resource.href) throw new InvalidGrantError('Incorrect consent resource');
     return { clientId: pending.clientId, scopes: pending.params.scopes ?? [], expires: pending.expires };
   }
@@ -84,7 +80,6 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
     const pending = await this.options.store.take('pending', hash(requestId));
     if (!pending) throw new InvalidGrantError('Consent already completed');
     const client = await this.clientsStore.getClient(pending.clientId);
-    if (!currentExpiry(pending.expires, Date.now())) throw new InvalidGrantError('Consent request expired');
     if (!client?.redirect_uris.some((uri) => oauthCallbackMatches(pending.params.redirectUri, uri))) throw new InvalidClientError('Callback unavailable');
     const redirect = new URL(pending.params.redirectUri);
     redirect.searchParams.set('error', 'access_denied');
@@ -97,41 +92,36 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
    */
   async approveConsent(requestId: string, accountRef: string, boardIds: string[]): Promise<string> {
     const pending = await this.options.store.get('pending', hash(requestId));
-    if (!pending || !currentExpiry(pending.expires, Date.now())) throw new InvalidGrantError('Consent request expired');
+    if (!pending || pending.expires < Date.now()) throw new InvalidGrantError('Consent request expired');
     if (pending.params.resource !== this.options.resource.href) throw new InvalidGrantError('Incorrect consent resource');
     const registered = await this.clientsStore.getClient(pending.clientId);
     if (!registered?.redirect_uris.some((uri) => oauthCallbackMatches(pending.params.redirectUri, uri))) throw new InvalidClientError('Client or callback unavailable');
     if (!boardIds.length || boardIds.length > 100 || new Set(boardIds).size !== boardIds.length) throw new InvalidGrantError('Select 1–100 distinct boards');
     const account = await this.options.resolveAccount(accountRef);
-    if (account.expires !== undefined && !currentExpiry(account.expires, Date.now())) throw new InvalidGrantError('Account session expired');
+    if (account.expires !== undefined && account.expires <= Date.now()) throw new InvalidGrantError('Account session expired');
     db.bindBoardAccess(account.client, { userId: account.user.id, boardIds });
     for (const boardId of boardIds) {
       await db.getBoard(account.client, boardId);
       if (pending.params.scopes?.includes('cards:add')) await db.requireBoardEditor(account.client, boardId);
     }
     // Atomic take ensures two concurrent approvals cannot issue two grants/codes.
-    const consumed = await this.options.store.take('pending', hash(requestId));
-    if (!consumed) throw new InvalidGrantError('Consent already completed');
-    if (pendingBinding(consumed) !== pendingBinding(pending)) throw new InvalidGrantError('Consent request changed');
-    const now = Date.now();
-    if (!currentExpiry(consumed.expires, now)) throw new InvalidGrantError('Consent request expired');
-    if (account.expires !== undefined && !currentExpiry(account.expires, now)) throw new InvalidGrantError('Account session expired');
+    if (!(await this.options.store.take('pending', hash(requestId)))) throw new InvalidGrantError('Consent already completed');
     const grantId = opaque(); const code = opaque();
-    await this.options.store.put('grant', grantId, { id: grantId, userId: account.user.id, clientId: consumed.clientId,
-      boardIds: [...boardIds], scopes: consumed.params.scopes ?? [], accountRef, issuer: this.options.issuer.href, resource: this.options.resource.href,
-      expires: Math.min(account.expires ?? Infinity, now + (this.options.grantDurationMs ?? 30 * 86400_000)), revoked: false });
-    await this.options.store.put('code', hash(code), { grantId, clientId: consumed.clientId, redirectUri: consumed.params.redirectUri,
-      challenge: consumed.params.codeChallenge, resource: consumed.params.resource, expires: Date.now() + 60_000 });
-    const redirect = new URL(consumed.params.redirectUri); redirect.searchParams.set('code', code);
+    await this.options.store.put('grant', grantId, { id: grantId, userId: account.user.id, clientId: pending.clientId,
+      boardIds: [...boardIds], scopes: pending.params.scopes ?? [], accountRef, issuer: this.options.issuer.href, resource: this.options.resource.href,
+      expires: Math.min(account.expires ?? Infinity, Date.now() + (this.options.grantDurationMs ?? 30 * 86400_000)), revoked: false });
+    await this.options.store.put('code', hash(code), { grantId, clientId: pending.clientId, redirectUri: pending.params.redirectUri,
+      challenge: pending.params.codeChallenge, resource: pending.params.resource, expires: Date.now() + 60_000 });
+    const redirect = new URL(pending.params.redirectUri); redirect.searchParams.set('code', code);
     redirect.searchParams.set('iss', this.options.issuer.href);
-    if (consumed.params.state !== undefined) redirect.searchParams.set('state', consumed.params.state);
+    if (pending.params.state !== undefined) redirect.searchParams.set('state', pending.params.state);
     return redirect.href;
   }
   private async code(client: OAuthClientInformationFull, code: string): Promise<Code> {
     const record = await this.options.store.get('code', hash(code));
-    const registered = await this.clientsStore.getClient(client.client_id);
-    if (!record || record.clientId !== client.client_id || !currentExpiry(record.expires, Date.now())) throw new InvalidGrantError('Invalid or expired code');
+    if (!record || record.clientId !== client.client_id || record.expires < Date.now()) throw new InvalidGrantError('Invalid or expired code');
     if (record.resource !== this.options.resource.href) throw new InvalidGrantError('Incorrect code resource');
+    const registered = await this.clientsStore.getClient(client.client_id);
     if (!registered?.redirect_uris.some((uri) => oauthCallbackMatches(record.redirectUri, uri))) throw new InvalidClientError('Client or callback unavailable');
     return record;
   }
@@ -141,43 +131,31 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
   async exchangeAuthorizationCode(client: OAuthClientInformationFull, code: string, _verifier?: string, redirectUri?: string, resource?: URL): Promise<OAuthTokens> {
     const record = await this.code(client, code);
     if (redirectUri !== record.redirectUri || resource?.href !== record.resource) throw new InvalidGrantError('Callback/resource mismatch');
-    const consumed = await this.options.store.take('code', hash(code));
-    if (!consumed) throw new InvalidGrantError('Code already used');
-    if (codeBinding(consumed) !== codeBinding(record)) throw new InvalidGrantError('Code changed');
-    const grant = await this.options.store.get('grant', consumed.grantId);
-    const now = Date.now();
-    if (!currentExpiry(consumed.expires, now)) throw new InvalidGrantError('Invalid or expired code');
-    if (!grant || grant.revoked || !currentExpiry(grant.expires, now)) throw new InvalidGrantError('Grant unavailable');
-    const token = opaque(); const expires = Math.min(grant.expires, now + 15 * 60_000);
-    await this.options.store.put('token', hash(token), { grantId: consumed.grantId, expires });
+    if (!(await this.options.store.take('code', hash(code)))) throw new InvalidGrantError('Code already used');
+    const grant = await this.options.store.get('grant', record.grantId);
+    if (!grant || grant.revoked || grant.expires < Date.now()) throw new InvalidGrantError('Grant unavailable');
+    const token = opaque(); const expires = Math.min(grant.expires, Date.now() + 15 * 60_000);
+    await this.options.store.put('token', hash(token), { grantId: record.grantId, expires });
     return { access_token: token, token_type: 'Bearer', expires_in: Math.max(1, Math.floor((expires - Date.now()) / 1000)), scope: grant.scopes.join(' ') };
   }
   async exchangeRefreshToken(): Promise<OAuthTokens> { throw new InvalidGrantError('Refresh disabled; reconnect after expiry'); }
-  private async currentAccess(token: string): Promise<{ record: AccessToken; grant: Grant }> {
+  async verifyAccessToken(token: string): Promise<AuthInfo> {
     const record = await this.options.store.get('token', hash(token));
     const grant = record && await this.options.store.get('grant', record.grantId);
-    const client = grant && await this.clientsStore.getClient(grant.clientId);
-    const now = Date.now();
-    if (!record || !currentExpiry(record.expires, now) || !grant || grant.revoked || !currentExpiry(grant.expires, now) ||
+    if (!record || record.expires < Date.now() || !grant || grant.revoked || grant.expires < Date.now() ||
       grant.issuer !== this.options.issuer.href || grant.resource !== this.options.resource.href ||
-      !client || grant.scopes.some((scope) => !SCOPES.includes(scope))) {
+      !(await this.clientsStore.getClient(grant.clientId)) || grant.scopes.some((scope) => !SCOPES.includes(scope))) {
       throw new InvalidTokenError('Expired, revoked or incorrectly scoped connection');
     }
-    return { record, grant };
-  }
-  async verifyAccessToken(token: string): Promise<AuthInfo> {
-    const { record, grant } = await this.currentAccess(token);
     return { token, clientId: grant.clientId, scopes: grant.scopes, expiresAt: Math.floor(record.expires / 1000),
       resource: this.options.resource, extra: { grantId: grant.id } };
   }
   async accountForToken(token: string): Promise<AccountContext & { grant: Grant }> {
-    const initial = await this.currentAccess(token);
-    const account = await this.options.resolveAccount(initial.grant.accountRef);
-    // This is the last authorization decision before constructing new tool
-    // authority. It does not cancel a tool or SQL write already dispatched.
-    const { grant } = await this.currentAccess(token);
-    if (account.expires !== undefined && !currentExpiry(account.expires, Date.now())) throw new InvalidTokenError('Account session expired');
-    if (account.user.id !== grant.userId || grant.accountRef !== initial.grant.accountRef) throw new InvalidTokenError('Account mismatch');
+    const info = await this.verifyAccessToken(token);
+    const grant = await this.options.store.get('grant', String(info.extra?.grantId));
+    if (!grant || grant.revoked) throw new InvalidTokenError('Revoked connection');
+    const account = await this.options.resolveAccount(grant.accountRef);
+    if (account.user.id !== grant.userId) throw new InvalidTokenError('Account mismatch');
     return { ...account, grant };
   }
   async revokeToken(client: OAuthClientInformationFull, request: OAuthTokenRevocationRequest): Promise<void> {

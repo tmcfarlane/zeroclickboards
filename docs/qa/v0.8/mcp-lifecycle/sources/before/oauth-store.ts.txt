@@ -14,7 +14,7 @@ export class SqlOAuthStore implements OAuthStore {
       on conflict(kind,key) do update set value = excluded.value, expires_at = excluded.expires_at`, [kind, key, JSON.stringify(value), value.expires]);
   }
   async take<K extends keyof OAuthRecords>(kind: K, key: string): Promise<OAuthRecords[K] | undefined> {
-    const result = await this.sql.query('delete from zeroboard_oauth.records where kind = $1 and key = $2 and expires_at > clock_timestamp() returning value', [kind, key]);
+    const result = await this.sql.query('delete from zeroboard_oauth.records where kind = $1 and key = $2 returning value', [kind, key]);
     return result.rows[0]?.value as OAuthRecords[K] | undefined;
   }
 }

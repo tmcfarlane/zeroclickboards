@@ -1,0 +1,37 @@
+{
+  "scope": "Anonymous landing check of the same local compiled fixture bundle; not hosted verification",
+  "url": "http://127.0.0.1:4262/",
+  "navigationExitCode": 0,
+  "title": "ZeroBoard - AI Project Management",
+  "hasContent": true,
+  "errorOverlay": false,
+  "screenshot": "preview-landing.png",
+  "commands": [
+    {
+      "cmd": "agent-browser --session zeroboard-mcp-final-preview errors",
+      "chunk_id": "374e61",
+      "wall_time_seconds": 0.186923167,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "cmd": "agent-browser --session zeroboard-mcp-final-preview console",
+      "chunk_id": "21530d",
+      "wall_time_seconds": 0.144931209,
+      "exit_code": 0,
+      "original_token_count": 78,
+      "output": "[error] Failed to load resource: the server responded with a status of 404 (Not Found)\n[log] [Vercel Web Analytics] Failed to load script from /_vercel/insights/script.js. Be sure to enable Web Analytics for your project and deploy again. See https://vercel.com/docs/analytics/quickstart for more information.\n"
+    },
+    {
+      "cmd": "agent-browser --session zeroboard-mcp-final-preview close",
+      "chunk_id": "5e89f0",
+      "wall_time_seconds": 0.228700125,
+      "exit_code": 0,
+      "original_token_count": 5,
+      "output": "✓ Browser closed\n"
+    }
+  ],
+  "consoleNotice": "Local static preview has no /_vercel/insights/script.js endpoint; the console records its 404 and analytics notice. Page errors were empty. Do not claim zero console errors.",
+  "browserClosed": true
+}
