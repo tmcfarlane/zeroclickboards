@@ -1,0 +1,214 @@
+{
+  "base": "022803b0760749f12489bcb2c0a6ef017fbc9a6c",
+  "branch": "codex/gauntlet-signout-owner-commit",
+  "runtime": {
+    "node": "20.20.2",
+    "binary": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "sha256": "38de4fc456c0c439bac48c727d378f749abb4e31f4116703bb1ee9a746fccbb6"
+  },
+  "changedSourceFiles": {
+    "src/hooks/__tests__/useSignOutAction.test.tsx": "7aa61a2ac3f2f5a85148ccc83823bd637d3d8b1f098fa7ae21d1734059420a09",
+    "src/hooks/useSignOutAction.ts": "002734c4cded40d44a9d35d495a0e2ab61a809859d9b722137c7615ce767fd52"
+  },
+  "sourceFreeze": {
+    "count": 371,
+    "unchangedThroughActualGates": true,
+    "exclude": "docs/** and .env* environment files"
+  },
+  "privateProbe": {
+    "before": {
+      "passed": 7,
+      "failed": 7,
+      "total": 14
+    },
+    "after": {
+      "passed": 14,
+      "failed": 0,
+      "total": 14
+    },
+    "identicalTestBytes": true,
+    "firstHarnessFailureRetained": true,
+    "originalReceiptSha256": "df02847a5188ca23232758de8f6b77bfebd4868dfed25ccd6274d356669cca68"
+  },
+  "actualGates": {
+    "focused-tests": {
+      "gate": "focused-tests",
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--config",
+        "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/vite-test.config.mts",
+        "--maxWorkers=1",
+        "src/hooks/__tests__/useSignOutAction.test.tsx",
+        "src/components/auth/__tests__/signOut.test.tsx",
+        "--reporter=default",
+        "--reporter=json",
+        "--outputFile.json=/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/focused-tests.json"
+      ],
+      "nodeVersion": "20.20.2",
+      "startedAt": "2026-10-02T13:43:11.115013+00:00",
+      "elapsedSeconds": 5.020362457958981,
+      "exitCode": 0,
+      "explicitEnvironment": {
+        "CI": "true",
+        "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+        "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+      }
+    },
+    "scoped-lint": {
+      "gate": "scoped-lint",
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "src/hooks/useSignOutAction.ts",
+        "src/hooks/__tests__/useSignOutAction.test.tsx"
+      ],
+      "nodeVersion": "20.20.2",
+      "startedAt": "2026-10-02T13:43:16.137088+00:00",
+      "elapsedSeconds": 2.0078247499186546,
+      "exitCode": 0,
+      "explicitEnvironment": {
+        "CI": "true",
+        "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+        "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+      }
+    },
+    "typecheck-app": {
+      "gate": "typecheck-app",
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--project",
+        "tsconfig.app.json",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "nodeVersion": "20.20.2",
+      "startedAt": "2026-10-02T13:43:18.145948+00:00",
+      "elapsedSeconds": 13.485262792091817,
+      "exitCode": 0,
+      "explicitEnvironment": {
+        "CI": "true",
+        "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+        "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+      }
+    },
+    "typecheck-node": {
+      "gate": "typecheck-node",
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--project",
+        "tsconfig.node.json",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "nodeVersion": "20.20.2",
+      "startedAt": "2026-10-02T13:43:31.632180+00:00",
+      "elapsedSeconds": 4.114843791117892,
+      "exitCode": 0,
+      "explicitEnvironment": {
+        "CI": "true",
+        "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+        "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+      }
+    },
+    "build": {
+      "gate": "build",
+      "command": [
+        "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+        "node_modules/vite/bin/vite.js",
+        "build",
+        "--config",
+        "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/vite-build.config.mts"
+      ],
+      "nodeVersion": "20.20.2",
+      "startedAt": "2026-10-02T13:43:35.747777+00:00",
+      "elapsedSeconds": 8.43130087503232,
+      "exitCode": 0,
+      "explicitEnvironment": {
+        "CI": "true",
+        "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+        "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+      }
+    }
+  },
+  "focusedTests": {
+    "passed": 20,
+    "failed": 0,
+    "total": 20,
+    "hook": 14,
+    "actualSdkSignOutUi": 6,
+    "attempts": 1
+  },
+  "builtArtifacts": {
+    "count": 41,
+    "outDir": "/private/tmp/zeroboard-signout-owner-built-smoke/dist",
+    "stableBuildConfig": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/vite-build.config.mts"
+  },
+  "originalFullFailure": {
+    "sourceHead": "a26da88bf3768cc9bbe54f0c8cb8ddb7deb6cdcf",
+    "nodeVersion": "20.20.2",
+    "passed": 981,
+    "failed": 1,
+    "total": 982,
+    "originalSha256": {
+      "originalFullTestJson": "ae44be9e5e17ca0eb2233c781b2f1131808ee745cc428eeefea4f3c5cc7fe321",
+      "originalFullTestLog": "e7965a0ae3cfdf0194ff050eba15b8046afcdfcfb15f2b2ae4ccec9bd599684e"
+    },
+    "failures": [
+      {
+        "file": "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci/src/components/auth/__tests__/signOut.test.tsx",
+        "title": "keeps Account signed in on failure, prevents duplicate requests, and redirects only after a successful retry",
+        "durationMs": 1231.8697089999998,
+        "errorFirstLine": "Error: Unable to find role=\"button\" and name \"Signing out...\""
+      }
+    ],
+    "scopeNote": "Original combined full app gate was retained, never retried by this diagnosis. The hook race is causally established by the separate controlled phase probe; original failure phase ordering was not instrumented."
+  },
+  "browserEvidence": "Pending root compiled browser verification; none claimed by this agent.",
+  "boundaries": "No full-app/PG retest, live providers, installs, commit/push/PR/merge/deploy. Product change scoped to hook owner-reset scheduling and import only.",
+  "qaFileSha256": {
+    "private-probe/before.json": "52d67f7ec803b11df000ccfc55ec51162d9161f8fa90c65d54ee5cdd18cca4c8",
+    "private-probe/minimal-private-candidate.diff": "97b788b86e80e2193807b5ce5b3cb61277c2ba3045ce522354d7fc97e8743f8c",
+    "private-probe/after-hook.ts.txt": "002734c4cded40d44a9d35d495a0e2ab61a809859d9b722137c7615ce767fd52",
+    "private-probe/harness-jsx-failed-before-execution.json": "7812f48aa2a1229b42f9dc4f3b606ca3d6bf5decbc136e1388e437b4d418e86b",
+    "private-probe/harness-jsx-failed-before.json": "d15935a4f535a44f66169aa39e1b24def7160b871b9d507d259b3a13b8200afb",
+    "private-probe/source-before.json": "887b4a5b3b3d9c4c5d00bc56674a9b7765be525bb44b43db93f21902b11414bc",
+    "private-probe/source-after.json": "bf53733b6cfee190c9c0f5656d037de39adb7bccf78a3eb747008d8dd243f997",
+    "private-probe/after-execution.json": "b3fb8287441049f12a964ccbe2cfdd49b2d8c80026172e4f8d44fba14c154b82",
+    "private-probe/before-execution.json": "04809c8fe4ff594293790d54b0abf5a96ed9c3e0ca1b70a2b796d52d49806d11",
+    "private-probe/seven-phase-probe.test.tsx.txt": "808250c1583f158fde5145d64be8efc32aaf6a9aef81c4c8898165e5c2249fbe",
+    "private-probe/after.json": "1bbaa39622d739c76a60b8625244b7cc39259bdb48d3b778de16c7390333aa84",
+    "private-probe/setup.ts.txt": "7501a568d23a7ff22d887900ecd9fc87ce1c21adc0c919bf7b861e2c4df2eb8a",
+    "private-probe/before-hook.ts.txt": "231422491ffc6d09bf9f2a1c28737122d47136b6e0383a270f022e749c780025",
+    "private-probe/existing-controls.test.tsx.txt": "10f23bb1cd16009400895e4b824cf1cd7d34703ad5dbf4bae89dc509f2bb144a",
+    "private-probe/harness-jsx-failed-before.log": "c4be7328c57a4be6f2f987477441c4b7d830948889a0ddf127a8f9ec4d077efc",
+    "private-probe/before.config.mts.txt": "f6bf176eb79fb36c33e30442caab42a0c7747be660f9e90e51abf5668c7f2366",
+    "private-probe/before.log": "44286c309104db1a1626a212ce5f4e647e9229b612e0ee03c71a628719c0cdb7",
+    "private-probe/after.config.mts.txt": "e7f6f812a5655e738b10977db16ca86cf69b8da328995025c74b1de1ffb43e8f",
+    "private-probe/after.log": "15aef1e4f89c54f627245eb23561e63fd81211e17a14642dfb75fa42d36c1a98",
+    "actual/typecheck-app-execution.json": "4505dd0ee046e5aee0e3513f29ce3d40d40aeddc69ee6569f0b1be1d3ccdb5b8",
+    "actual/scoped-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "actual/vite-test.config.mts.txt": "10c703213ddd95121b2dacc1c50e22788f9789c15741770c646016401bc494a1",
+    "actual/source-after-gates.json": "8957988a2782e34e9ca04a6073b97dc7774c84d6674e1e5547ed8dc8e50c9dce",
+    "actual/focused-tests.log": "2a17adaf7017dc73285ad619cb1f1ff19e9cfae4b0b554399d6709d9df451433",
+    "actual/built-artifact-sha256.json": "29e6331edd10de34f621eb366e761bb05834a7c7c61d5aa77b0886c5348724b7",
+    "actual/typecheck-app.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "actual/typecheck-node.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "actual/scoped-lint-execution.json": "e60bf866feb12cd029ce5753ea4d837e935bb5eeff9d186d5c6d1a1fb5ff4e94",
+    "actual/source-before-apply.json": "92936939783717609b48ad01129c556491ee1ec501e8fec9214db6e3630369c2",
+    "actual/source-before-gates.json": "03dd9b7326340f41506014c8a9b423c20937212282c8fff1302aa93e25970637",
+    "actual/original-full-failure-summary.json": "90ac087adc0cdc8f5f4adfc824721c4d962c2c513099dffaaa78d12b67eeab2c",
+    "actual/focused-tests.json": "ac08e1be131cbb7d1740f1875b8841e0aa50db0c34bb8d916d5b96da911c5e0c",
+    "actual/focused-tests-execution.json": "4837cee7c6bba1200ef1e0bcbec200280050d9191e6c32ef6ec0120ea6219960",
+    "actual/typecheck-node-execution.json": "3711b09b428ba8eb52449f2bc40004d26a37895019d3353fbb6eccbf752af7ff",
+    "actual/seven-phase-regressions.tsx.txt": "53684c2e2bab5b0450d0538e8c982d48a62be7d47ea78410e2e0ab3479f8d134",
+    "actual/vite-build.config.mts.txt": "4c25babb9a1f8f0ee93bca502f103bdcaacbf8b960915bc0f27bd9eea4d5d3a3",
+    "actual/build-execution.json": "c3e4355a2bdd0323d5e0ec44629bc94861f6578e467450f3833fd328101e5235",
+    "actual/build.log": "fbb1926608c533c5f503dafea277138e7cc6c582ec3cd7f7a677f271a786f38e"
+  }
+}

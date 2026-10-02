@@ -1,0 +1,25 @@
+{
+  "gate": "focused-tests",
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--config",
+    "/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/vite-test.config.mts",
+    "--maxWorkers=1",
+    "src/hooks/__tests__/useSignOutAction.test.tsx",
+    "src/components/auth/__tests__/signOut.test.tsx",
+    "--reporter=default",
+    "--reporter=json",
+    "--outputFile.json=/Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/actual/focused-tests.json"
+  ],
+  "nodeVersion": "20.20.2",
+  "startedAt": "2026-10-02T13:43:11.115013+00:00",
+  "elapsedSeconds": 5.020362457958981,
+  "exitCode": 0,
+  "explicitEnvironment": {
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+  }
+}

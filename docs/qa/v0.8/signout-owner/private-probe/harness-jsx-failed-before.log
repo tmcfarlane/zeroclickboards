@@ -1,0 +1,150 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/private-before
+
+ ❯ src/hooks/__tests__/useSignOutAction.test.tsx (7 tests | 7 failed) 7ms
+     × deduplicates immediate calls from the same control before React rerenders 3ms
+     × shows a visible toast for a returned error and allows an explicit retry 1ms
+     × shows a visible toast for a rejected error and allows an explicit retry 1ms
+     × retains pending state across a same-account token, session, and callback rerender 0ms
+     × allows the new owner to act while suppressing the old result and preserving the new pending action 0ms
+     × suppresses a returned failure after unmount and resolves the action without an unhandled rejection 0ms
+     × suppresses a rejected failure after unmount and resolves the action without an unhandled rejection 0ms
+ ❯ src/hooks/__tests__/commit-order.test.tsx (7 tests | 7 failed) 6ms
+     × stays visibly pending after passive effects flush 2ms
+     × does not permit a second request while the committed action is held 0ms
+     × shows the current owner failure and enables an explicit retry 0ms
+     × stays visibly pending after passive effects flush 0ms
+     × does not permit a second request while the committed action is held 0ms
+     × shows the current owner failure and enables an explicit retry 0ms
+   × allows a replacement owner commit action while an old owner request is held, suppressing the old failure 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > initial owner action at the DOM commit boundary > stays visibly pending after passive effects flush
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > replacement owner action at the DOM commit boundary > stays visibly pending after passive effects flush
+ReferenceError: React is not defined
+ ❯ renderAtBoundary src/hooks/__tests__/commit-order.test.tsx:36:10
+     34|
+     35| function renderAtBoundary(kind: 'initial' | 'replacement') {
+     36|   render(<Toaster duration={Infinity} />);
+       |          ^
+     37|   if (kind === 'initial') return render(<CommitAction startAtCommit />…
+     38|   const view = render(<CommitAction startAtCommit={false} />);
+ ❯ src/hooks/__tests__/commit-order.test.tsx:55:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > initial owner action at the DOM commit boundary > does not permit a second request while the committed action is held
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > replacement owner action at the DOM commit boundary > does not permit a second request while the committed action is held
+ReferenceError: React is not defined
+ ❯ renderAtBoundary src/hooks/__tests__/commit-order.test.tsx:36:10
+     34|
+     35| function renderAtBoundary(kind: 'initial' | 'replacement') {
+     36|   render(<Toaster duration={Infinity} />);
+       |          ^
+     37|   if (kind === 'initial') return render(<CommitAction startAtCommit />…
+     38|   const view = render(<CommitAction startAtCommit={false} />);
+ ❯ src/hooks/__tests__/commit-order.test.tsx:61:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > initial owner action at the DOM commit boundary > shows the current owner failure and enables an explicit retry
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > replacement owner action at the DOM commit boundary > shows the current owner failure and enables an explicit retry
+ReferenceError: React is not defined
+ ❯ renderAtBoundary src/hooks/__tests__/commit-order.test.tsx:36:10
+     34|
+     35| function renderAtBoundary(kind: 'initial' | 'replacement') {
+     36|   render(<Toaster duration={Infinity} />);
+       |          ^
+     37|   if (kind === 'initial') return render(<CommitAction startAtCommit />…
+     38|   const view = render(<CommitAction startAtCommit={false} />);
+ ❯ src/hooks/__tests__/commit-order.test.tsx:68:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  src/hooks/__tests__/commit-order.test.tsx > allows a replacement owner commit action while an old owner request is held, suppressing the old failure
+ReferenceError: React is not defined
+ ❯ src/hooks/__tests__/commit-order.test.tsx:81:10
+     79| it('allows a replacement owner commit action while an old owner reques…
+     80|   const oldRequest = deferred(); const oldSignOut = fixture.auth.signO…
+     81|   render(<Toaster duration={Infinity} />);
+       |          ^
+     82|   const view = render(<CommitAction startAtCommit={false} />);
+     83|   act(() => { screen.getByRole('button', { name: 'Sign out' }).click()…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  src/hooks/__tests__/useSignOutAction.test.tsx > useSignOutAction > deduplicates immediate calls from the same control before React rerenders
+ReferenceError: React is not defined
+ ❯ renderAction src/hooks/__tests__/useSignOutAction.test.tsx:36:10
+     34| function renderAction() {
+     35|   // This root remains mounted even when the initiating hook unmounts.
+     36|   render(<StrictMode><Toaster theme="dark" duration={Infinity} /></Str…
+       |          ^
+     37|   return renderHook(() => useSignOutAction(), { wrapper: StrictMode });
+     38| }
+ ❯ src/hooks/__tests__/useSignOutAction.test.tsx:63:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  src/hooks/__tests__/useSignOutAction.test.tsx > useSignOutAction > shows a visible toast for a returned error and allows an explicit retry
+ FAIL  src/hooks/__tests__/useSignOutAction.test.tsx > useSignOutAction > shows a visible toast for a rejected error and allows an explicit retry
+ReferenceError: React is not defined
+ ❯ renderAction src/hooks/__tests__/useSignOutAction.test.tsx:36:10
+     34| function renderAction() {
+     35|   // This root remains mounted even when the initiating hook unmounts.
+     36|   render(<StrictMode><Toaster theme="dark" duration={Infinity} /></Str…
+       |          ^
+     37|   return renderHook(() => useSignOutAction(), { wrapper: StrictMode });
+     38| }
+ ❯ src/hooks/__tests__/useSignOutAction.test.tsx:88:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  src/hooks/__tests__/useSignOutAction.test.tsx > useSignOutAction > retains pending state across a same-account token, session, and callback rerender
+ReferenceError: React is not defined
+ ❯ renderAction src/hooks/__tests__/useSignOutAction.test.tsx:36:10
+     34| function renderAction() {
+     35|   // This root remains mounted even when the initiating hook unmounts.
+     36|   render(<StrictMode><Toaster theme="dark" duration={Infinity} /></Str…
+       |          ^
+     37|   return renderHook(() => useSignOutAction(), { wrapper: StrictMode });
+     38| }
+ ❯ src/hooks/__tests__/useSignOutAction.test.tsx:115:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+ FAIL  src/hooks/__tests__/useSignOutAction.test.tsx > useSignOutAction > allows the new owner to act while suppressing the old result and preserving the new pending action
+ReferenceError: React is not defined
+ ❯ renderAction src/hooks/__tests__/useSignOutAction.test.tsx:36:10
+     34| function renderAction() {
+     35|   // This root remains mounted even when the initiating hook unmounts.
+     36|   render(<StrictMode><Toaster theme="dark" duration={Infinity} /></Str…
+       |          ^
+     37|   return renderHook(() => useSignOutAction(), { wrapper: StrictMode });
+     38| }
+ ❯ src/hooks/__tests__/useSignOutAction.test.tsx:144:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  src/hooks/__tests__/useSignOutAction.test.tsx > useSignOutAction > suppresses a returned failure after unmount and resolves the action without an unhandled rejection
+ FAIL  src/hooks/__tests__/useSignOutAction.test.tsx > useSignOutAction > suppresses a rejected failure after unmount and resolves the action without an unhandled rejection
+ReferenceError: React is not defined
+ ❯ renderAction src/hooks/__tests__/useSignOutAction.test.tsx:36:10
+     34| function renderAction() {
+     35|   // This root remains mounted even when the initiating hook unmounts.
+     36|   render(<StrictMode><Toaster theme="dark" duration={Infinity} /></Str…
+       |          ^
+     37|   return renderHook(() => useSignOutAction(), { wrapper: StrictMode });
+     38| }
+ ❯ src/hooks/__tests__/useSignOutAction.test.tsx:182:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  14 failed (14)
+   Start at  06:38:24
+   Duration  1.99s (transform 92ms, setup 160ms, import 303ms, tests 13ms, environment 1.24s)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/fourteenth-signout-race/before.json

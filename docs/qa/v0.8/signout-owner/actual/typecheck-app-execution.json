@@ -1,0 +1,21 @@
+{
+  "gate": "typecheck-app",
+  "command": [
+    "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "node_modules/typescript/bin/tsc",
+    "--project",
+    "tsconfig.app.json",
+    "--noEmit",
+    "--incremental",
+    "false"
+  ],
+  "nodeVersion": "20.20.2",
+  "startedAt": "2026-10-02T13:43:18.145948+00:00",
+  "elapsedSeconds": 13.485262792091817,
+  "exitCode": 0,
+  "explicitEnvironment": {
+    "CI": "true",
+    "VITE_SUPABASE_URL": "https://signout-owner-fixture.invalid",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_disposable"
+  }
+}
