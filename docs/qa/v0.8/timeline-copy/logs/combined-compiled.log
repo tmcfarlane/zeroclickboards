@@ -1,0 +1,25 @@
+[WebServer] (node:55847) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 18 tests using 1 worker
+
+  ✓   1 [desktop] › tests/connector-ui/ai-drafts.spec.ts:106:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly (2.7s)
+  ✓   2 [desktop] › tests/connector-ui/ai-drafts.spec.ts:126:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning (2.1s)
+  ✓   3 [desktop] › tests/connector-ui/ai-drafts.spec.ts:145:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry (3.6s)
+  ✓   4 [desktop] › tests/connector-ui/ai-drafts.spec.ts:164:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent (2.2s)
+  ✓   5 [desktop] › tests/connector-ui/ai-drafts.spec.ts:182:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (1.7s)
+  ✓   6 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (1.7s)
+  ✓   7 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (1.7s)
+  ✓   8 [desktop] › tests/connector-ui/board-access.spec.ts:760:1 › timeline recurring cards stay operable when drag is disabled (1.1s)
+  ✓   9 [desktop] › tests/connector-ui/board-access.spec.ts:775:1 › timeline downgrade keeps title copyable while open and explains closing discards it (1.4s)
+  ✓  10 [mobile] › tests/connector-ui/ai-drafts.spec.ts:106:1 › AI-only text blocks browser Back, preserves text and focus on Stay, and leaves explicitly (2.2s)
+  ✓  11 [mobile] › tests/connector-ui/ai-drafts.spec.ts:126:1 › Clear chat and closing AI retain its hidden draft and truthful Account warning (2.0s)
+  ✓  12 [mobile] › tests/connector-ui/ai-drafts.spec.ts:145:1 › hidden AI draft delays sign-out and survives a failed explicit attempt for retry (7.5s)
+  ✓  13 [mobile] › tests/connector-ui/ai-drafts.spec.ts:164:1 › same-owner token renewal keeps AI text while an actual SDK account replacement clears the old intent (2.2s)
+  ✓  14 [mobile] › tests/connector-ui/ai-drafts.spec.ts:182:1 › composing Enter keeps AI text guarded and accepted submission clears only the unsent reason (2.0s)
+  ✓  15 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (1.9s)
+  ✓  16 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (2.0s)
+  ✓  17 [mobile] › tests/connector-ui/board-access.spec.ts:760:1 › timeline recurring cards stay operable when drag is disabled (1.5s)
+  ✓  18 [mobile] › tests/connector-ui/board-access.spec.ts:775:1 › timeline downgrade keeps title copyable while open and explains closing discards it (1.7s)
+
+  18 passed (48.6s)

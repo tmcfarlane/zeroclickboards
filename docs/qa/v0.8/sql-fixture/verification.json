@@ -1,0 +1,93 @@
+{
+  "capturedAt": "2026-10-02T12:36:09.059493+00:00",
+  "branch": "codex/gauntlet-sql-fixture",
+  "baseCommit": "63efb43fe37ddc312a9b76b7ee1f875901389e7f",
+  "scope": "Test fixture and its scoped QA evidence only. Production executor/pool/configuration/migrations/packages are unchanged.",
+  "sourceFile": "api/_lib/__tests__/connector-sql.test.ts",
+  "sourceSha256": "ee4fa4666c11c04071fa4fb73fde21cbd767eea65391290cd17733690f7781e8",
+  "pristineBeforeSha256": "af9b0599f80f2aecee1d51ae9f42938182058b8b99fd649a00d57ce598b3ac9f",
+  "instrumentedBeforeSha256": "098b3001b13cb14d3b8cd3c0be079544b000d6724babfb857a3fbe91b060f449",
+  "identicalLifecycleCaseSha256": "9aee7b36a9d929b60dbe8e4d59ba769cee10417f77bb93eeb806d66316f4a498",
+  "sameLifecycleAssertionsBeforeAndAfter": true,
+  "unchangedLimits": {
+    "driverConnectSeconds": 5,
+    "existingCaseMilliseconds": 15000,
+    "newLifecycleCaseMilliseconds": 15000,
+    "configuredPoolSizes": [
+      1,
+      2
+    ]
+  },
+  "results": [
+    {
+      "gate": "instrumented original lifecycle witness",
+      "status": "expected failure",
+      "exitCode": 1,
+      "failed": 1,
+      "skipped": 3,
+      "durationSeconds": 4.2,
+      "log": "logs/lifecycle-before.log",
+      "observation": "Teardown completed before held startup work; actual PostgreSQL SELECT rejected PGlite is closed."
+    },
+    {
+      "gate": "all native postgres.js/PGlite wire cases after repair",
+      "status": "passed",
+      "exitCode": 0,
+      "passed": 4,
+      "durationSeconds": 10.68,
+      "log": "logs/native-after.log",
+      "observation": "No unhandled error; original pipelining, row correctness, bounded max=1/2, SQL-error release and new lifecycle assertions hold."
+    },
+    {
+      "gate": "scoped ESLint",
+      "status": "passed",
+      "exitCode": 0,
+      "command": "npx eslint api/_lib/__tests__/connector-sql.test.ts",
+      "log": "logs/lint.log"
+    },
+    {
+      "gate": "API TypeScript",
+      "status": "passed",
+      "exitCode": 0,
+      "command": "npx tsc -p tsconfig.node.json --noEmit",
+      "log": "logs/types.log"
+    },
+    {
+      "gate": "git diff --check",
+      "status": "passed",
+      "exitCode": 0
+    },
+    {
+      "gate": "bounded full unit integration",
+      "status": "pending parent resource release/latest v0.8 integration"
+    },
+    {
+      "gate": "committed-head GitHub CI",
+      "status": "not run for this uncommitted patch"
+    }
+  ],
+  "nativeCommands": {
+    "before": "npx vitest run api/_lib/__tests__/connector-sql.test.ts --config /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-vite.config.mjs --maxWorkers 1 --testNamePattern \"drains startup work\"",
+    "after": "npx vitest run api/_lib/__tests__/connector-sql.test.ts --config /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-vite.config.mjs --maxWorkers 1"
+  },
+  "environmentRecordedAtReceipt": {
+    "node": "v25.6.0",
+    "pglite": "0.3.14",
+    "postgres": "3.4.9",
+    "vitest": "4.1.4"
+  },
+  "unchangedFileSha256": {
+    "api/_lib/connector-sql.ts": "467174f4298ea29b177271c13de5d0ddbea18888f4002a7002b784322c886a0b",
+    "api/_lib/connector-runtime.ts": "89f955901c3a7c849fb20e8f2356a1fc8099ddf3ce8251d71a067b05bfb592be",
+    "api/_lib/connector-config.ts": "ba9638b60bef77511ec098f572d6fb7b1668b66931ad41474e78a2fbb658d789",
+    "package.json": "72ec80ee52cbdf1a792298f5eb2616c285d12f2958bb5bf9a077ec4b939fb3a7",
+    "package-lock.json": "31cc49471db5d501d464ea4d27e919a74d4c33e4f0277d53c832704319dbeed7"
+  },
+  "limitations": [
+    "The lifecycle checkpoint reproduces the untracked startup teardown race; it does not measure which initialization phase caused every historical CONNECT_TIMEOUT.",
+    "The startup handshake remains synthetic; actual statements/results run through real PostgreSQL and postgres.js where applicable.",
+    "Historical combined local failure logs are not relabeled passing by isolated verification.",
+    "Parent inspection of PR42 CI found all three original SQL cases passing; the actual six CI failures are in signOut.test.tsx and are separately owned. This patch is not claimed to resolve that CI auth blocker.",
+    "No production service was contacted, no grant/schema/configuration changed, and no commit/push was made."
+  ]
+}

@@ -1,0 +1,113 @@
+[WebServer] (node:24387) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 1 worker
+
+(node:24390) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (2.0s)
+  ✓  2 [desktop] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (1.5s)
+  ✘  3 [desktop] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it (30.8s)
+(node:24537) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  4 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores composing Enter and Escape until composition ends (2.0s)
+  ✓  5 [mobile] › tests/connector-ui/board-access.spec.ts:214:3 › timeline ignores 229 Enter and Escape until composition ends (1.6s)
+  ✘  6 [mobile] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it (30.4s)
+
+
+  1) [desktop] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'View Design pricing page', exact: true })
+        - locator resolved to <div tabindex="0" role="button" aria-disabled="true" data-slot="popover-anchor" aria-roledescription="draggable" aria-describedby="DndDescribedBy-1" aria-label="View Design pricing page" code-path="src/components/timeline/TimelineView.tsx:610:11" class=" border rounded-lg p-1 sm:p-2 overflow-hidden transition-[filter,transform] hover:brightness-125 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#78fcd6]/60 cursor-pointer">…</div>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+          - waiting 100ms
+        57 × waiting for element to be visible, enabled and stable
+           - element is not enabled
+         - retrying click action
+           - waiting 500ms
+
+
+      781 |   if (await title.isVisible()) await title.press('Escape');
+      782 |   await expect(title).not.toBeVisible();
+    > 783 |   await page.getByRole('button', { name: 'View Design pricing page', exact: true }).click();
+          |                                                                                     ^
+      784 |   await expect(title).toHaveValue('Design pricing page');
+      785 |   expect(fixture.writes).toEqual([]);
+      786 | });
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroclickboards/tests/connector-ui/board-access.spec.ts:783:85
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-desktop/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [mobile] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'View Design pricing page', exact: true })
+        - locator resolved to <div tabindex="0" role="button" aria-disabled="true" data-slot="popover-anchor" aria-roledescription="draggable" aria-describedby="DndDescribedBy-1" aria-label="View Design pricing page" code-path="src/components/timeline/TimelineView.tsx:610:11" class=" border rounded-lg p-1 sm:p-2 overflow-hidden transition-[filter,transform] hover:brightness-125 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[#78fcd6]/60 cursor-pointer">…</div>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+          - waiting 100ms
+        56 × waiting for element to be visible, enabled and stable
+           - element is not enabled
+         - retrying click action
+           - waiting 500ms
+
+
+      781 |   if (await title.isVisible()) await title.press('Escape');
+      782 |   await expect(title).not.toBeVisible();
+    > 783 |   await page.getByRole('button', { name: 'View Design pricing page', exact: true }).click();
+          |                                                                                     ^
+      784 |   await expect(title).toHaveValue('Design pricing page');
+      785 |   expect(fixture.writes).toEqual([]);
+      786 | });
+        at /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroclickboards/tests/connector-ui/board-access.spec.ts:783:85
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-mobile/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-mobile/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../outputs/gauntlet/tenth-timeline-browser-results/board-access-timeline-down-2e4d4-xplains-closing-discards-it-mobile/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [desktop] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it 
+    [mobile] › tests/connector-ui/board-access.spec.ts:760:1 › timeline downgrade keeps title copyable while open and explains closing discards it 
+  4 passed (1.2m)

@@ -1,0 +1,174 @@
+{
+  "runtimeNode": "20.20.2",
+  "totalTests": 33,
+  "passed": 33,
+  "failed": 0,
+  "success": true,
+  "cases": [
+    {
+      "name": "actual OpenAI chat adapter response size guard accepts ordinary successful streamed JSON",
+      "status": "passed",
+      "durationMs": 158.88208299999997
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard preserves an ordinary streamed upstream JSON error",
+      "status": "passed",
+      "durationMs": 5.2870419999999285
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=false)",
+      "status": "passed",
+      "durationMs": 24.026417000000038
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=true)",
+      "status": "passed",
+      "durationMs": 5.298416000000088
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard accepts ordinary successful streamed JSON",
+      "status": "passed",
+      "durationMs": 42.931790999999976
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard preserves an ordinary streamed upstream JSON error",
+      "status": "passed",
+      "durationMs": 6.871999999999844
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=false)",
+      "status": "passed",
+      "durationMs": 7.1106660000000375
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=true)",
+      "status": "passed",
+      "durationMs": 24.208250000000135
+    },
+    {
+      "name": "resolveCommandIds resolves columnId for add_card from columnTitle",
+      "status": "passed",
+      "durationMs": 13.44549999999981
+    },
+    {
+      "name": "resolveCommandIds matches columns case-insensitively and by substring",
+      "status": "passed",
+      "durationMs": 0.5855840000003809
+    },
+    {
+      "name": "resolveCommandIds resolves cardId + columnId for move_card and its target column",
+      "status": "passed",
+      "durationMs": 1.0490410000002157
+    },
+    {
+      "name": "resolveCommandIds prefers an exact title match over a substring match",
+      "status": "passed",
+      "durationMs": 0.9127499999995052
+    },
+    {
+      "name": "resolveCommandIds resolves cardId + columnId for edit_card",
+      "status": "passed",
+      "durationMs": 0.7952919999997903
+    },
+    {
+      "name": "resolveCommandIds remove_card resolves the card under the `title` param",
+      "status": "passed",
+      "durationMs": 0.826958999999988
+    },
+    {
+      "name": "resolveCommandIds restore_card prefers the archived card",
+      "status": "passed",
+      "durationMs": 0.3352080000004207
+    },
+    {
+      "name": "resolveCommandIds does not attach a cardId for bulk (allCards) operations",
+      "status": "passed",
+      "durationMs": 0.2924590000002354
+    },
+    {
+      "name": "resolveCommandIds never overwrites an id the model already supplied",
+      "status": "passed",
+      "durationMs": 1.76508400000057
+    },
+    {
+      "name": "resolveCommandIds leaves params untouched when the title cannot be resolved",
+      "status": "passed",
+      "durationMs": 1.1174160000000484
+    },
+    {
+      "name": "resolveCommandIds does not mutate the input command params",
+      "status": "passed",
+      "durationMs": 0.7344579999999041
+    },
+    {
+      "name": "AI shared-board permissions keeps composition confirmation out of AI commands ({\"isComposing\":true})",
+      "status": "passed",
+      "durationMs": 345.5799999999999
+    },
+    {
+      "name": "AI shared-board permissions keeps composition confirmation out of AI commands ({\"keyCode\":229})",
+      "status": "passed",
+      "durationMs": 161.72012499999983
+    },
+    {
+      "name": "AI shared-board permissions keeps viewer board commands read-only and does not claim an edit succeeded",
+      "status": "passed",
+      "durationMs": 585.9767499999998
+    },
+    {
+      "name": "AI shared-board permissions keeps commenter board commands read-only and does not claim an edit succeeded",
+      "status": "passed",
+      "durationMs": 319.37241600000016
+    },
+    {
+      "name": "AI shared-board permissions checks current access after waiting for an AI response",
+      "status": "passed",
+      "durationMs": 579.6504999999997
+    },
+    {
+      "name": "AI shared-board permissions checks access between commands in an AI batch",
+      "status": "passed",
+      "durationMs": 1109.3245000000006
+    },
+    {
+      "name": "AI shared-board permissions still permits a board summary for a viewer",
+      "status": "passed",
+      "durationMs": 916.4916249999987
+    },
+    {
+      "name": "AI shared-board permissions permits creating a separate owned board while viewing a shared read-only board",
+      "status": "passed",
+      "durationMs": 574.442833000001
+    },
+    {
+      "name": "AI card content commands uses the latest moved card after waiting for the AI response: edit_card",
+      "status": "passed",
+      "durationMs": 584.9447499999987
+    },
+    {
+      "name": "AI card content commands uses the latest moved card after waiting for the AI response: add_checklist",
+      "status": "passed",
+      "durationMs": 311.28229099999953
+    },
+    {
+      "name": "AI card content commands does not execute a delayed response after the signed-in account changes",
+      "status": "passed",
+      "durationMs": 867.265958
+    },
+    {
+      "name": "AI card content commands edits only body text and preserves checklist, image, metadata and summary ({\"cardId\":\"card-1\"})",
+      "status": "passed",
+      "durationMs": 449.5670829999981
+    },
+    {
+      "name": "AI card content commands edits only body text and preserves checklist, image, metadata and summary ({\"cardTitle\":\"Review card\"})",
+      "status": "passed",
+      "durationMs": 406.3818749999991
+    },
+    {
+      "name": "AI card content commands restores stored checklist items while keeping body and image when adding tasks to all cards",
+      "status": "passed",
+      "durationMs": 455.2772499999992
+    }
+  ]
+}

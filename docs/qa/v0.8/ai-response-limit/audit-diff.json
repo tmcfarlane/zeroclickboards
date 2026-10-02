@@ -1,0 +1,40 @@
+{
+  "before": {
+    "info": 0,
+    "low": 4,
+    "moderate": 3,
+    "high": 3,
+    "critical": 0,
+    "total": 10
+  },
+  "after": {
+    "info": 0,
+    "low": 0,
+    "moderate": 3,
+    "high": 3,
+    "critical": 0,
+    "total": 6
+  },
+  "removedPackageNodes": [
+    "@ai-sdk/gateway",
+    "@ai-sdk/openai",
+    "@ai-sdk/provider-utils",
+    "ai"
+  ],
+  "addedPackageNodes": [],
+  "remainingChangedPackageNodes": [],
+  "remainingPackageNodes": [
+    "lodash",
+    "react-router",
+    "react-router-dom",
+    "resend",
+    "svix",
+    "uuid"
+  ],
+  "packageHashes": {
+    "package.json": "d861c93b64a2d769a403d93ad1601d83e82bb31c01ea4e53cfb8b328b69ec18b",
+    "package-lock.json": "9c79e68c03958a2c5d40fda9a180ee705024295e1f8ccfc1acc9a77d7999ea95"
+  },
+  "auditExitCode": 1,
+  "assessment": "The four AI-family nodes are removed; six existing unrelated package nodes remain. No new findings appeared. Prior source reachability assessment applies because the application and these packages are unchanged. The nonzero audit result is not a zero-vulnerability claim and does not negate the scoped AI advisory removal."
+}

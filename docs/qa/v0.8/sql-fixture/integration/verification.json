@@ -1,0 +1,40 @@
+{
+  "capturedAt": "2026-10-02T12:46:53.037162+00:00",
+  "head": "5a022f0ba8f1a48344fddaa8e1cf32ee132f9587",
+  "branch": "codex/gauntlet-sql-fixture",
+  "gate": "one authorized bounded full app/API unit run after latest v0.8 integration",
+  "command": "VITE_SUPABASE_URL=https://placeholder.supabase.co VITE_SUPABASE_ANON_KEY=placeholder-key /private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node node_modules/vitest/vitest.mjs run --config /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/eighth-ai-vite.config.mjs --maxWorkers=2",
+  "node": {
+    "version": "v20.20.2",
+    "execPath": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "nativeLocksRequest": "undefined"
+  },
+  "environment": {
+    "VITE_SUPABASE_URL": "https://placeholder.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "placeholder-key"
+  },
+  "passedTestFiles": 45,
+  "passedTests": 958,
+  "failedTests": 0,
+  "exitCode": 0,
+  "durationSeconds": 101.15,
+  "unhandledErrors": false,
+  "log": "full-unit-node20.log",
+  "logSha256": "b8c018689348527804a2bd20b14343a90cfd55af345f478d01f7cd315df3e4c8",
+  "trackedFilesUnchangedBeforeAndAfter": 483,
+  "trackedBeforeManifest": "tracked-source-before.json",
+  "trackedBeforeManifestSha256": "b6cd5365b1cb77bf20c7905f846e934c3c8d9dc0f02a55abb8131030d72cd141",
+  "privateHarnessSha256BeforeAndAfter": "d602bbe98b95366ba78e383b8142b4eddb20489752edb3c9c8712f3f3b3422a1",
+  "helperSha256BeforeAndAfter": "ee4fa4666c11c04071fa4fb73fde21cbd767eea65391290cd17733690f7781e8",
+  "originalReceiptSha256Unchanged": "359007f1dff93d8991bb6adfff3e1c1d8a17eafa3eb77fdf2489fe1c5b7b7278",
+  "originalArtifactManifestSha256Unchanged": "8767e38c4aaf9c971274bd25e3d6fafdc869c60f62ffcba6fbb2ae248456e853",
+  "historicalReadmeSha256": "7a07a511621b8c35ce0402c065f85a8d43cc2b2a9dbe78514a1b2b4d165f0756",
+  "countDifference": "supabase-auth-lock.test.ts includes 15 additional native-lock-mode cases when the initial Node navigator.locks exists. Node25.6.0 exposes locks.request; Node20.20.2 does not. The actual integrated count958 is recorded, not inferred from historical totals.",
+  "scope": "No code, configuration, production executor, package, timeout or assertion changed for this integration gate. Only scoped QA artifacts are added afterward.",
+  "limits": [
+    "This is local macOS verification under the explicit CI-version Node binary; it is not a substitute for the next PR exact-head Linux CI.",
+    "The historical base63 receipt and failing/passing logs remain unchanged. Its pending full-gate status describes that earlier capture; this separate integration receipt supplies the later result.",
+    "The historical artifact manifest binds the original README bytes now archived as integration/README-before-integration.md. The integration artifact manifest binds the current appended README and all current files.",
+    "No additional isolated/full rerun, production service contact, grant/configuration change, commit, push or deployment was performed by this agent."
+  ]
+}
