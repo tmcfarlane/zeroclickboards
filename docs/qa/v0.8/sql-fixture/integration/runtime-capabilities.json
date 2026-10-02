@@ -1,0 +1,21 @@
+{
+  "explicitIntegrationRuntime": {
+    "version": "v20.20.2",
+    "execPath": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node",
+    "nativeLocksRequest": "undefined"
+  },
+  "historicalNpxResolvedRuntime": {
+    "version": "v25.6.0",
+    "execPath": "/opt/homebrew/Cellar/node/25.6.0/bin/node",
+    "nativeLocksRequest": "function"
+  },
+  "historicalNpx": {
+    "invokedCommand": "npx vitest run",
+    "resolvedPath": "/opt/homebrew/bin/npx",
+    "symlinkTarget": "/opt/homebrew/Cellar/node/25.6.0/bin/npx",
+    "shebang": "#!/usr/bin/env node",
+    "npmResolvedPath": "/opt/homebrew/bin/npm",
+    "npmTarget": "/opt/homebrew/Cellar/node/25.6.0/bin/npm",
+    "evidenceLimit": "No execution-path trace was embedded in the original native log; these resolution paths were checked in the same isolated-worktree shell after that gate, and its original receipt directly recorded Node25.6.0."
+  }
+}

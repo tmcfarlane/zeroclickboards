@@ -32,12 +32,3 @@ npx tsc -p tsconfig.node.json --noEmit
 ```
 
 Recorded runs used the [private Vite configuration](harness/private-vite.config.mjs.txt), which inherits repository test settings and moves its cache outside shared dependencies. Its absolute paths describe this isolated worktree and are evidence metadata, not a portable configuration requirement. No live database or credential is used. The controlled original source and its exact command are preserved for review; do not replace current source merely to replay an expected failing witness.
-
-
-## Integrated full unit gate
-
-After the parent integrated the fixture patch with the latest `v0.8`, the one authorized full app/API unit run passed **958 tests across 45 files** in 101.15 seconds, exit code 0, with no unhandled errors. It used the explicit Node 20.20.2 binary `/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node`, two workers, the private cache overlay and the same placeholder Supabase environment as CI. All 483 tracked files, the helper hash and the private harness hash stayed unchanged throughout the run. No retry or timeout adjustment was used.
-
-The tested integrated head is `5a022f0ba8f1a48344fddaa8e1cf32ee132f9587`. See the [separate integration receipt](integration/verification.json), [complete log](integration/full-unit-node20.log), [tracked source manifest](integration/tracked-source-before.json) and [runtime capability evidence](integration/runtime-capabilities.json). Node 25 exposes native Web Locks; Node 20 does not. The auth lock test conditionally adds fifteen native-mode cases under Node 25, so historical and CI-version counts are not interchangeable.
-
-The original `verification.json` and `artifact-sha256.json` remain byte-for-byte unchanged as historical evidence. Their README hash describes the version preserved at [README-before-integration.md](integration/README-before-integration.md). The [integration artifact manifest](integration/artifact-sha256.json) binds the current appended README and all archived artifacts. The next PR's exact-head Linux CI remains parent-owned; this local result does not claim that remote gate has run.
