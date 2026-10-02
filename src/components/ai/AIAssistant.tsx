@@ -690,7 +690,11 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
   const lastCardTitle = useRef<string | null>(null);
 
   const activeBoard = getActiveBoard();
-  const quickActions = getQuickActions(activeBoard);
+  const canEditActiveBoard = activeBoardId ? useBoardStore.getState().canEditBoard(activeBoardId) : true;
+  const quickActions = canEditActiveBoard ? getQuickActions(activeBoard) : [
+    { label: 'Board summary', command: 'How many cards total?' },
+    { label: 'Timeline view', command: 'Show the timeline' },
+  ];
 
   // Set welcome message on first open or when board changes
   useEffect(() => {
@@ -730,6 +734,18 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
     const activeBoard = currentState.boards.find((board) => board.id === activeBoardId);
     if (activeBoardId && !activeBoard && command.type !== "create_board") {
       return "The requested board is no longer available.";
+    }
+    // Permissions may change while the AI request or a batch is waiting. Check
+    // the current store immediately before every command, rather than reporting
+    // success when a denied store mutation did nothing.
+    const readCommand = command.type === 'unknown' || command.type === 'create_board' ||
+      command.type === 'switch_view' || command.type === 'count_cards' ||
+      command.type === 'extract_card_json' || command.type === 'extract_column_json';
+    if (activeBoardId && !readCommand && !currentState.canEditBoard(activeBoardId)) {
+      return 'This board is read-only. Ask the owner for editor access to make changes.';
+    }
+    if (activeBoardId && command.type === 'delete_board' && !currentState.canManageBoard(activeBoardId)) {
+      return 'Only the board owner can delete this board.';
     }
     const getString = (key: string) => {
       const value = command.params[key];

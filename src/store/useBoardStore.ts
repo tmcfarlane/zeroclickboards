@@ -10,6 +10,8 @@ import { BoardSyncCoordinator, type BoardSnapshot, type BoardSyncState } from '@
 import { validateBoardDocument, mergeBoardDocuments, type BoardDocument } from '@/lib/board-merge';
 import type { BoardRow } from '@/types/database';
 import type { CardEditorSaveData } from '@/components/board/CardEditor';
+import { boardAccessFor, editableAccess, memberAccess, type BoardAccess } from '@/lib/board-access';
+export type { BoardAccess } from '@/lib/board-access';
 
 export interface CardEditorSession {
   boardId: string;
@@ -25,6 +27,11 @@ interface BoardStore extends AppState {
   remoteStatus: 'idle' | 'loading' | 'ready' | 'error';
   remoteError: string | null;
   boardSyncStates: Record<string, BoardSyncState>;
+  boardAccess: Record<string, BoardAccess>;
+  getBoardAccess: (boardId: string) => BoardAccess;
+  canEditBoard: (boardId: string) => boolean;
+  canManageBoard: (boardId: string) => boolean;
+  canRecoverCardDraft: (boardId: string) => boolean;
   cardEditorSession: CardEditorSession | null;
   openCardEditor: (boardId: string, cardId: string) => void;
   closeCardEditor: () => void;
@@ -99,6 +106,49 @@ type BoardSettings = Pick<Board, 'isPublic' | 'embedEnabled'>;
 const pendingSettings = new Map<string, Partial<BoardSettings>>();
 const settingJobs = new Map<string, Promise<void>>();
 const creatingBoards = new Map<string, { snapshot: BoardSnapshot; job?: Promise<boolean> }>();
+const accessVersions = new Map<string, number>();
+
+function requireEditable(boardId: string): boolean {
+  if (useBoardStore.getState().canEditBoard(boardId)) return true;
+  toast.error('This board is read-only. You need editor access to change it.');
+  return false;
+}
+
+function publishBoardAccess(next: Record<string, BoardAccess>) {
+  const state = useBoardStore.getState();
+  const editableBefore = state.activeBoardId ? state.canEditBoard(state.activeBoardId) : false;
+  const changed = new Set([...Object.keys(state.boardAccess), ...Object.keys(next)].filter((id) => state.boardAccess[id] !== next[id]));
+  useBoardStore.setState({ boardAccess: next });
+  for (const id of changed) {
+    accessVersions.set(id, (accessVersions.get(id) ?? 0) + 1);
+    boardSync?.accessChanged(id);
+  }
+  if (editableBefore && state.activeBoardId && !useBoardStore.getState().canEditBoard(state.activeBoardId)) useUndoStore.getState().clearHistory();
+}
+
+function setBoardAccess(id: string, access: BoardAccess) {
+  publishBoardAccess({ ...useBoardStore.getState().boardAccess, [id]: access });
+}
+
+async function verifySharedWrite(id: string, epoch: number): Promise<void> {
+  const state = useBoardStore.getState();
+  const userId = state.currentUserId;
+  const board = state.boards.find((candidate) => candidate.id === id);
+  if (!userId || !board || !state.canEditBoard(id)) throw new Error('This board is read-only');
+  if (board.userId === userId) return;
+  const accessVersion = accessVersions.get(id) ?? 0;
+  const response = await supabase.from('board_members').select('role').eq('board_id', id).eq('user_id', userId).maybeSingle().then(
+    (result) => result,
+    () => {
+      if (epoch === sessionEpoch && accessVersion === (accessVersions.get(id) ?? 0)) setBoardAccess(id, 'unknown');
+      throw new Error('Unable to confirm editor access. Your draft is kept.');
+    },
+  );
+  if (epoch !== sessionEpoch || accessVersion !== (accessVersions.get(id) ?? 0)) throw new Error('Your board access changed');
+  const { data, error } = response;
+  setBoardAccess(id, error ? 'unknown' : memberAccess(data?.role));
+  if (error || !useBoardStore.getState().canEditBoard(id)) throw new Error('Unable to confirm editor access. Your draft is kept.');
+}
 
 function boardToDocument(board: Board): BoardDocument {
   return {
@@ -127,6 +177,7 @@ function documentToBoard(board: Board, document: BoardDocument): Board {
  * another client while applying the recorded delta. This makes undo/redo
  * safe when MCP or realtime updates arrive after the form was opened. */
 function replayBoardDocument(boardId: string, from: BoardDocument, to: BoardDocument): void {
+  if (!requireEditable(boardId)) return;
   const current = useBoardStore.getState().boards.find((board) => board.id === boardId);
   if (!current) return;
   const currentDocument = boardToDocument(current);
@@ -145,6 +196,7 @@ function replayBoardDocument(boardId: string, from: BoardDocument, to: BoardDocu
 /** Archive the selected sources and add their successors in one local/sync/undo
  * transaction. Validate every copy before changing any part of the board. */
 function archiveBoardCards(board: Board, cardIds: string[], description: string): number | undefined {
+  if (!requireEditable(board.id)) return;
   const selected = new Set(cardIds);
   const sources = board.columns.flatMap((column) => column.cards).filter((card) => selected.has(card.id) && !card.isArchived);
   if (!sources.length) return;
@@ -215,13 +267,16 @@ function removeLocalBoard(id: string) {
   useBoardStore.setState((state) => {
     const boardSyncStates = { ...state.boardSyncStates };
     delete boardSyncStates[id];
+    const boardAccess = { ...state.boardAccess };
+    delete boardAccess[id];
     const boards = state.boards.filter((board) => board.id !== id);
-    return { boards, boardSyncStates, activeBoardId: state.activeBoardId === id ? boards[0]?.id ?? null : state.activeBoardId };
+    return { boards, boardSyncStates, boardAccess, activeBoardId: state.activeBoardId === id ? boards[0]?.id ?? null : state.activeBoardId };
   });
 }
 
 function createSyncCoordinator(epoch: number) {
   return new BoardSyncCoordinator({
+    canWrite: (id) => epoch === sessionEpoch && useBoardStore.getState().canEditBoard(id),
     read: async (id) => {
       if (epoch !== sessionEpoch) return null;
       const { data, error } = await supabase.from('boards').select('*').eq('id', id).maybeSingle();
@@ -230,10 +285,15 @@ function createSyncCoordinator(epoch: number) {
     },
     write: async (id, revision, document) => {
       if (epoch !== sessionEpoch) return null;
+      await verifySharedWrite(id, epoch);
+      if (epoch !== sessionEpoch || !useBoardStore.getState().canEditBoard(id)) throw new Error('Your board access changed');
       const { data, error } = await supabase.from('boards')
         .update({ name: document.name, description: document.description, data: document.data as Json })
         .eq('id', id).eq('updated_at', revision).select('*').maybeSingle();
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42501' && epoch === sessionEpoch) setBoardAccess(id, 'unknown');
+        throw error;
+      }
       return data ? rowToSnapshot(data) : null;
     },
     local: (id) => {
@@ -280,7 +340,8 @@ function ensureBoardsSubscription(userId: string, epoch: number) {
 }
 
 function scheduleBoardSync(boardId: string) {
-  if (useBoardStore.getState().currentUserId) boardSync?.schedule(boardId);
+  const state = useBoardStore.getState();
+  if (state.currentUserId && state.canEditBoard(boardId)) boardSync?.schedule(boardId);
 }
 
 function persistCreation(id: string): Promise<boolean> {
@@ -331,7 +392,7 @@ function updateBoardSetting(id: string, field: keyof BoardSettings, value: boole
   const state = useBoardStore.getState();
   const userId = state.currentUserId;
   const board = state.boards.find((candidate) => candidate.id === id);
-  if (!board || (userId && board.userId !== userId)) return;
+  if (!board || !state.canManageBoard(id)) return;
   useBoardStore.setState({ boards: state.boards.map((candidate) => candidate.id === id ? { ...candidate, [field]: value } : candidate) });
   if (!userId) return;
   const epoch = sessionEpoch;
@@ -343,7 +404,7 @@ function updateBoardSetting(id: string, field: keyof BoardSettings, value: boole
   const run = async () => {
     await previous;
     const created = await creation;
-    if (epoch !== sessionEpoch || !useBoardStore.getState().boards.some((board) => board.id === id)) return;
+    if (epoch !== sessionEpoch || !useBoardStore.getState().canManageBoard(id)) return;
     try {
       if (created === false) throw new Error('Save the board before updating its sharing settings');
       const updates = field === 'isPublic' ? { is_public: value } : { embed_enabled: value };
@@ -374,6 +435,11 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   remoteStatus: 'idle',
   remoteError: null,
   boardSyncStates: {},
+  boardAccess: {},
+  getBoardAccess: (id) => boardAccessFor(get().boards.find((board) => board.id === id), get().currentUserId, get().boardAccess),
+  canEditBoard: (id) => editableAccess(get().getBoardAccess(id)),
+  canManageBoard: (id) => get().getBoardAccess(id) === 'owner',
+  canRecoverCardDraft: (id) => get().cardEditorSession?.boardId === id && !!boardSync?.isDeleted(id),
   cardEditorSession: null,
 
   setCurrentUserId: (userId) => {
@@ -383,12 +449,13 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     boardSync?.dispose();
     boardSync = null;
     rawBoardData.clear();
+    accessVersions.clear();
     creatingBoards.clear();
     pendingSettings.clear();
     settingJobs.clear();
     if (boardsChannel) { void supabase.removeChannel(boardsChannel); boardsChannel = null; }
     useUndoStore.getState().clearHistory();
-    set({ currentUserId: userId, boards: [], activeBoardId: null, boardSyncStates: {}, cardEditorSession: null, remoteStatus: 'idle', remoteError: null });
+    set({ currentUserId: userId, boards: [], activeBoardId: null, boardSyncStates: {}, boardAccess: {}, cardEditorSession: null, remoteStatus: 'idle', remoteError: null });
     if (userId) {
       boardSync = createSyncCoordinator(sessionEpoch);
       ensureBoardsSubscription(userId, sessionEpoch);
@@ -401,6 +468,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     if (!userId) return;
     const epoch = sessionEpoch;
     const sequence = ++refreshSequence;
+    const accessAtStart = new Map(accessVersions);
     const coordinator = boardSync;
     const priorIds = get().boards.filter((board) => !coordinator?.isCreating(board.id)).map((board) => board.id);
     const current = () => epoch === sessionEpoch && sequence === refreshSequence;
@@ -408,11 +476,16 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     try {
       const [own, members] = await Promise.all([
         supabase.from('boards').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
-        supabase.from('board_members').select('board_id').eq('user_id', userId),
+        supabase.from('board_members').select('board_id, role').eq('user_id', userId),
       ]);
       if (!current()) return;
       if (own.error) throw own.error;
       if (members.error) throw members.error;
+      const nextAccess: Record<string, BoardAccess> = Object.fromEntries(priorIds.map((id) => [id, 'unknown' as const]));
+      for (const member of members.data ?? []) nextAccess[member.board_id] = (accessAtStart.get(member.board_id) ?? 0) === (accessVersions.get(member.board_id) ?? 0)
+        ? memberAccess(member.role) : get().boardAccess[member.board_id] ?? 'unknown';
+      for (const board of own.data ?? []) nextAccess[board.id] = 'owner';
+      publishBoardAccess(nextAccess);
       let shared: BoardRow[] = [];
       if (members.data?.length) {
         const result = await supabase.from('boards').select('*').in('id', members.data.map((member) => member.board_id)).order('created_at', { ascending: true });
@@ -427,6 +500,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       set({ remoteStatus: 'ready', remoteError: null });
     } catch (error) {
       if (current()) {
+        publishBoardAccess(Object.fromEntries(get().boards.map((board) => [board.id, board.userId === userId ? 'owner' : 'unknown'])));
         set({ remoteStatus: 'error', remoteError: error instanceof Error ? error.message : 'Unable to load boards' });
         toast.error('Failed to load boards. Your open drafts are kept.');
       }
@@ -450,7 +524,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     const userId = get().currentUserId;
     const board = get().boards.find((candidate) => candidate.id === boardId);
     if (!board) return;
-    if (userId && board.userId !== userId) { toast.error('Only the board owner can delete it'); return; }
+    if (!get().canManageBoard(boardId)) { toast.error('Only the board owner can delete it'); return; }
     const epoch = sessionEpoch;
     const coordinator = boardSync;
     const data = boardToDocument(board).data;
@@ -491,6 +565,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   openCardEditor: (boardId, cardId) => {
+    if (!requireEditable(boardId)) return;
     const board = get().boards.find((candidate) => candidate.id === boardId);
     const card = board?.columns.flatMap((column) => column.cards).find((candidate) => candidate.id === cardId);
     if (board && card) set({ cardEditorSession: structuredClone({ boardId, cardId, board, card, document: boardToDocument(board), baseline: boardSync?.getBaseline(boardId) }) });
@@ -499,6 +574,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   saveCardEditor: (data, initialForm) => {
     const session = get().cardEditorSession;
     if (!session) return;
+    if (!get().canRecoverCardDraft(session.boardId) && !requireEditable(session.boardId)) return;
     // Submit only changes to the displayed form. Legacy body/cover migration
     // and empty optional fields must not masquerade as deliberate user edits.
     const updates = Object.fromEntries(Object.entries(data).filter(([key, value]) =>
@@ -551,7 +627,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     const epoch = sessionEpoch;
     const previousCard = get().boards.find((board) => board.id === session.boardId)?.columns.flatMap((column) => column.cards).find((card) => card.id === session.cardId);
     const recordUndo = () => {
-      if (!previousCard || ['conflict', 'deleted', 'error'].includes(get().boardSyncStates[session.boardId]?.status ?? '')) return;
+      if (!previousCard || !get().canEditBoard(session.boardId) || ['conflict', 'deleted', 'error', 'readonly'].includes(get().boardSyncStates[session.boardId]?.status ?? '')) return;
       useUndoStore.getState().pushAction({
         description: `Edit card '${previousCard.title}'`,
         undo: () => replayBoardDocument(session.boardId, afterDocument, beforeDocument),
@@ -561,6 +637,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     if (get().currentUserId && boardSync) {
       void boardSync.stage(session.boardId, session.document, draft, session.baseline).then(() => {
         if (epoch !== sessionEpoch) return;
+        if (!get().canEditBoard(session.boardId) && !get().canRecoverCardDraft(session.boardId)) return;
         if (get().boards.some((board) => board.id === session.boardId)) set({ activeBoardId: session.boardId });
         if (get().cardEditorSession === session) set({ cardEditorSession: null });
         recordUndo();
@@ -577,11 +654,18 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   retryBoardSync: (id) => {
+    if (!requireEditable(id)) return;
     if (creatingBoards.has(id)) void persistCreation(id);
     else void boardSync?.flush(id);
   },
-  resolveBoardConflict: (id, choice) => { boardSync?.resolve(id, choice); },
-  discardBoardDraft: (id) => { boardSync?.forget(id); creatingBoards.delete(id); removeLocalBoard(id); },
+  resolveBoardConflict: (id, choice) => { if (requireEditable(id)) boardSync?.resolve(id, choice); },
+  discardBoardDraft: (id) => {
+    if (get().boardSyncStates[id]?.status === 'readonly') {
+      void boardSync?.discard(id).catch(() => toast.error('The saved board could not be loaded. Your draft is kept.'));
+      return;
+    }
+    boardSync?.forget(id); creatingBoards.delete(id); removeLocalBoard(id);
+  },
   saveBoardDraftAsCopy: (id) => {
     const original = get().boards.find((board) => board.id === id);
     const userId = get().currentUserId;
@@ -597,6 +681,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   renameBoard: (boardId, newName) => {
+    if (!requireEditable(boardId)) return;
     set((state) => ({
       boards: state.boards.map((b) => (b.id === boardId ? { ...b, name: newName, updatedAt: new Date().toISOString() } : b)),
     }));
@@ -605,6 +690,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   setBoardBackground: (boardId, background) => {
+    if (!requireEditable(boardId)) return;
     set((state) => ({
       boards: state.boards.map((b) => (b.id === boardId ? { ...b, background, updatedAt: new Date().toISOString() } : b)),
     }));
@@ -612,6 +698,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   setBoardHiddenColumns: (boardId, hiddenColumnIds) => {
+    if (!requireEditable(boardId)) return;
     set((state) => ({
       boards: state.boards.map((b) =>
         b.id === boardId ? { ...b, hiddenColumnIds, updatedAt: new Date().toISOString() } : b
@@ -626,10 +713,12 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   syncBoard: (boardId) => {
+    if (!requireEditable(boardId)) return;
     scheduleBoardSync(boardId);
   },
 
   addColumn: (boardId, title) => {
+    if (!requireEditable(boardId)) return;
     const newId = uuidv4();
     set((state) => ({
       boards: state.boards.map((b) => {
@@ -649,6 +738,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       description: `Add column '${title}'`,
       undo: () => useBoardStore.getState().removeColumn(boardId, newId),
       redo: () => {
+        if (!requireEditable(boardId)) return;
         useBoardStore.setState((state) => ({ boards: state.boards.map((board) =>
           board.id === boardId && !board.columns.some((column) => column.id === newId)
             ? { ...board, columns: [...board.columns, { id: newId, title, cards: [], order: board.columns.length }] }
@@ -659,6 +749,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   removeColumn: (boardId, columnId) => {
+    if (!requireEditable(boardId)) return;
     const board = get().boards.find((b) => b.id === boardId);
     const column = board?.columns.find((c) => c.id === columnId);
     const columnClone = column ? structuredClone(column) : null;
@@ -678,6 +769,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       useUndoStore.getState().pushAction({
         description: `Remove column '${columnClone.title}'`,
         undo: () => {
+          if (!requireEditable(boardId)) return;
           useBoardStore.setState((state) => ({
             boards: state.boards.map((b) => {
               if (b.id !== boardId || b.columns.some((candidate) => candidate.id === columnId)) return b;
@@ -697,6 +789,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   renameColumn: (boardId, columnId, newTitle) => {
+    if (!requireEditable(boardId)) return;
     const board = get().boards.find((b) => b.id === boardId);
     const column = board?.columns.find((c) => c.id === columnId);
     const oldTitle = column?.title ?? '';
@@ -724,6 +817,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   reorderColumns: (boardId, columnIds) => {
+    if (!requireEditable(boardId)) return;
     set((state) => ({
       boards: state.boards.map((b) => {
         if (b.id !== boardId) return b;
@@ -747,6 +841,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
     targetDate,
     options?: { description?: string; labels?: CardLabel[]; coverImage?: string; attachments?: Attachment[]; recurrence?: RecurrenceConfig }
   ) => {
+    if (!requireEditable(boardId)) return '';
     const now = new Date().toISOString();
     const newCard: Card = {
       id: uuidv4(),
@@ -781,6 +876,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       description: `Add card '${title}'`,
       undo: () => useBoardStore.getState().removeCard(boardId, columnId, newCard.id),
       redo: () => {
+        if (!requireEditable(boardId)) return;
         useBoardStore.setState((state) => ({
           boards: state.boards.map((b) =>
             b.id === boardId
@@ -802,6 +898,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   removeCard: (boardId, columnId, cardId) => {
+    if (!requireEditable(boardId)) return;
     const board = get().boards.find((b) => b.id === boardId);
     const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
     columnId = column?.id ?? columnId;
@@ -829,6 +926,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
       useUndoStore.getState().pushAction({
         description: `Delete card '${cardClone.title}'`,
         undo: () => {
+          if (!requireEditable(boardId)) return;
           useBoardStore.setState((state) => ({
             boards: state.boards.map((b) =>
               b.id === boardId
@@ -854,6 +952,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   editCard: (boardId, columnId, cardId, updates) => {
+    if (!requireEditable(boardId)) return;
     const board = get().boards.find((b) => b.id === boardId);
     const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
     columnId = column?.id ?? columnId;
@@ -897,6 +996,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   moveCard: (boardId, _sourceColumnId, targetColumnId, cardId, targetIndex) => {
+    if (!requireEditable(boardId)) return;
     set((state) => {
       const board = state.boards.find((candidate) => candidate.id === boardId);
       const source = board?.columns.find((column) => column.cards.some((card) => card.id === cardId));
@@ -916,6 +1016,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   reorderCards: (boardId, columnId, cardIds) => {
+    if (!requireEditable(boardId)) return;
     set((state) => ({
       boards: state.boards.map((b) => {
         if (b.id !== boardId) return b;
@@ -950,6 +1051,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   restoreCard: (boardId, columnId, cardId) => {
+    if (!requireEditable(boardId)) return;
     get().editCard(boardId, columnId, cardId, { isArchived: false, archivedAt: undefined });
     toast.success('Card restored');
 
@@ -964,6 +1066,7 @@ export const useBoardStore = create<BoardStore>()((set, get) => ({
   },
 
   duplicateCard: (boardId, columnId, cardId) => {
+    if (!requireEditable(boardId)) return;
     const board = get().boards.find((b) => b.id === boardId);
     const column = board?.columns.find((c) => c.cards.some((card) => card.id === cardId));
     columnId = column?.id ?? columnId;

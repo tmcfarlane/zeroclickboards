@@ -1,4 +1,5 @@
 import type { OAuthClientInformationFull } from '@modelcontextprotocol/sdk/shared/auth.js'
+import { isOAuthCallbackUri } from '../../mcp-server/src/oauth-callback.js'
 
 export interface ConnectorConfig {
   issuer: URL
@@ -46,8 +47,8 @@ export function readConnectorConfig(env: NodeJS.ProcessEnv = process.env): Conne
       typeof client.client_name !== 'string' || !client.client_name || !Array.isArray(client.redirect_uris) ||
       !client.redirect_uris.length || client.token_endpoint_auth_method !== 'none') throw new Error('Invalid public OAuth client')
     const callbacks = client.redirect_uris.map((uri: unknown) => {
-      if (typeof uri !== 'string') throw new Error('Exact callbacks required')
-      return httpsUrl(uri, true).href
+      if (!isOAuthCallbackUri(uri)) throw new Error('HTTPS or literal 127.0.0.1 HTTP callbacks required')
+      return new URL(uri).href
     })
     return { client_id: client.client_id, client_name: client.client_name, redirect_uris: callbacks, token_endpoint_auth_method: 'none' }
   })

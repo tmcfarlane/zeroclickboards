@@ -60,7 +60,7 @@ const OTHER_USER = 'user-2';
 const FIRST_REVISION = '2026-09-06T12:00:00.123001+00:00';
 const SECOND_REVISION = '2026-09-06T12:00:00.123002+00:00';
 let rows: Map<string, BoardRow>;
-let memberships: Array<{ user_id: string; board_id: string }>;
+let memberships: Array<{ user_id: string; board_id: string; role: string }>;
 let serial: number;
 
 function card(id = 'card-1', title = 'Original card'): Card {
@@ -83,8 +83,9 @@ function result(data: unknown): Response { return { data: structuredClone(data),
 
 function execute(request: Request): Response {
   if (request.table === 'board_members') {
-    return result(memberships.filter((membership) => membership.user_id === request.filters.user_id)
-      .map(({ board_id }) => ({ board_id })));
+    const matching = memberships.filter((membership) => membership.user_id === request.filters.user_id &&
+      (!request.filters.board_id || membership.board_id === request.filters.board_id));
+    return result(request.single ? matching[0] ?? null : matching);
   }
   if (request.table !== 'boards') throw new Error(`Unexpected table ${request.table}`);
   const matches = [...rows.values()].filter((value) => Object.entries(request.filters).every(([key, expected]) => {
@@ -177,7 +178,7 @@ describe('signed-in board sync integration', () => {
   it('loads shared boards and receives updates from their different owner', async () => {
     const shared = row('shared-board', OTHER_USER);
     rows.set(shared.id, shared);
-    memberships.push({ user_id: USER, board_id: shared.id });
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
     await signIn();
     expect(useBoardStore.getState().boards.map((board) => board.id)).toEqual([shared.id]);
     const updated = { ...shared, name: 'Owner changed this', updated_at: SECOND_REVISION };
@@ -190,10 +191,218 @@ describe('signed-in board sync integration', () => {
     expect(updateRequests()[0].filters).not.toHaveProperty('user_id');
   });
 
+  it.each(['viewer', 'commenter', 'owner', 'unrecognized'])('fails closed for all mutation entry points on a shared %s board', async (role) => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role });
+    await signIn();
+    const store = useBoardStore.getState();
+    const before = structuredClone(store.boards);
+    expect(store.canEditBoard(shared.id)).toBe(false);
+    expect(store.canManageBoard(shared.id)).toBe(false);
+    store.renameBoard(shared.id, 'Denied');
+    store.setBoardBackground(shared.id, 'red');
+    store.setBoardHiddenColumns(shared.id, ['column-1']);
+    store.addColumn(shared.id, 'Denied');
+    store.removeColumn(shared.id, 'column-1');
+    store.renameColumn(shared.id, 'column-1', 'Denied');
+    store.reorderColumns(shared.id, []);
+    expect(store.addCard(shared.id, 'column-1', 'Denied')).toBe('');
+    store.removeCard(shared.id, 'column-1', 'card-1');
+    store.editCard(shared.id, 'column-1', 'card-1', { title: 'Denied' });
+    store.moveCard(shared.id, 'column-1', 'column-1', 'card-1', 0);
+    store.reorderCards(shared.id, 'column-1', []);
+    store.archiveCard(shared.id, 'column-1', 'card-1');
+    store.archiveAllCards(shared.id, 'column-1');
+    store.restoreCard(shared.id, 'column-1', 'card-1');
+    store.duplicateCard(shared.id, 'column-1', 'card-1');
+    store.openCardEditor(shared.id, 'card-1');
+    store.syncBoard(shared.id);
+    store.retryBoardSync(shared.id);
+    store.resolveBoardConflict(shared.id, 'local');
+    store.toggleBoardPublic(shared.id, true);
+    store.toggleBoardEmbed(shared.id, true);
+    store.deleteBoard(shared.id);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useBoardStore.getState().boards).toEqual(before);
+    expect(useBoardStore.getState().cardEditorSession).toBeNull();
+    expect(useUndoStore.getState().undoStack).toEqual([]);
+    expect(updateRequests()).toEqual([]);
+  });
+
+  it('cancels a queued save on role downgrade and reloads only after explicit discard', async () => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    useBoardStore.getState().renameBoard(shared.id, 'Unsaved editor draft');
+    memberships[0].role = 'viewer';
+    await useBoardStore.getState().refreshFromRemote();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(updateRequests()).toEqual([]);
+    expect(useBoardStore.getState().boardSyncStates[shared.id].status).toBe('readonly');
+    expect(useBoardStore.getState().boards[0].name).toBe('Unsaved editor draft');
+    expect(useUndoStore.getState().undoStack).toEqual([]);
+    useBoardStore.getState().discardBoardDraft(shared.id);
+    await settle();
+    expect(useBoardStore.getState().boards[0].name).toBe(shared.name);
+    expect(useBoardStore.getState().getBoardAccess(shared.id)).toBe('viewer');
+    expect(updateRequests()).toEqual([]);
+  });
+
+  it.each(['viewer', 'lookup error', 'lookup throws'])('rechecks shared write access immediately before UPDATE (%s)', async (outcome) => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    useBoardStore.getState().renameBoard(shared.id, 'Unsaved editor draft');
+    if (outcome === 'viewer') memberships[0].role = 'viewer';
+    else transport.execute.mockImplementation(async (request) => {
+      if (request.table === 'board_members' && request.single) {
+        if (outcome === 'lookup throws') throw new Error('Connection lost');
+        return { data: null, error: { message: 'Membership lookup unavailable' } };
+      }
+      return execute(request);
+    });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(updateRequests()).toEqual([]);
+    expect(useBoardStore.getState().getBoardAccess(shared.id)).toBe(outcome === 'viewer' ? 'viewer' : 'unknown');
+    expect(useBoardStore.getState().boardSyncStates[shared.id].status).toBe('readonly');
+    expect(useBoardStore.getState().boards[0].name).toBe('Unsaved editor draft');
+    const requests = transport.execute.mock.calls.length;
+    useBoardStore.getState().retryBoardSync(shared.id);
+    await settle();
+    expect(transport.execute).toHaveBeenCalledTimes(requests);
+  });
+
+  it('does not let a stale membership response restore permission after a newer downgrade', async () => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    const pending = deferred<Response>();
+    transport.execute.mockImplementation(async (request) => request.table === 'board_members' && request.single ? pending.promise : execute(request));
+    useBoardStore.getState().renameBoard(shared.id, 'Unsaved editor draft');
+    await vi.advanceTimersByTimeAsync(400);
+    memberships[0].role = 'viewer';
+    await useBoardStore.getState().refreshFromRemote();
+    pending.resolve(result({ ...memberships[0], role: 'editor' }));
+    await settle();
+    expect(useBoardStore.getState().getBoardAccess(shared.id)).toBe('viewer');
+    expect(useBoardStore.getState().boardSyncStates[shared.id].status).toBe('readonly');
+    expect(updateRequests()).toEqual([]);
+  });
+
+  it('does not let an older full refresh overwrite a fresh permission denial', async () => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    const pending = deferred<Response>();
+    const oldMemberships = result(memberships);
+    transport.execute.mockImplementation(async (request) => request.table === 'board_members' && !request.single ? pending.promise : execute(request));
+    useBoardStore.getState().renameBoard(shared.id, 'Unsaved editor draft');
+    const refreshing = useBoardStore.getState().refreshFromRemote();
+    await settle();
+    memberships[0].role = 'viewer';
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useBoardStore.getState().getBoardAccess(shared.id)).toBe('viewer');
+    pending.resolve(oldMemberships);
+    await refreshing;
+    expect(useBoardStore.getState().getBoardAccess(shared.id)).toBe('viewer');
+    expect(updateRequests()).toEqual([]);
+  });
+
+  it('recovers a readonly editor draft as an owned private board without altering the original', async () => {
+    const shared = row('shared-board', OTHER_USER);
+    shared.is_public = true;
+    shared.embed_enabled = true;
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    useBoardStore.getState().renameBoard(shared.id, 'Unsaved editor draft');
+    memberships[0].role = 'viewer';
+    await useBoardStore.getState().refreshFromRemote();
+    useBoardStore.getState().saveBoardDraftAsCopy(shared.id);
+    await settle();
+    const copy = useBoardStore.getState().boards.find((board) => board.id !== shared.id)!;
+    expect(copy.name).toBe('Unsaved editor draft (recovered)');
+    expect(copy.userId).toBe(USER);
+    expect(copy.isPublic).toBe(false);
+    expect(copy.embedEnabled).toBe(false);
+    expect(useBoardStore.getState().canManageBoard(copy.id)).toBe(true);
+    expect(useBoardStore.getState().boards.find((board) => board.id === shared.id)?.name).toBe(shared.name);
+    expect(rows.get(shared.id)).toEqual(shared);
+    expect(updateRequests()).toEqual([]);
+  });
+
+  it('does not apply a late save acknowledgement or reschedule after a role downgrade', async () => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    const pending = deferred<Response>();
+    transport.execute.mockImplementation(async (request) => request.action === 'update' ? pending.promise : execute(request));
+    useBoardStore.getState().renameBoard(shared.id, 'Unsaved editor draft');
+    await vi.advanceTimersByTimeAsync(400);
+    expect(updateRequests()).toHaveLength(1);
+    memberships[0].role = 'viewer';
+    await useBoardStore.getState().refreshFromRemote();
+    pending.resolve(result({ ...shared, name: 'Late acknowledgement', updated_at: SECOND_REVISION }));
+    await settle();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(updateRequests()).toHaveLength(1);
+    expect(useBoardStore.getState().boards[0].name).toBe('Unsaved editor draft');
+    expect(useBoardStore.getState().boardSyncStates[shared.id].status).toBe('readonly');
+  });
+
+  it('preserves an open form when edit access is lost while staging waits for a save', async () => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    const pending = deferred<Response>();
+    transport.execute.mockImplementation(async (request) => request.action === 'update' ? pending.promise : execute(request));
+    useBoardStore.getState().renameBoard(shared.id, 'Already dispatched draft');
+    await vi.advanceTimersByTimeAsync(400);
+    useBoardStore.getState().openCardEditor(shared.id, 'card-1');
+    const session = useBoardStore.getState().cardEditorSession;
+    useBoardStore.getState().saveCardEditor({ title: 'Form draft', content: { type: 'text', text: '' }, labels: [], attachments: [] });
+    memberships[0].role = 'commenter';
+    await useBoardStore.getState().refreshFromRemote();
+    pending.resolve(result({ ...shared, name: 'Already dispatched draft', updated_at: SECOND_REVISION }));
+    await settle();
+    expect(useBoardStore.getState().cardEditorSession).toBe(session);
+    expect(columns(rows.get(shared.id)!)[0].cards[0].title).toBe('Original card');
+    expect(useBoardStore.getState().boards[0].columns[0].cards[0].title).toBe('Original card');
+    expect(updateRequests()).toHaveLength(1);
+    expect(useBoardStore.getState().canRecoverCardDraft(shared.id)).toBe(false);
+  });
+
+  it.each(['add column redo', 'remove column undo', 'add card redo', 'remove card undo'] as const)('guards captured %s callbacks after downgrade', async (action) => {
+    const shared = row('shared-board', OTHER_USER);
+    rows.set(shared.id, shared);
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
+    await signIn();
+    const store = useBoardStore.getState();
+    if (action === 'add column redo') store.addColumn(shared.id, 'New column');
+    if (action === 'remove column undo') store.removeColumn(shared.id, 'column-1');
+    if (action === 'add card redo') store.addCard(shared.id, 'column-1', 'New card');
+    if (action === 'remove card undo') store.removeCard(shared.id, 'column-1', 'card-1');
+    const callback = useUndoStore.getState().undoStack.at(-1)![action.endsWith('redo') ? 'redo' : 'undo'];
+    memberships[0].role = 'viewer';
+    await store.refreshFromRemote();
+    const draft = structuredClone(useBoardStore.getState().boards);
+    callback();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(useBoardStore.getState().boards).toEqual(draft);
+    expect(updateRequests()).toEqual([]);
+  });
+
   it.each(['board_members', 'shared boards'] as const)('keeps loaded shared drafts if refreshing %s fails', async (failure) => {
     const shared = row('shared-board', OTHER_USER);
     rows.set(shared.id, shared);
-    memberships.push({ user_id: USER, board_id: shared.id });
+    memberships.push({ user_id: USER, board_id: shared.id, role: 'editor' });
     await signIn();
     useBoardStore.getState().renameBoard(shared.id, 'Unsaved shared draft');
     transport.execute.mockImplementation(async (request) => {
@@ -204,7 +413,7 @@ describe('signed-in board sync integration', () => {
     expect(useBoardStore.getState().remoteStatus).toBe('error');
     expect(useBoardStore.getState().boards).toHaveLength(1);
     expect(useBoardStore.getState().boards[0].name).toBe('Unsaved shared draft');
-    expect(useBoardStore.getState().boardSyncStates[shared.id].status).toBe('pending');
+    expect(useBoardStore.getState().boardSyncStates[shared.id].status).toBe('readonly');
   });
 
   it('does not invent unsaved edits when an unchanged board lacks optional data keys and is deleted remotely', async () => {

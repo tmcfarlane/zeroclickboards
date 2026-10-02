@@ -6,6 +6,7 @@ import type { OAuthClientInformationFull, OAuthTokenRevocationRequest, OAuthToke
 import { InvalidClientError, InvalidGrantError, InvalidScopeError, InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import * as db from './board-data.js';
+import { isOAuthCallbackUri, oauthCallbackMatches } from './oauth-callback.js';
 
 export const SCOPES = ['boards:read', 'cards:add'];
 export interface AccountContext { client: SupabaseClient; user: User; expires?: number }
@@ -33,7 +34,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
   readonly clientsStore;
   readonly options: {
     issuer: URL; resource: URL; consentUrl: URL; store: OAuthStore;
-    /** Predefined public OAuth clients with exact callbacks from the connection setup. No URL fetching or open DCR. */
+    /** Predefined public clients; only literal native HTTP loopback ports may vary. No URL fetching or open DCR. */
     clients: OAuthClientInformationFull[];
     resolveAccount: (accountRef: string) => Promise<AccountContext>;
     /** Hosted account-session grants may expire sooner than the default local adapter policy. */
@@ -48,8 +49,8 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
     if (options.issuer.pathname !== '/') throw new Error('Use an origin issuer for the SDK OAuth routes');
     for (const client of options.clients) {
       if (client.token_endpoint_auth_method !== 'none' || client.redirect_uris.length === 0 ||
-        client.redirect_uris.some((uri) => { const url = new URL(uri); return url.protocol !== 'https:' || !!url.hash || !!url.username || !!url.password; })) {
-        throw new Error('Predefined public clients require exact HTTPS callbacks and auth method none');
+        client.redirect_uris.some((uri) => !isOAuthCallbackUri(uri))) {
+        throw new Error('Predefined public clients require HTTPS or literal 127.0.0.1 HTTP callbacks and auth method none');
       }
     }
     const clients = new Map(options.clients.map((client) => [client.client_id, structuredClone(client)]));
@@ -57,7 +58,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
   }
   async authorize(client: OAuthClientInformationFull, params: AuthorizationParams, res: Response): Promise<void> {
     const registered = await this.clientsStore.getClient(client.client_id);
-    if (!registered?.redirect_uris.includes(params.redirectUri)) throw new InvalidClientError('Unknown client or callback');
+    if (!registered?.redirect_uris.some((uri) => oauthCallbackMatches(params.redirectUri, uri))) throw new InvalidClientError('Unknown client or callback');
     if (params.resource?.href !== this.options.resource.href) throw new InvalidGrantError('Incorrect resource');
     if (!/^[A-Za-z0-9_-]{43}$/.test(params.codeChallenge)) throw new InvalidGrantError('S256 challenge required');
     const scopes = params.scopes ?? ['boards:read'];
@@ -79,7 +80,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
     const pending = await this.options.store.take('pending', hash(requestId));
     if (!pending) throw new InvalidGrantError('Consent already completed');
     const client = await this.clientsStore.getClient(pending.clientId);
-    if (!client?.redirect_uris.includes(pending.params.redirectUri)) throw new InvalidClientError('Callback unavailable');
+    if (!client?.redirect_uris.some((uri) => oauthCallbackMatches(pending.params.redirectUri, uri))) throw new InvalidClientError('Callback unavailable');
     const redirect = new URL(pending.params.redirectUri);
     redirect.searchParams.set('error', 'access_denied');
     redirect.searchParams.set('iss', this.options.issuer.href);
@@ -94,7 +95,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
     if (!pending || pending.expires < Date.now()) throw new InvalidGrantError('Consent request expired');
     if (pending.params.resource !== this.options.resource.href) throw new InvalidGrantError('Incorrect consent resource');
     const registered = await this.clientsStore.getClient(pending.clientId);
-    if (!registered?.redirect_uris.includes(pending.params.redirectUri)) throw new InvalidClientError('Client or callback unavailable');
+    if (!registered?.redirect_uris.some((uri) => oauthCallbackMatches(pending.params.redirectUri, uri))) throw new InvalidClientError('Client or callback unavailable');
     if (!boardIds.length || boardIds.length > 100 || new Set(boardIds).size !== boardIds.length) throw new InvalidGrantError('Select 1–100 distinct boards');
     const account = await this.options.resolveAccount(accountRef);
     if (account.expires !== undefined && account.expires <= Date.now()) throw new InvalidGrantError('Account session expired');
@@ -121,7 +122,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
     if (!record || record.clientId !== client.client_id || record.expires < Date.now()) throw new InvalidGrantError('Invalid or expired code');
     if (record.resource !== this.options.resource.href) throw new InvalidGrantError('Incorrect code resource');
     const registered = await this.clientsStore.getClient(client.client_id);
-    if (!registered?.redirect_uris.includes(record.redirectUri)) throw new InvalidClientError('Client or callback unavailable');
+    if (!registered?.redirect_uris.some((uri) => oauthCallbackMatches(record.redirectUri, uri))) throw new InvalidClientError('Client or callback unavailable');
     return record;
   }
   async challengeForAuthorizationCode(client: OAuthClientInformationFull, code: string): Promise<string> {

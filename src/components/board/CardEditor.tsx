@@ -47,6 +47,7 @@ interface CardEditorProps {
   onClose: () => void;
   onSave: (data: CardEditorSaveData, initialForm?: CardEditorSaveData) => void;
   onDelete?: () => void;
+  accessMessage?: string;
   mode: 'create' | 'edit';
   cardId?: string;
   initialData?: {
@@ -122,7 +123,7 @@ function CardTemplatePicker({ onApply }: { onApply: (tpl: CardTemplate) => void 
   );
 }
 
-export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, initialData }: CardEditorProps) {
+export function CardEditor({ isOpen, onClose, onSave, onDelete, accessMessage, mode, cardId, initialData }: CardEditorProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [bodyText, setBodyText] = useState('');
@@ -257,6 +258,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
   }, [isOpen, initialData]);
 
   const handleSave = () => {
+    if (accessMessage) return;
     if (!title.trim()) return;
 
     // Native date inputs expose incomplete dates as an empty value. Check
@@ -973,6 +975,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
         )}
 
         <div className="overflow-y-auto max-h-[calc(90vh-60px)] px-5 pt-5 pb-4 flex flex-col min-h-0">
+          {accessMessage && <p role="alert" className="mb-3 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-sm text-amber-100">{accessMessage}</p>}
           {/* Title - always visible */}
           <Input
             id="card-title"
@@ -1039,6 +1042,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               <button
                 type="button"
                 onClick={onDelete}
+                disabled={!!accessMessage}
                 className="inline-flex items-center gap-1.5 text-xs text-red-400/60 hover:text-red-400 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1055,7 +1059,7 @@ export function CardEditor({ isOpen, onClose, onSave, onDelete, mode, cardId, in
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!title.trim()}
+                disabled={!title.trim() || !!accessMessage}
                 className="gradient-cyan text-[#0B0F0F] hover:opacity-90 disabled:opacity-50 h-8 text-xs px-4"
               >
                 {mode === 'create' ? 'Add Card' : 'Save'}

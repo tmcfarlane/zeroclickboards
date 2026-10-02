@@ -56,6 +56,7 @@ export function ShareBoardDialog({
   onOpenChange,
 }: ShareBoardDialogProps) {
   const { toggleBoardPublic, toggleBoardEmbed } = useBoardStore();
+  const canManage = useBoardStore((state) => state.canManageBoard(boardId));
   const [members, setMembers] = useState<BoardMemberWithProfile[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<MemberRole>("viewer");
@@ -70,6 +71,7 @@ export function ShareBoardDialog({
   const embedSnippet = `<iframe src="${window.location.origin}/embed/${boardId}" width="100%" height="600" frameborder="0"></iframe>`;
 
   const refreshData = useCallback(async () => {
+    if (!useBoardStore.getState().canManageBoard(boardId)) return;
     const [membersResult, invitesResult] = await Promise.all([
       boardMembers.getMembers(boardId),
       supabase
@@ -77,25 +79,29 @@ export function ShareBoardDialog({
         .select("id, email, role, created_at")
         .eq("board_id", boardId),
     ]);
+    if (!useBoardStore.getState().canManageBoard(boardId)) return;
     if (membersResult.data) setMembers(membersResult.data);
     if (invitesResult.data) setPendingInvites(invitesResult.data);
   }, [boardId]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && canManage) {
       void refreshData();
     }
-  }, [isOpen, refreshData]);
+  }, [isOpen, canManage, refreshData]);
+
+  const hasOwnerAccess = () => useBoardStore.getState().canManageBoard(boardId);
 
   const handleInviteByEmail = async () => {
     const email = inviteEmail.trim().toLowerCase();
-    if (!email) return;
+    if (!email || !hasOwnerAccess()) return;
 
     setInviting(true);
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      if (!session || !hasOwnerAccess()) return;
       const res = await fetch("/api/invite/send", {
         method: "POST",
         headers: {
@@ -110,21 +116,28 @@ export function ShareBoardDialog({
         toast.error(err?.error || "Failed to send invite");
         return;
       }
+      if (!hasOwnerAccess()) return;
 
       toast.success(`Invitation sent to ${email}`);
       setInviteEmail("");
       void refreshData();
+    } catch {
+      toast.error("Failed to send invite");
     } finally {
       setInviting(false);
     }
   };
 
   const handleRevokeInvite = async (inviteId: string) => {
-    const { error } = await supabase
+    if (!hasOwnerAccess()) return;
+    const { data, error } = await supabase
       .from("board_invites")
       .delete()
-      .eq("id", inviteId);
-    if (error) {
+      .eq("board_id", boardId)
+      .eq("id", inviteId)
+      .select("id")
+      .maybeSingle();
+    if (error || data?.id !== inviteId || !hasOwnerAccess()) {
       toast.error("Failed to revoke invite");
       return;
     }
@@ -137,12 +150,13 @@ export function ShareBoardDialog({
     memberUserId: string,
     role: MemberRole,
   ) => {
-    const { error } = await boardMembers.updateRole(
+    if (!hasOwnerAccess()) return;
+    const { data, error } = await boardMembers.updateRole(
       boardId,
       memberUserId,
       role,
     );
-    if (error) {
+    if (error || data?.id !== memberId || data.role !== role || !hasOwnerAccess()) {
       toast.error("Failed to update role");
       return;
     }
@@ -152,8 +166,15 @@ export function ShareBoardDialog({
   };
 
   const handleRemoveMember = async (memberUserId: string) => {
-    const { error } = await boardMembers.removeMember(boardId, memberUserId);
-    if (error) {
+    if (!hasOwnerAccess()) return;
+    const { data, error } = await supabase
+      .from("board_members")
+      .delete()
+      .eq("board_id", boardId)
+      .eq("user_id", memberUserId)
+      .select("id")
+      .maybeSingle();
+    if (error || typeof data?.id !== "string" || !hasOwnerAccess()) {
       toast.error("Failed to remove member");
       return;
     }
@@ -178,6 +199,11 @@ export function ShareBoardDialog({
         <DialogHeader>
           <DialogTitle>Share "{boardName}"</DialogTitle>
         </DialogHeader>
+        {!canManage && (
+          <p role="alert" className="rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-sm text-[#F2F7F7]">
+            Only the board owner can change sharing. Your invitation draft is kept here.
+          </p>
+        )}
 
         <Tabs defaultValue="share" className="w-full overflow-hidden">
           <TabsList className="w-full bg-white/5 border border-white/10">
@@ -224,10 +250,10 @@ export function ShareBoardDialog({
                 </div>
               </div>
               <Switch
+                aria-label="Public board"
                 checked={isPublic}
-                onCheckedChange={(checked) =>
-                  toggleBoardPublic(boardId, checked)
-                }
+                disabled={!canManage}
+                onCheckedChange={(checked) => { if (hasOwnerAccess()) toggleBoardPublic(boardId, checked); }}
               />
             </div>
 
@@ -236,14 +262,17 @@ export function ShareBoardDialog({
               <label className="text-sm font-medium">Invite by email</label>
               <div className="flex gap-2">
                 <Input
+                  aria-label="Invite email address"
                   type="email"
                   value={inviteEmail}
+                  readOnly={!canManage}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="Enter email address..."
                   className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
                 />
                 <Select
                   value={inviteRole}
+                  disabled={!canManage || inviting}
                   onValueChange={(v) => setInviteRole(v as MemberRole)}
                 >
                   <SelectTrigger className="w-28 bg-white/5 border-white/10">
@@ -257,8 +286,9 @@ export function ShareBoardDialog({
                 </Select>
                 <Button
                   size="icon"
+                  aria-label="Send invitation"
                   onClick={handleInviteByEmail}
-                  disabled={!inviteEmail.trim() || inviting}
+                  disabled={!canManage || !inviteEmail.trim() || inviting}
                   className="bg-[#78fcd6] hover:bg-[#78fcd6]/80 text-[#111515] flex-shrink-0"
                 >
                   <Send className="w-4 h-4" />
@@ -298,10 +328,10 @@ export function ShareBoardDialog({
                   <span className="text-sm font-medium">Enable Embedding</span>
                 </div>
                 <Switch
+                  aria-label="Enable embedding"
                   checked={embedEnabled}
-                  onCheckedChange={(checked) =>
-                    toggleBoardEmbed(boardId, checked)
-                  }
+                  disabled={!canManage}
+                  onCheckedChange={(checked) => { if (hasOwnerAccess()) toggleBoardEmbed(boardId, checked); }}
                 />
               </div>
               {embedEnabled && (
@@ -348,11 +378,11 @@ export function ShareBoardDialog({
                 </div>
                 <div>
                   <div className="text-sm font-medium">You</div>
-                  <div className="text-xs text-[#A8B2B2]">Board owner</div>
+                  <div className="text-xs text-[#A8B2B2]">{canManage ? "Board owner" : "Sharing access changed"}</div>
                 </div>
               </div>
               <span className="text-xs text-[#78fcd6] font-medium bg-[#78fcd6]/10 px-2.5 py-1 rounded-full">
-                Owner
+                {canManage ? "Owner" : "Read only"}
               </span>
             </div>
 
@@ -385,6 +415,7 @@ export function ShareBoardDialog({
                     <div className="flex items-center gap-2">
                       <Select
                         value={member.role}
+                        disabled={!canManage}
                         onValueChange={(v) =>
                           handleUpdateRole(
                             member.id,
@@ -404,6 +435,8 @@ export function ShareBoardDialog({
                       </Select>
                       <button
                         type="button"
+                        aria-label={`Remove ${member.profiles?.email || member.profiles?.full_name || "member"}`}
+                        disabled={!canManage}
                         onClick={() => handleRemoveMember(member.user_id)}
                         className="p-1 hover:bg-white/10 rounded text-[#A8B2B2] hover:text-red-400 transition-colors"
                       >
@@ -453,6 +486,8 @@ export function ShareBoardDialog({
                     </div>
                     <button
                       type="button"
+                      aria-label={`Revoke invitation to ${invite.email}`}
+                      disabled={!canManage}
                       onClick={() => handleRevokeInvite(invite.id)}
                       className="p-1 hover:bg-white/10 rounded text-[#A8B2B2] hover:text-red-400 transition-colors"
                       title="Revoke invite"

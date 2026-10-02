@@ -6,6 +6,7 @@ import { SignInModal } from '@/components/auth/SignInModal';
 import { Button } from '@/components/ui/button';
 import { connectorRequest, permissionLabel } from '@/components/connectors/connector-api';
 import type { ConnectorConsent } from '@/components/connectors/connector-api';
+import { isOAuthCallbackUri } from '../../mcp-server/src/oauth-callback';
 
 export function ConnectorConsentPage() {
   const { session, user, isSignedIn, isLoaded } = useAuthContext();
@@ -45,11 +46,10 @@ export function ConnectorConsentPage() {
     setError(null);
     try {
       const data = await connectorRequest<{ redirectUrl: string }>(session, { body: { action: 'approve', request, boardIds: selected } });
-      const redirect = new URL(data.redirectUrl);
-      if (redirect.protocol !== 'https:') {
+      if (!isOAuthCallbackUri(data.redirectUrl)) {
         throw new Error('The connection returned an invalid return address. Restart setup in your client.');
       }
-      window.location.assign(redirect.href);
+      window.location.assign(new URL(data.redirectUrl).href);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to allow the connection. Please try again.');
       setBusy(null);
@@ -62,12 +62,7 @@ export function ConnectorConsentPage() {
     setError(null);
     try {
       const result = await connectorRequest<{ cancelled: true; redirectUrl?: string }>(session, { body: { action: 'cancel', request } });
-      if (result.redirectUrl) {
-        try {
-          const url = new URL(result.redirectUrl);
-          if (url.protocol === 'https:') setCancelRedirect(url.href);
-        } catch { /* Cancellation still succeeds when there is no usable return address. */ }
-      }
+      if (isOAuthCallbackUri(result.redirectUrl)) setCancelRedirect(new URL(result.redirectUrl).href);
       setCancelled(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to cancel. Please try again.');

@@ -15,6 +15,7 @@ const originalContent = {
   imageUrl: 'https://example.com/legacy.png', metadata: { owner: 'original' },
 };
 const savedCard = () => useBoardStore.getState().boards[0].columns[0].cards[0];
+const originalActions = { addCard: useBoardStore.getState().addCard, createBoard: useBoardStore.getState().createBoard };
 
 beforeEach(() => {
   useBoardStore.getState().setCurrentUserId(null);
@@ -26,7 +27,79 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  useBoardStore.setState(originalActions);
   useUndoStore.getState().clearHistory();
+});
+
+const readOnlyMessage = 'This board is read-only. Ask the owner for editor access to make changes.';
+function setSharedAccess(role: 'editor' | 'viewer' | 'commenter') {
+  useBoardStore.setState(state => ({
+    currentUserId: 'member-account',
+    boardAccess: { 'board-1': role },
+    boards: state.boards.map(board => ({ ...board, userId: 'other-owner' })),
+  }));
+}
+
+describe('AI shared-board permissions', () => {
+  it.each(['viewer', 'commenter'] as const)('keeps %s board commands read-only and does not claim an edit succeeded', async role => {
+    setSharedAccess(role);
+    const before = structuredClone(useBoardStore.getState().boards);
+    await submit('edit_card', { cardId: 'card-1', text: 'Denied body' });
+    await screen.findByText(readOnlyMessage);
+    expect(useBoardStore.getState().boards).toEqual(before);
+    expect(screen.queryByText('Label all cards green')).not.toBeInTheDocument();
+  });
+
+  it('checks current access after waiting for an AI response', async () => {
+    setSharedAccess('editor');
+    let respond!: (response: Response) => void;
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise<Response>(resolve => { respond = resolve; })));
+    render(<AIAssistant isOpen onClose={() => {}} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByPlaceholderText('What should we do next?'), 'Update this card{Enter}');
+    act(() => useBoardStore.setState({ boardAccess: { 'board-1': 'viewer' } }));
+    await act(async () => respond(new Response(JSON.stringify({ commands: [{
+      type: 'edit_card', params: { cardId: 'card-1', text: 'Denied late body' }, originalText: 'Update this card',
+    }] }), { status: 200 })));
+    await screen.findByText(readOnlyMessage);
+    expect(savedCard().content).toEqual(originalContent);
+  });
+
+  it('checks access between commands in an AI batch', async () => {
+    setSharedAccess('editor');
+    const addCard = vi.fn<(boardId: string, columnId: string, title: string) => string>(boardId => {
+      useBoardStore.setState({ boardAccess: { [boardId]: 'viewer' } });
+      return 'disposable-new-card';
+    });
+    useBoardStore.setState({ addCard });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ commands: [
+      { type: 'add_card', params: { title: 'First approved action' }, originalText: 'Add two tasks' },
+      { type: 'add_card', params: { title: 'Denied after downgrade' }, originalText: 'Add two tasks' },
+    ] }), { status: 200 })));
+    render(<AIAssistant isOpen onClose={() => {}} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByPlaceholderText('What should we do next?'), 'Add two tasks{Enter}');
+    await screen.findByText(content => content.includes(readOnlyMessage) && content.includes('First approved action'));
+    expect(addCard).toHaveBeenCalledTimes(1);
+    expect(addCard.mock.calls[0][2]).toBe('First approved action');
+  });
+
+  it('still permits a board summary for a viewer', async () => {
+    setSharedAccess('viewer');
+    await submit('count_cards', {});
+    await screen.findByText('1 total card (To Do: 1)');
+    expect(screen.queryByText(readOnlyMessage)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Board summary' })).toBeInTheDocument();
+  });
+
+  it('permits creating a separate owned board while viewing a shared read-only board', async () => {
+    setSharedAccess('viewer');
+    const createBoard = vi.fn(() => 'disposable-owned-board');
+    useBoardStore.setState({ createBoard });
+    await submit('create_board', { name: 'My separate board' });
+    await screen.findByText('Created board "My separate board"');
+    expect(createBoard).toHaveBeenCalledWith('My separate board', 'Created via AI');
+  });
 });
 
 async function submit(type: string, params: Record<string, unknown>) {

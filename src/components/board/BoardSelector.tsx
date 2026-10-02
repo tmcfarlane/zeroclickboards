@@ -6,9 +6,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, Edit2, Trash2, Check, Plus } from 'lucide-react';
+import { ChevronDown, Edit2, Trash2, Check, Plus, MoreHorizontal } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +27,7 @@ interface BoardSelectorProps {
 }
 
 export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
-  const { boards, activeBoardId, setActiveBoard, renameBoard, deleteBoard } = useBoardStore();
+  const { boards, activeBoardId, setActiveBoard, renameBoard, deleteBoard, canEditBoard, canManageBoard } = useBoardStore();
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingBoard, setEditingBoard] = useState<{ id: string; name: string } | null>(null);
@@ -33,7 +36,7 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
   const activeBoard = boards.find((b) => b.id === activeBoardId);
 
   const handleRename = () => {
-    if (editingBoard && newName.trim()) {
+    if (editingBoard && newName.trim() && useBoardStore.getState().canEditBoard(editingBoard.id)) {
       renameBoard(editingBoard.id, newName.trim());
       setIsRenameDialogOpen(false);
       setEditingBoard(null);
@@ -42,22 +45,20 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
   };
 
   const handleDelete = () => {
-    if (editingBoard) {
+    if (editingBoard && useBoardStore.getState().canManageBoard(editingBoard.id)) {
       deleteBoard(editingBoard.id);
       setIsDeleteDialogOpen(false);
       setEditingBoard(null);
     }
   };
 
-  const openRenameDialog = (board: { id: string; name: string }, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const openRenameDialog = (board: { id: string; name: string }) => {
     setEditingBoard(board);
     setNewName(board.name);
     setIsRenameDialogOpen(true);
   };
 
-  const openDeleteDialog = (board: { id: string; name: string }, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const openDeleteDialog = (board: { id: string; name: string }) => {
     setEditingBoard(board);
     setIsDeleteDialogOpen(true);
   };
@@ -89,11 +90,12 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-white/10" />
           {boards.map((board) => (
-            <DropdownMenuItem
-              key={board.id}
-              onClick={() => setActiveBoard(board.id)}
-              className="flex items-center justify-between py-2 px-2 hover:bg-white/5 cursor-pointer focus:bg-white/5 group"
-            >
+            <div key={board.id} className="flex items-center group">
+              <DropdownMenuItem
+                onSelect={() => setActiveBoard(board.id)}
+                aria-current={activeBoardId === board.id ? 'true' : undefined}
+                className="flex-1 min-w-0 py-2 px-2 hover:bg-white/5 cursor-pointer focus:bg-white/5"
+              >
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {activeBoardId === board.id ? (
                   <Check className="w-4 h-4 text-[#78fcd6] shrink-0" />
@@ -102,23 +104,28 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
                 )}
                 <span className="truncate">{board.name}</span>
               </div>
-              <div className="flex items-center gap-0.5 opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                <button
-                  aria-label={`Rename ${board.name}`}
-                  onClick={(e) => openRenameDialog(board, e)}
-                  className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-[#78fcd6] transition-colors"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  aria-label={`Delete ${board.name}`}
-                  onClick={(e) => openDeleteDialog(board, e)}
-                  className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-red-400 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+              {canEditBoard(board.id) && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger
+                    aria-label={`Actions for ${board.name} board`}
+                    className="h-10 w-9 justify-center p-2 [&>svg:last-child]:hidden opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 text-[#A8B2B2] focus:bg-white/5 focus:text-[#78fcd6]"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
+                    <DropdownMenuItem onSelect={() => openRenameDialog(board)} className="focus:bg-white/5 focus:text-[#78fcd6]">
+                      <Edit2 className="w-4 h-4" />Rename
+                    </DropdownMenuItem>
+                    {canManageBoard(board.id) && (
+                      <DropdownMenuItem onSelect={() => openDeleteDialog(board)} className="text-red-400 focus:bg-red-500/10 focus:text-red-400">
+                        <Trash2 className="w-4 h-4" />Delete
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+            </div>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -130,6 +137,7 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
             <DialogTitle>Rename Board</DialogTitle>
           </DialogHeader>
           <div className="py-4">
+            {editingBoard && !canEditBoard(editingBoard.id) && <p role="alert" className="mb-3 text-sm text-amber-100">You no longer have editing access. Your name change is kept here.</p>}
             <Label htmlFor="rename" className="mb-2 block">
               Board Name
             </Label>
@@ -151,7 +159,7 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
             </Button>
             <Button
               onClick={handleRename}
-              disabled={!newName.trim()}
+              disabled={!newName.trim() || !editingBoard || !canEditBoard(editingBoard.id)}
               className="gradient-cyan text-[#0B0F0F] hover:opacity-90"
             >
               Rename
@@ -169,6 +177,7 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
           <p className="text-[#A8B2B2] py-4">
             Are you sure you want to delete "{editingBoard?.name}"? This action cannot be undone.
           </p>
+          {editingBoard && !canManageBoard(editingBoard.id) && <p role="alert" className="text-sm text-amber-100">Only the board owner can delete this board.</p>}
           <DialogFooter>
             <Button
               variant="outline"
@@ -179,6 +188,7 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
             </Button>
             <Button
               onClick={handleDelete}
+              disabled={!editingBoard || !canManageBoard(editingBoard.id)}
               variant="destructive"
               className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
             >

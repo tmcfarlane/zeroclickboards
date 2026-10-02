@@ -148,7 +148,10 @@ test.describe('tablet touch controls', () => {
     const cardActions = page.getByRole('button', { name: 'Actions for Design pricing page', exact: true });
     await expect(cardActions).toHaveCSS('opacity', '1');
     await page.getByRole('button', { name: 'Product roadmap', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Rename Product roadmap', exact: true }).locator('..')).toHaveCSS('opacity', '1');
-    await expect(page.getByRole('button', { name: 'Delete Product roadmap', exact: true })).toBeVisible();
+    const boardActions = page.getByRole('menuitem', { name: 'Actions for Product roadmap board', exact: true });
+    await expect(boardActions).toHaveCSS('opacity', '1');
+    await boardActions.click();
+    await expect(page.getByRole('menuitem', { name: 'Rename', exact: true })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Delete', exact: true })).toBeVisible();
   });
 });
