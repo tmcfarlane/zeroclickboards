@@ -1,0 +1,50 @@
+{
+  "phase": "candidate",
+  "totalTests": 8,
+  "passed": 8,
+  "failed": 0,
+  "exitCode": 0,
+  "success": true,
+  "cases": [
+    {
+      "name": "actual OpenAI chat adapter response size guard accepts ordinary successful streamed JSON",
+      "status": "passed",
+      "durationMs": 65.26920900000005
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard preserves an ordinary streamed upstream JSON error",
+      "status": "passed",
+      "durationMs": 4.733207999999877
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=false)",
+      "status": "passed",
+      "durationMs": 4.577041999999892
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=true)",
+      "status": "passed",
+      "durationMs": 1.349333999999999
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard accepts ordinary successful streamed JSON",
+      "status": "passed",
+      "durationMs": 22.173416999999972
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard preserves an ordinary streamed upstream JSON error",
+      "status": "passed",
+      "durationMs": 1.2842500000001564
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=false)",
+      "status": "passed",
+      "durationMs": 4.907042000000047
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=true)",
+      "status": "passed",
+      "durationMs": 6.9055419999999685
+    }
+  ]
+}

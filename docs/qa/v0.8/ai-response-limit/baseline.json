@@ -1,0 +1,54 @@
+{
+  "phase": "baseline",
+  "totalTests": 8,
+  "passed": 4,
+  "failed": 4,
+  "exitCode": 1,
+  "success": false,
+  "cases": [
+    {
+      "name": "actual OpenAI chat adapter response size guard accepts ordinary successful streamed JSON",
+      "status": "passed",
+      "durationMs": 44.45433300000002
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard preserves an ordinary streamed upstream JSON error",
+      "status": "passed",
+      "durationMs": 4.267000000000053
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=false)",
+      "status": "failed",
+      "durationMs": 8.715125000000057,
+      "failureSummary": "Error: promise resolved \"DefaultGenerateTextResult{ \u2026(3) }\" instead of rejecting"
+    },
+    {
+      "name": "actual OpenAI chat adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=true)",
+      "status": "failed",
+      "durationMs": 2.8113329999999905,
+      "failureSummary": "Error: expected false to be true // Object.is equality"
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard accepts ordinary successful streamed JSON",
+      "status": "passed",
+      "durationMs": 9.130917000000068
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard preserves an ordinary streamed upstream JSON error",
+      "status": "passed",
+      "durationMs": 1.52312500000005
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=false)",
+      "status": "failed",
+      "durationMs": 3.0439999999999827,
+      "failureSummary": "Error: promise resolved \"DefaultGenerateTextResult{ \u2026(3) }\" instead of rejecting"
+    },
+    {
+      "name": "actual OpenAI responses adapter response size guard rejects and cancels declared oversized streamed JSON before reading (error=true)",
+      "status": "failed",
+      "durationMs": 1.5863330000000815,
+      "failureSummary": "Error: expected false to be true // Object.is equality"
+    }
+  ]
+}
