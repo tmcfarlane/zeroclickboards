@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, Copy, Link2, Loader2, ShieldCheck, Unplug } from 'lucide-react';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,11 @@ import type { ConnectorConnection, ConnectorStatus } from './connector-api';
 import { nativeSetupCommand } from './connector-setup';
 
 export function ConnectorSettings() {
+  const { user } = useAuthContext();
+  return <AccountConnectorSettings key={user?.id ?? 'signed-out'} />;
+}
+
+function AccountConnectorSettings() {
   const { session } = useAuthContext();
   const [status, setStatus] = useState<ConnectorStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,51 +27,91 @@ export function ConnectorSettings() {
   const [revokeError, setRevokeError] = useState<string | null>(null);
   const [clientId, setClientId] = useState('');
   const copyGeneration = useRef(0);
+  const epoch = useRef(0);
+  const pending = useRef<symbol | null>(null);
+  const readGeneration = useRef(0);
+  const read = useRef<AbortController | null>(null);
   const setupClients = status?.clients?.filter(client => client.callbackKinds.length > 0) || [];
   const configuredClient = setupClients.find(client => client.clientId === clientId) || setupClients[0];
   const command = status?.endpoint && configuredClient?.callbackKinds.includes('native')
     ? nativeSetupCommand(status.endpoint, configuredClient.clientId) : null;
 
+  useLayoutEffect(() => {
+    const counters = { epoch, copyGeneration, readGeneration };
+    ++counters.epoch.current;
+    return () => {
+      ++counters.epoch.current;
+      ++counters.copyGeneration.current;
+      ++counters.readGeneration.current;
+      pending.current = null;
+      read.current?.abort();
+    };
+  }, []);
+
   useEffect(() => {
+    // Renewal/retry reads wait for the submitted revoke, then its settlement
+    // refresh uses the current session. A read cannot restore a revoked grant.
+    if (pending.current) return;
     ++copyGeneration.current;
-    setStatus(null);
     setError(null);
     setCopied(null);
     setCopyError(null);
     if (!session) return;
     const controller = new AbortController();
+    const generation = ++readGeneration.current;
+    const lifetime = epoch.current;
+    read.current = controller;
+    const current = () => !controller.signal.aborted && epoch.current === lifetime && generation === readGeneration.current;
     connectorRequest<ConnectorStatus>(session, { signal: controller.signal })
-      .then((data) => { if (!controller.signal.aborted) setStatus(data); })
+      .then((data) => {
+        if (!current()) return;
+        setStatus(data);
+        setDisconnect((connection) => connection && data.connections.some(item => item.id === connection.id) ? connection : null);
+      })
       .catch((cause: unknown) => {
-        if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Unable to load connections.');
+        if (current()) setError(cause instanceof Error ? cause.message : 'Unable to load connections.');
       });
     return () => controller.abort();
   }, [session, refresh]);
 
   const copyText = async (value: string, kind: 'url' | 'id' | 'command') => {
     const generation = ++copyGeneration.current;
+    const lifetime = epoch.current;
     setCopyError(null);
     setCopied(null);
     try {
       await navigator.clipboard.writeText(value);
-      if (generation === copyGeneration.current) setCopied(kind);
+      if (epoch.current === lifetime && generation === copyGeneration.current) setCopied(kind);
     } catch {
-      if (generation === copyGeneration.current) setCopyError('Copy was blocked by your browser. Select the text and copy it manually.');
+      if (epoch.current === lifetime && generation === copyGeneration.current) setCopyError('Copy was blocked by your browser. Select the text and copy it manually.');
     }
   };
 
   const revoke = async () => {
-    if (!session || !disconnect || revoking) return;
+    if (!session || !disconnect || pending.current) return;
+    const attempt = Symbol();
+    const lifetime = epoch.current;
+    pending.current = attempt;
+    const current = () => epoch.current === lifetime && pending.current === attempt;
+    ++readGeneration.current;
+    read.current?.abort();
     setRevoking(true);
     setRevokeError(null);
     try {
       await connectorRequest(session, { body: { action: 'revoke', connectionId: disconnect.id } });
+      if (!current()) return;
       setStatus((current) => current ? { ...current, connections: current.connections.filter((item) => item.id !== disconnect.id) } : null);
       setDisconnect(null);
     } catch (cause) {
-      setRevokeError(cause instanceof Error ? cause.message : 'Unable to disconnect. Please try again.');
+      if (current()) setRevokeError(cause instanceof Error ? cause.message : 'Unable to disconnect. Please try again.');
     } finally {
-      setRevoking(false);
+      if (current()) {
+        pending.current = null;
+        setRevoking(false);
+        // A failed acknowledgement may still have persisted revocation. Read
+        // authoritative access after either outcome; never replay the POST.
+        setRefresh(value => value + 1);
+      }
     }
   };
 
@@ -81,6 +126,8 @@ export function ConnectorSettings() {
           <p className="mt-1 text-sm text-[#A8B2B2]">Bring your boards into the conversations where work starts.</p>
         </div>
       </div>
+
+      {revokeError && !disconnect ? <p role="alert" className="mb-4 text-sm text-red-300">{revokeError}</p> : null}
 
       {!status && !error ? (
         <p className="flex items-center gap-2 text-sm text-[#A8B2B2]" role="status"><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />Checking connection service…</p>
@@ -186,7 +233,7 @@ export function ConnectorSettings() {
         <p>You control access per board and can disconnect at any time. Connections cannot edit existing cards or delete your work.</p>
       </div>
 
-      <AlertDialog open={!!disconnect} onOpenChange={(open) => { if (!open && !revoking) setDisconnect(null); }}>
+      <AlertDialog open={!!disconnect} onOpenChange={(open) => { if (!open && !pending.current) setDisconnect(null); }}>
         <AlertDialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
           <AlertDialogHeader>
             <AlertDialogTitle>Disconnect {disconnect?.clientName}?</AlertDialogTitle>
