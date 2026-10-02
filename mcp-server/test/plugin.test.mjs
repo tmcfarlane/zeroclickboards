@@ -85,3 +85,19 @@ test('approved preview cannot cross accounts and current viewer role blocks comm
   assert.equal((await viewer.mcp.callTool({ name: 'commit_cards', arguments: { previewToken: draft.previewToken, approved: true } })).isError, true);
   assert.equal(viewer.state.requests.filter((r) => r.method === 'PATCH').length, 0);
 });
+
+test('large Unicode previews fail with actionable batching guidance before returning an unusable token', async (t) => {
+  const { mcp, state } = await connect(t);
+  const cards = Array.from({ length: 50 }, (_, i) => ({ columnId: 'column-a', title: `Follow up ${i + 1}`, text: '漢'.repeat(6000) }));
+  // This request fits the hosted 1 MiB input limit, but its base64url proposal
+  // exceeds the commit token limit. It formerly produced an unsavable approval.
+  assert.ok(Buffer.byteLength(JSON.stringify({ boardId: 'board-1', cards })) < 1024 * 1024);
+  const rejected = await mcp.callTool({ name: 'preview_cards', arguments: { boardId: 'board-1', cards } });
+  assert.equal(rejected.isError, true);
+  assert.match(JSON.parse(rejected.content[0].text).error, /split it into smaller batches/);
+  assert.equal(state.requests.filter((r) => r.method === 'PATCH').length, 0);
+  const smaller = payload(await mcp.callTool({ name: 'preview_cards', arguments: { boardId: 'board-1', cards: cards.slice(0, 10) } }));
+  const saved = payload(await mcp.callTool({ name: 'commit_cards', arguments: { previewToken: smaller.previewToken, approved: true } }));
+  assert.equal(saved.columns[0].cards.length, 11);
+  assert.equal(saved.columns[0].cards[1].content.text, cards[0].text);
+});

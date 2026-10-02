@@ -18,7 +18,7 @@ export function Footer({ variant = 'full' }: FooterProps) {
             <Link to="/privacy" className="hover:text-[#78fcd6] transition-colors">Privacy</Link>
             <Link to="/feedback" className="hover:text-[#78fcd6] transition-colors">Feedback</Link>
             {repoUrl && (
-              <a href={repoUrl} target="_blank" rel="noreferrer" className="hover:text-[#78fcd6] transition-colors">
+              <a href={repoUrl} target="_blank" rel="noreferrer" aria-label="Open GitHub repository" className="hover:text-[#78fcd6] transition-colors">
                 <Github className="w-3 h-3" />
               </a>
             )}

@@ -492,7 +492,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
           <ViewToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5">
+              <Button aria-label="Board actions" variant="ghost" size="icon" className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5">
                 <MoreHorizontal className="w-5 h-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -558,7 +558,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
         <div className="sm:hidden px-3 py-3 border-b border-white/10 bg-[#111515]/80 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-medium text-[#A8B2B2]">Filters</p>
-            <button type="button" onClick={() => setIsFilterOpen(false)} className="text-[#A8B2B2] hover:text-[#F2F7F7]">
+            <button aria-label="Close filters" type="button" onClick={() => setIsFilterOpen(false)} className="text-[#A8B2B2] hover:text-[#F2F7F7]">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -569,7 +569,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
               </p>
               <div className="flex flex-wrap gap-2">
                 {ALL_LABELS.map((label) => (
-                  <button key={label} type="button" onClick={() => { setSelectedLabels(selectedLabels.includes(label) ? selectedLabels.filter((l) => l !== label) : [...selectedLabels, label]); }}
+                  <button key={label} type="button" aria-pressed={selectedLabels.includes(label)} onClick={() => { setSelectedLabels(selectedLabels.includes(label) ? selectedLabels.filter((l) => l !== label) : [...selectedLabels, label]); }}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-colors ${selectedLabels.includes(label) ? 'border-[#78fcd6]/50 bg-[#78fcd6]/10 text-[#78fcd6]' : 'border-white/10 bg-white/5 text-[#A8B2B2]'}`}>
                     <div className={`w-3 h-3 rounded ${LABEL_COLORS[label]}`} />
                     <span className="capitalize">{label}</span>
@@ -583,7 +583,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
               </p>
               <div className="flex flex-wrap gap-2">
                 {DUE_DATE_OPTIONS.map((opt) => (
-                  <button key={opt.value} type="button" onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
+                  <button key={opt.value} type="button" aria-pressed={dueDateFilter === opt.value} onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
                     className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${dueDateFilter === opt.value ? 'border-[#78fcd6]/50 bg-[#78fcd6]/20 text-[#78fcd6]' : 'border-white/10 text-[#A8B2B2] bg-white/5'}`}>
                     {opt.label}
                   </button>
@@ -623,6 +623,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8B2B2]" />
             <Input
               id="board-search-input"
+              aria-label="Search cards"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search... (/)"
@@ -686,6 +687,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
                       <button
                         key={opt.value}
                         type="button"
+                        aria-pressed={dueDateFilter === opt.value}
                         onClick={() => setDueDateFilter(dueDateFilter === opt.value ? null : opt.value)}
                         className={`w-full text-left text-sm px-2 py-1.5 rounded transition-colors ${
                           dueDateFilter === opt.value
@@ -732,6 +734,7 @@ export function KanbanBoard({ board, onAIClick, onNewBoardClick }: KanbanBoardPr
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
+                aria-label="Board actions"
                 variant="ghost"
                 size="icon"
                 className="h-9 w-9 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"

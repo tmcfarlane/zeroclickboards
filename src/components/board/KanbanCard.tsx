@@ -103,6 +103,7 @@ export function KanbanCard({ boardId, columnId, card }: KanbanCardProps) {
         {card.coverImage && (
           <button
             type="button"
+            aria-label={`Open ${card.title}`}
             onClick={(e) => {
               e.stopPropagation();
               openCardEditor(boardId, card.id);

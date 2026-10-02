@@ -6,7 +6,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { connectorRequest, permissionLabels } from './connector-api';
+import { connectorRequest, permissionLabel } from './connector-api';
 import type { ConnectorConnection, ConnectorStatus } from './connector-api';
 
 export function ConnectorSettings() {
@@ -148,7 +148,7 @@ export function ConnectorSettings() {
                       <Button variant="ghost" size="sm" onClick={() => { setRevokeError(null); setDisconnect(connection); }} className="text-[#A8B2B2] hover:text-red-300 hover:bg-red-400/5 shrink-0"><Unplug className="w-4 h-4 mr-2" aria-hidden="true" />Disconnect</Button>
                     </div>
                     {connection.boards?.length ? <p className="text-sm text-[#A8B2B2] mt-2">{connection.boards.map((board) => board.name).join(', ')}</p> : null}
-                    <ul className="mt-3 space-y-1 text-xs text-[#A8B2B2]">{connection.scopes.map((scope) => <li key={scope}>{permissionLabels[scope] || scope}</li>)}</ul>
+                    <ul className="mt-3 space-y-1 text-xs text-[#A8B2B2]">{connection.scopes.map((scope) => <li key={scope}>{permissionLabel(scope) || scope}</li>)}</ul>
                   </li>
                 ))}
               </ul>

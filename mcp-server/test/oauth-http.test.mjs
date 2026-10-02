@@ -73,6 +73,7 @@ test('HTTPS resource discovery, S256 and accurate public-client metadata; unauth
   const auth = await (await request('/.well-known/oauth-authorization-server')).json();
   assert.deepEqual(auth.code_challenge_methods_supported, ['S256']); assert.deepEqual(auth.grant_types_supported, ['authorization_code']);
   assert.deepEqual(auth.token_endpoint_auth_methods_supported, ['none']); assert.equal(auth.registration_endpoint, undefined);
+  assert.equal(auth.authorization_response_iss_parameter_supported, true);
   const unauth = await request('/mcp', { method: 'POST' }); assert.equal(unauth.status, 401);
   assert.match(unauth.headers.get('www-authenticate'), /resource_metadata=.*oauth-protected-resource\/mcp/);
   assert.equal((await request('/mcp', { headers: { host: 'evil.test' } })).status, 421);
@@ -123,4 +124,55 @@ test('OAuth rejects unknown client, mismatched redirect, unsupported scopes and 
   const res = await request(`/authorize?${new URLSearchParams(base)}`);
   const id = new URL(res.headers.get('location')).searchParams.get('request');
   await assert.rejects(oauth.approveConsent(id, 'alice', ['board-2']), /not found|selected-board|authorization contexts/);
+});
+
+test('authorization callbacks identify the exact discovery issuer on approval, denial, and protocol errors', async (t) => {
+  const { oauth, request } = await setup(t);
+  const metadata = await (await request('/.well-known/oauth-authorization-server')).json();
+  const params = { client_id: 'chatgpt-test', redirect_uri: 'https://chatgpt.test/callback', response_type: 'code',
+    code_challenge: 'a'.repeat(43), code_challenge_method: 'S256', resource: 'https://mcp.test/mcp', scope: 'boards:read', state: 'issuer-fixture-state' };
+  for (const action of ['approve', 'cancel']) {
+    const response = await request(`/authorize?${new URLSearchParams(params)}`);
+    const pending = new URL(response.headers.get('location')).searchParams.get('request');
+    const target = new URL(action === 'approve'
+      ? await oauth.approveConsent(pending, 'alice', ['board-1'])
+      : await oauth.cancelConsent(pending));
+    assert.equal(target.searchParams.get('iss'), metadata.issuer, action);
+    assert.equal(target.searchParams.get('state'), params.state, action);
+    assert.equal(target.searchParams.has(action === 'approve' ? 'code' : 'error'), true);
+  }
+  for (const extras of [{ scope: 'boards:read unsupported' }, { code_challenge_method: 'plain' }, { response_type: 'token' }, { state: '' }]) {
+    const response = await request(`/authorize?${new URLSearchParams({ ...params, scope: 'boards:read unsupported', ...extras })}`);
+    assert.equal(response.status, 302);
+    const target = new URL(response.headers.get('location'));
+    assert.equal(target.origin + target.pathname, params.redirect_uri);
+    assert.equal(target.searchParams.get('iss'), metadata.issuer);
+    assert.equal(target.searchParams.get('state'), extras.state ?? params.state);
+    assert.equal(target.searchParams.has('error'), true);
+    assert.equal(target.searchParams.has('code'), false);
+  }
+  const formError = await request('/authorize', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ ...params, response_type: 'token' }) });
+  assert.equal(formError.status, 302);
+  const formTarget = new URL(formError.headers.get('location'));
+  assert.equal(formTarget.searchParams.get('iss'), metadata.issuer);
+  assert.equal(formTarget.searchParams.get('state'), params.state);
+  assert.equal(formTarget.searchParams.has('error'), true);
+  const badCallback = await request(`/authorize?${new URLSearchParams({ ...params, redirect_uri: 'https://evil.test/callback' })}`);
+  assert.equal(badCallback.status, 400);
+  assert.equal(badCallback.headers.get('location'), null);
+});
+
+test('malformed and oversized MCP JSON return protocol errors without HTML, body text or stack traces', async (t) => {
+  const { request } = await setup(t);
+  const malformed = await request('/mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{fixture-private-text' });
+  assert.equal(malformed.status, 400);
+  assert.match(malformed.headers.get('content-type'), /application\/json/);
+  const body = await malformed.text();
+  assert.deepEqual(JSON.parse(body), { jsonrpc: '2.0', error: { code: -32700, message: 'Invalid JSON request' }, id: null });
+  assert.doesNotMatch(body, /fixture-private-text|node_modules|SyntaxError|DOCTYPE/);
+  const oversized = await request('/mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ oversized: 'x'.repeat(1024 * 1024) }) });
+  assert.equal(oversized.status, 413);
+  assert.deepEqual(await oversized.json(), { jsonrpc: '2.0', error: { code: -32600, message: 'MCP request exceeds the 1 MiB JSON limit' }, id: null });
+  assert.equal(oversized.headers.get('cache-control'), 'no-store');
 });

@@ -38,7 +38,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('Shift+N triggers onNewBoard', () => {
     const { unmount } = renderHook(() => useKeyboardShortcuts(callbacks));
-    fireKey('n', { shiftKey: true });
+    fireKey('N', { code: 'KeyN', shiftKey: true });
     expect(callbacks.onNewBoard).toHaveBeenCalledOnce();
     expect(callbacks.onNewCard).not.toHaveBeenCalled();
     unmount();
@@ -95,7 +95,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('Ctrl+Shift+Z triggers onRedo', () => {
     const { unmount } = renderHook(() => useKeyboardShortcuts(callbacks));
-    fireKey('z', { ctrlKey: true, shiftKey: true });
+    fireKey('Z', { code: 'KeyZ', ctrlKey: true, shiftKey: true });
     expect(callbacks.onRedo).toHaveBeenCalledOnce();
     expect(callbacks.onUndo).not.toHaveBeenCalled();
     unmount();
@@ -134,6 +134,29 @@ describe('useKeyboardShortcuts', () => {
     child.dispatchEvent(event);
     expect(callbacks.onBoardView).not.toHaveBeenCalled();
     document.body.removeChild(dialog);
+    unmount();
+  });
+
+  it('leaves menu typing to the focused menu', () => {
+    const { unmount } = renderHook(() => useKeyboardShortcuts(callbacks));
+    const menu = document.createElement('div');
+    menu.setAttribute('role', 'menu');
+    const item = document.createElement('button');
+    menu.appendChild(item);
+    document.body.appendChild(menu);
+    item.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    expect(callbacks.onToggleAI).not.toHaveBeenCalled();
+    menu.remove();
+    unmount();
+  });
+
+  it('does not interrupt composing text or a key already handled by a control', () => {
+    const { unmount } = renderHook(() => useKeyboardShortcuts(callbacks));
+    fireKey('n', { isComposing: true });
+    const handledKey = new KeyboardEvent('keydown', { key: 'n', bubbles: true, cancelable: true });
+    handledKey.preventDefault();
+    document.body.dispatchEvent(handledKey);
+    expect(callbacks.onNewCard).not.toHaveBeenCalled();
     unmount();
   });
 

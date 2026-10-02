@@ -32,10 +32,19 @@ async function main(): Promise<void> {
     case undefined:
     case 'serve':
     default:
-      // Bare invocation or any leading flag (e.g. --read-only) starts the server.
+      // Reject option typos before loading any account credentials. A misspelled
+      // safety flag must never silently fall back to the writable legacy mode.
       if (cmd && cmd !== 'serve' && !cmd.startsWith('--')) {
         console.error(`Unknown command: ${cmd}\n\n${HELP}`);
         process.exit(1);
+      }
+      const flags = process.argv.slice(cmd === 'serve' ? 3 : 2);
+      const allowed = new Set(['--plugin', '--read-only', '--help', '-h']);
+      const unknown = flags.find((flag) => !allowed.has(flag));
+      if (unknown) throw new Error(`Unknown server option: ${unknown}\n\n${HELP}`);
+      if (flags.includes('--help') || flags.includes('-h')) {
+        process.stdout.write(HELP);
+        return;
       }
       return runServer();
   }

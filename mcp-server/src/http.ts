@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type ErrorRequestHandler } from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { mcpAuthRouter, createOAuthMetadata, getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import { buildServer } from './server.js';
@@ -26,7 +26,26 @@ export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: s
     ...createOAuthMetadata({ provider: oauth, issuerUrl: oauth.options.issuer, scopesSupported: SCOPES }),
     token_endpoint_auth_methods_supported: ['none'], grant_types_supported: ['authorization_code'],
     revocation_endpoint_auth_methods_supported: ['none'],
+    authorization_response_iss_parameter_supported: true,
   }));
+  app.use('/authorize', (req, res, next) => {
+    const redirect = res.redirect.bind(res);
+    // The SDK validates the client/callback before redirecting protocol errors.
+    // Add RFC 9207 issuer identification to those responses as well as consent
+    // outcomes, and preserve valid state even when another parameter is invalid.
+    res.redirect = ((statusOrUrl: number | string, url?: string) => {
+      const status = typeof statusOrUrl === 'number' ? statusOrUrl : 302;
+      const location = typeof statusOrUrl === 'string' ? statusOrUrl : url!;
+      const target = new URL(location, oauth.options.issuer);
+      if (target.searchParams.has('error') || target.searchParams.has('code')) {
+        target.searchParams.set('iss', oauth.options.issuer.href);
+        const state = (req.method === 'POST' ? req.body : req.query)?.state;
+        if (!target.searchParams.has('state') && typeof state === 'string') target.searchParams.set('state', state);
+      }
+      return redirect(status, target.href);
+    }) as typeof res.redirect;
+    next();
+  });
   app.use(mcpAuthRouter({ provider: oauth, issuerUrl: oauth.options.issuer, resourceServerUrl: oauth.options.resource, scopesSupported: SCOPES }));
   app.use(express.json({ limit: '1mb' }));
   app.all('/mcp', async (req, res) => {
@@ -49,5 +68,17 @@ export function createHostedApp(oauth: ZeroBoardOAuth, options: { proposalKey: s
     try { await server.connect(transport); await transport.handleRequest(req, res, req.body); }
     catch { if (!res.headersSent) res.status(500).json({ error: 'MCP request failed' }); }
   });
+  const requestError: ErrorRequestHandler = (error: unknown, req, res, next) => {
+    if (req.path !== '/mcp' || res.headersSent) { next(error); return; }
+    const failure = error as { type?: string; status?: number };
+    const status = failure.type === 'entity.too.large' ? 413 : failure.type === 'entity.parse.failed' ? 400 :
+      (failure.status && failure.status >= 400 && failure.status < 600 ? failure.status : 500);
+    const message = status === 413 ? 'MCP request exceeds the 1 MiB JSON limit' :
+      failure.type === 'entity.parse.failed' ? 'Invalid JSON request' : status < 500 ? 'Invalid MCP request' : 'MCP request failed';
+    // Body-parser's default Express error page is HTML and can include request
+    // contents/stack traces in development. MCP clients need a safe JSON error.
+    res.status(status).json({ jsonrpc: '2.0', error: { code: failure.type === 'entity.parse.failed' ? -32700 : status < 500 ? -32600 : -32603, message }, id: null });
+  };
+  app.use(requestError);
   return app;
 }

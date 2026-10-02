@@ -326,6 +326,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
 
           <div className="flex items-center gap-2">
             <Button
+              aria-label="Today"
               onClick={goToToday}
               variant="outline"
               className="h-9 border-white/10 text-[#F2F7F7] hover:bg-white/5"
@@ -335,6 +336,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
             </Button>
             <div className="hidden md:flex items-center bg-white/5 rounded-lg">
               <Button
+                aria-label="Previous week"
                 onClick={goToPrevious}
                 variant="ghost"
                 size="sm"
@@ -343,6 +345,7 @@ export function TimelineView({ board, onNewBoardClick }: TimelineViewProps) {
                 <ChevronLeft className="w-5 h-5" />
               </Button>
               <Button
+                aria-label="Next week"
                 onClick={goToNext}
                 variant="ghost"
                 size="sm"

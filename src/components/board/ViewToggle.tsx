@@ -21,6 +21,7 @@ export function ViewToggle({ onBeforeTimeline }: ViewToggleProps) {
             : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
         }`}
         aria-pressed={viewMode === 'board'}
+        aria-label="Board"
       >
         <Layout className="w-3.5 h-3.5 sm:mr-1.5" />
         <span className="hidden sm:inline">Board</span>
@@ -38,6 +39,7 @@ export function ViewToggle({ onBeforeTimeline }: ViewToggleProps) {
             : 'text-[#A8B2B2] hover:text-white hover:bg-white/5'
         }`}
         aria-pressed={viewMode === 'timeline'}
+        aria-label="Timeline"
       >
         <Clock className="w-3.5 h-3.5 sm:mr-1.5" />
         <span className="hidden sm:inline">Timeline</span>

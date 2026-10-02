@@ -5,6 +5,10 @@ import { z } from 'zod';
 import { targetDateSchema } from './target-date-schema.js';
 import * as db from './board-data.js';
 const processKey = randomBytes(32);
+// A returned preview must fit the commit schema and the hosted 1 MiB JSON request.
+// Unicode text expands when encoded as base64url, so per-card character limits
+// alone cannot guarantee that an otherwise valid batch can be committed.
+const MAX_PREVIEW_TOKEN_LENGTH = 1_000_000;
 const cardSchema = z.object({ columnId: z.string().min(1), title: z.string().trim().min(1).max(300), description: z.string().max(2000).optional(), text: z.string().max(10000).optional(), targetDate: targetDateSchema.optional() }).strict();
 const proposalSchema = z.object({ boardId: z.string(), revision: z.string(), expires: z.number(), cards: z.array(cardSchema.extend({ id: z.string() })).min(1).max(50) }).strict();
 export function registerMeetingTools(server: McpServer, client: SupabaseClient, readOnly: boolean, key: string | Buffer = processKey, userId: string, boardIds: readonly string[]): void {
@@ -25,12 +29,14 @@ export function registerMeetingTools(server: McpServer, client: SupabaseClient, 
     const proposal = { boardId, revision: board.updatedAt, expires: Date.now() + 10 * 60_000,
       cards: cards.map((card) => ({ ...card, id: cardId() })) };
     const encoded = Buffer.from(JSON.stringify(proposal)).toString('base64url');
-    return { boardName: board.name, ...proposal, previewToken: `${encoded}.${sign(encoded).toString('base64url')}` };
+    const previewToken = `${encoded}.${sign(encoded).toString('base64url')}`;
+    if (previewToken.length > MAX_PREVIEW_TOKEN_LENGTH) throw new Error('This action batch is too large; split it into smaller batches and preview again');
+    return { boardName: board.name, ...proposal, previewToken };
   }));
   if (readOnly) return;
   server.registerTool('commit_cards', {
     title: 'Save approved meeting cards', description: 'Save the exact preview only after explicit user approval. Repeated commits do not duplicate saved cards. On an ambiguous error, inspect the board before trying again.',
-    inputSchema: { previewToken: z.string().max(1000000), approved: z.literal(true) }, _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read', 'cards:add'] }] }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: true },
+    inputSchema: { previewToken: z.string().max(MAX_PREVIEW_TOKEN_LENGTH), approved: z.literal(true) }, _meta: { securitySchemes: [{ type: 'oauth2', scopes: ['boards:read', 'cards:add'] }] }, annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: true },
   }, ({ previewToken }) => safe(async () => {
     const parts = previewToken.split('.'); if (parts.length !== 2) throw new Error('Invalid preview');
     const [encoded, signature] = parts; const expected = sign(encoded); const received = Buffer.from(signature, 'base64url');
