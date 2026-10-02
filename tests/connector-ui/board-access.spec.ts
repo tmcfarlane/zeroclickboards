@@ -1,5 +1,5 @@
 import { test, expect, BOARD_ID, USER_ID, boardRows, json } from './fixtures';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 type Role = 'owner' | 'editor' | 'viewer' | 'commenter';
 
@@ -76,6 +76,182 @@ async function openBoardRename(page: Page) {
   await page.getByRole('menuitem', { name: 'Rename', exact: true }).click();
   return page.getByRole('dialog', { name: 'Rename Board' });
 }
+
+type CompositionKey = 'composing' | '229';
+async function compositionKey(input: Locator, variant: CompositionKey, key: 'Enter' | 'Escape') {
+  await input.dispatchEvent('keydown', { key, code: key, isComposing: variant === 'composing', keyCode: variant === '229' ? 229 : key === 'Enter' ? 13 : 27, bubbles: true, cancelable: true });
+}
+
+async function leaveIsPrevented(page: Page) {
+  return page.evaluate(() => { const event = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(event); return event.defaultPrevented; });
+}
+
+async function manualBoardName(dialog: Locator) {
+  const input = dialog.getByRole('textbox', { name: 'Name', exact: true });
+  if (!await input.isVisible()) await dialog.getByRole('button', { name: 'Advanced options' }).click();
+  await expect(input).toBeVisible();
+  return input;
+}
+
+test('new card and board drafts warn before leaving and explicit cancel clears the warning', async ({ page }) => {
+  await installBoard(page);
+  await openBoard(page);
+  expect(await leaveIsPrevented(page)).toBe(false);
+  await page.keyboard.press('KeyN');
+  const card = page.getByRole('dialog', { name: 'Create Card' });
+  await card.getByPlaceholder('Card title...').fill('Keep this new card');
+  expect(await leaveIsPrevented(page)).toBe(true);
+  await card.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(await leaveIsPrevented(page)).toBe(false);
+  await page.getByRole('button', { name: 'New Board', exact: true }).click();
+  const board = page.getByRole('dialog', { name: 'Create New Board' });
+  await (await manualBoardName(board)).fill('Keep this new board');
+  expect(await leaveIsPrevented(page)).toBe(true);
+  await board.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(await leaveIsPrevented(page)).toBe(false);
+});
+
+test('a removed board keeps an open new-card draft without creating a default board', async ({ page }) => {
+  const fixture = await installBoard(page);
+  await openBoard(page);
+  await page.keyboard.press('KeyN');
+  const card = page.getByRole('dialog', { name: 'Create Card' });
+  await card.getByPlaceholder('Card title...').fill('Draft for a removed board');
+  await fixture.deleteRemotely();
+  await expect(page.getByText('No board selected', { exact: true })).toBeVisible();
+  await expect(card.getByPlaceholder('Card title...')).toHaveValue('Draft for a removed board');
+  expect(await leaveIsPrevented(page)).toBe(true);
+  expect(fixture.writes).toEqual([]);
+});
+
+for (const variant of ['composing', '229'] as const) {
+  test(`rename ignores ${variant} Enter and Escape until composition ends`, async ({ page }) => {
+    const fixture = await installBoard(page);
+    await openBoard(page);
+    const dialog = await openBoardRename(page);
+    const input = dialog.getByRole('textbox', { name: 'Board Name' });
+    await input.fill('日本語');
+    await input.dispatchEvent('compositionstart');
+    await compositionKey(input, variant, 'Enter');
+    await expect(dialog).toBeVisible();
+    await compositionKey(input, variant, 'Escape');
+    await expect(dialog).toBeVisible();
+    await expect(input).toHaveValue('日本語');
+    expect(fixture.writes).toEqual([]);
+    await input.dispatchEvent('compositionend');
+    await input.press('Enter');
+    await expect(dialog).not.toBeVisible();
+    await expect.poll(() => fixture.writes).toEqual(['PATCH']);
+  });
+
+  for (const mode of ['create', 'edit'] as const) {
+    test(`${mode} card ignores ${variant} Enter and Escape until composition ends`, async ({ page }) => {
+      const fixture = await installBoard(page);
+      await openBoard(page);
+      if (mode === 'create') await page.keyboard.press('KeyN');
+      else await page.getByRole('button', { name: 'Design pricing page', exact: true }).click();
+      const dialog = page.getByRole('dialog', { name: mode === 'create' ? 'Create Card' : 'Edit Card' });
+      const input = dialog.getByPlaceholder('Card title...');
+      await input.fill('日本語');
+      await input.dispatchEvent('compositionstart');
+      await compositionKey(input, variant, 'Enter');
+      await expect(dialog).toBeVisible();
+      await compositionKey(input, variant, 'Escape');
+      await expect(dialog).toBeVisible();
+      await expect(input).toHaveValue('日本語');
+      expect(fixture.writes).toEqual([]);
+      await input.dispatchEvent('compositionend');
+      await input.press('Enter');
+      await expect(dialog).not.toBeVisible();
+      await expect.poll(() => fixture.writes.filter((write) => write === 'PATCH')).toEqual(['PATCH']);
+    });
+  }
+
+  test(`manual board ignores ${variant} Enter and Escape until composition ends`, async ({ page }) => {
+    await installBoard(page);
+    await openBoard(page);
+    await page.getByRole('button', { name: 'New Board', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create New Board' });
+    const input = await manualBoardName(dialog);
+    await input.fill('日本語');
+    await input.dispatchEvent('compositionstart');
+    await compositionKey(input, variant, 'Enter');
+    await expect(dialog).toBeVisible();
+    await compositionKey(input, variant, 'Escape');
+    await expect(dialog).toBeVisible();
+    await expect(input).toHaveValue('日本語');
+    await input.dispatchEvent('compositionend');
+    await input.press('Enter');
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '日本語', exact: true })).toBeVisible();
+  });
+
+  test(`board generation waits for ${variant} composition to end`, async ({ page }) => {
+    let generations = 0;
+    await page.route('**/api/ai/usage', (route) => json(route, { used: 0, limit: 10, remaining: 10 }));
+    await page.route('**/api/ai/board-template', async (route) => { generations++; await json(route, { error: 'Disposable generation failure' }, 503); });
+    await installBoard(page);
+    await openBoard(page);
+    await page.getByRole('button', { name: 'New Board', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create New Board' });
+    const input = dialog.getByRole('textbox', { name: 'What do you want to build?' });
+    await input.fill('日本語');
+    await input.dispatchEvent('compositionstart');
+    await compositionKey(input, variant, 'Enter');
+    await expect(input).toBeEnabled();
+    await compositionKey(input, variant, 'Escape');
+    await expect(input).toHaveValue('日本語');
+    expect(generations).toBe(0);
+    await input.dispatchEvent('compositionend');
+    await input.press('Enter');
+    await expect(page.getByText('Could not generate board. Try a simpler prompt.', { exact: true })).toBeVisible();
+    expect(generations).toBe(1);
+    await expect(input).toHaveValue('日本語');
+    await input.press('Escape');
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test(`timeline ignores ${variant} Enter and Escape until composition ends`, async ({ page }) => {
+    const fixture = await installBoard(page);
+    await openBoard(page);
+    await page.getByRole('button', { name: 'Timeline', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit Design pricing page', exact: true }).click();
+    const input = page.getByRole('textbox', { name: 'Title', exact: true });
+    await input.fill('日本語');
+    await input.dispatchEvent('compositionstart');
+    await compositionKey(input, variant, 'Enter');
+    await expect(input).toBeVisible();
+    await compositionKey(input, variant, 'Escape');
+    await expect(input).toHaveValue('日本語');
+    expect(fixture.writes).toEqual([]);
+    await input.dispatchEvent('compositionend');
+    await input.press('Enter');
+    await expect(input).not.toBeVisible();
+    await expect.poll(() => fixture.writes.filter((write) => write === 'PATCH')).toEqual(['PATCH']);
+  });
+}
+
+test('composing Escape protects a downgraded card draft and normal Enter cannot write', async ({ page }) => {
+  const fixture = await installBoard(page, 'editor');
+  await openBoard(page);
+  await page.keyboard.press('KeyN');
+  const dialog = page.getByRole('dialog', { name: 'Create Card' });
+  const input = dialog.getByPlaceholder('Card title...');
+  await input.fill('Keep this composition draft');
+  await fixture.downgrade();
+  await expect(dialog.getByRole('alert')).toContainText('no longer have editing access');
+  await input.dispatchEvent('compositionstart');
+  await compositionKey(input, 'composing', 'Escape');
+  await expect(input).toHaveValue('Keep this composition draft');
+  await input.dispatchEvent('compositionend');
+  await input.press('Enter');
+  await expect(dialog).toBeVisible();
+  expect(await leaveIsPrevented(page)).toBe(true);
+  expect(fixture.writes).toEqual([]);
+  await input.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  expect(await leaveIsPrevented(page)).toBe(false);
+});
 
 test('board rename draft survives a readonly transition without writing', async ({ page }) => {
   const fixture = await installBoard(page, 'editor');

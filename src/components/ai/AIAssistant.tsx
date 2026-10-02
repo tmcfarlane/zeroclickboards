@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useAIUsage } from "@/hooks/useAIUsage";
+import { isComposingKey } from "@/lib/keyboard";
 
 interface AIAssistantProps {
   isOpen: boolean;
@@ -1781,7 +1782,7 @@ export function AIAssistant({ isOpen, onClose, onUpgrade }: AIAssistantProps) {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              onKeyDown={(e) => e.key === "Enter" && !isComposingKey(e.nativeEvent) && handleSend()}
               placeholder="What should we do next?"
               className="flex-1 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50 h-11 sm:h-10 text-base sm:text-sm"
               disabled={isProcessing}

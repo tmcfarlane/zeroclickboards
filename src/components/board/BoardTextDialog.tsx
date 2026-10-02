@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isComposingKey } from '@/lib/keyboard';
 
 /** Hosted by AppShell so changing the board presentation cannot discard text. */
 export function BoardTextDialog({ request, onClose }: { request: BoardTextDialogRequest; onClose: () => void }) {
@@ -36,7 +37,7 @@ export function BoardTextDialog({ request, onClose }: { request: BoardTextDialog
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
+      <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]" onEscapeKeyDown={(event) => { if (isComposingKey(event)) event.preventDefault(); }}>
         <DialogHeader><DialogTitle>{isBoard ? 'Rename Board' : isAdd ? 'Add Column' : 'Rename Column'}</DialogTitle></DialogHeader>
         <div className="py-4">
           {blockedMessage && <p role="alert" className="mb-3 text-sm text-amber-100">{blockedMessage}</p>}
@@ -48,7 +49,7 @@ export function BoardTextDialog({ request, onClose }: { request: BoardTextDialog
             readOnly={!!blockedMessage}
             maxLength={isAdd ? 100 : undefined}
             placeholder={isAdd ? 'e.g., In Review' : undefined}
-            onKeyDown={(event) => { if (event.key === 'Enter') handleSave(); }}
+            onKeyDown={(event) => { if (!isComposingKey(event.nativeEvent) && event.key === 'Enter') handleSave(); }}
             className="bg-white/5 border-white/10 text-[#F2F7F7]"
           />
         </div>

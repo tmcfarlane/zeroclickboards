@@ -1,6 +1,6 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
-import { AppShell } from '@/components/layout/AppShell';
 import { AuthRedirect } from '@/components/auth/AuthRedirect';
 import { LandingPage } from '@/pages/LandingPage';
 import { TermsPage } from '@/pages/TermsPage';
@@ -14,6 +14,16 @@ import { AdminPage } from '@/pages/AdminPage';
 import { AuthCliPage } from '@/pages/AuthCliPage';
 import { ConnectorConsentPage } from '@/pages/ConnectorConsentPage';
 
+const AppShell = lazy(() => import('@/components/layout/AppShell').then((module) => ({ default: module.AppShell })));
+
+function AppLoading() {
+  return (
+    <div role="status" aria-live="polite" className="min-h-screen bg-[#0B0F0F] flex items-center justify-center text-[#A8B2B2]">
+      <span>Loading your board...</span>
+    </div>
+  );
+}
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -26,7 +36,7 @@ export function AppRoutes() {
       </Route>
 
       {/* Authenticated app */}
-      <Route path="/app" element={<AuthRedirect requireAuth><AppShell /></AuthRedirect>} />
+      <Route path="/app" element={<AuthRedirect requireAuth><Suspense fallback={<AppLoading />}><AppShell /></Suspense></AuthRedirect>} />
       <Route path="/account" element={<AuthRedirect requireAuth><AccountPage /></AuthRedirect>} />
       <Route path="/admin" element={<AuthRedirect requireAuth><AdminPage /></AuthRedirect>} />
 

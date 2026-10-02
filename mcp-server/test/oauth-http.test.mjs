@@ -66,6 +66,21 @@ async function setup(t, clients = [{ client_id: 'chatgpt-test', client_name: 'Te
   return { oauth, store, request, authorize, exchange, connect };
 }
 const payload = (result) => { assert.notEqual(result.isError, true); return JSON.parse(result.content[0].text); };
+test('allowed browser origins can discover the Bearer challenge without exposing it to denied origins', async (t) => {
+  const { request } = await setup(t);
+  for (const method of ['GET', 'POST']) {
+    const response = await request('/mcp', { method, headers: { origin: 'https://chatgpt.test' } });
+    assert.equal(response.status, 401);
+    assert.equal(response.headers.get('access-control-allow-origin'), 'https://chatgpt.test');
+    const exposed = (response.headers.get('access-control-expose-headers') ?? '').toLowerCase().split(',').map(value => value.trim());
+    assert.ok(exposed.includes('www-authenticate'), 'browser JavaScript can read the authentication challenge');
+    assert.match(response.headers.get('www-authenticate'), /resource_metadata="https:\/\/mcp\.test\/\.well-known\/oauth-protected-resource\/mcp"/);
+  }
+  const denied = await request('/mcp', { headers: { origin: 'https://unapproved.test' } });
+  assert.equal(denied.status, 403);
+  assert.equal(denied.headers.get('access-control-expose-headers'), null);
+  assert.equal(denied.headers.get('www-authenticate'), null);
+});
 test('HTTPS resource discovery, S256 and accurate public-client metadata; unauthorized, Host and Origin denial', async (t) => {
   const { request } = await setup(t);
   const metadata = await (await request('/.well-known/oauth-protected-resource/mcp')).json();
