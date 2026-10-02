@@ -1,0 +1,361 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci
+
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool 1124ms
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser 613ms
+   → expected 200 to be 401 // Object.is equality
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch 543ms
+   → expected 200 to be 401 // Object.is equality
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch 462ms
+   → expected 200 to be 401 // Object.is equality
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch 675ms
+   → expected 200 to be 401 // Object.is equality
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired pending from the actual consume statement 502ms
+   → expected { params: { …(4) }, …(2) } to be undefined
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired code from the actual consume statement 884ms
+   → expected { expires: 1790945939565, …(5) } to be undefined
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid pending consumption 807ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid code consumption 476ms
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for pending consumption 554ms
+   → expected { params: { …(4) }, …(2) } to be undefined
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for code consumption 454ms
+   → expected { expires: 1790946061871, …(5) } to be undefined
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires 423ms
+   → expected { Object (value) } to have property "error"
+   → expected 1 to be +0 // Object.is equality
+   → expected 1 to be +0 // Object.is equality
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when code consumption settles after its returned record expires 495ms
+   → expected { value: { …(4) } } to have property "error"
+   → expected 1 to be +0 // Object.is equality
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read 595ms
+   → expected { Object (value) } to have property "error"
+   → expected 1 to be +0 // Object.is equality
+   → expected 1 to be +0 // Object.is equality
+ × api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when a consumed code expires during the later held grant lookup 531ms
+   → expected { value: { …(4) } } to have property "error"
+   → expected 1 to be +0 // Object.is equality
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > retains ordinary approval, valid code exchange and new token account resolution 902ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:223:37
+    221|     expect(f.boardRequests).toEqual([])
+    222|     hold.release.resolve(undefined)
+    223|     expect((await response).status).toBe(401)
+       |                                     ^
+    224|     expect(f.boardRequests).toEqual([])
+    225|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:241:37
+    239|     f.clock.now = deadline
+    240|     hold.release.resolve(undefined)
+    241|     expect((await response).status).toBe(401)
+       |                                     ^
+    242|     expect(f.boardRequests).toEqual([])
+    243|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired pending from the actual consume statement
+AssertionError: expected { params: { …(4) }, …(2) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "clientId": "lifecycle-fixture",
+  "expires": 1790945938695,
+  "params": {
+    "codeChallenge": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "redirectUri": "https://client.fixture.invalid/callback",
+    "resource": "https://lifecycle.fixture.invalid/mcp",
+    "scopes": [
+      "boards:read",
+    ],
+  },
+}
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:256:56
+    254|     if (kind === 'pending') await f.store.put('pending', 'expired-reco…
+    255|     else await f.store.put('code', 'expired-record', value as OAuthRec…
+    256|     expect(await f.store.take(kind, 'expired-record')).toBeUndefined()
+       |                                                        ^
+    257|   })
+    258|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired code from the actual consume statement
+AssertionError: expected { expires: 1790945939565, …(5) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "challenge": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "clientId": "lifecycle-fixture",
+  "expires": 1790945939565,
+  "grantId": "fixture-grant",
+  "redirectUri": "https://client.fixture.invalid/callback",
+  "resource": "https://lifecycle.fixture.invalid/mcp",
+}
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:256:56
+    254|     if (kind === 'pending') await f.store.put('pending', 'expired-reco…
+    255|     else await f.store.put('code', 'expired-record', value as OAuthRec…
+    256|     expect(await f.store.take(kind, 'expired-record')).toBeUndefined()
+       |                                                        ^
+    257|   })
+    258|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for pending consumption
+AssertionError: expected { params: { …(4) }, …(2) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "clientId": "lifecycle-fixture",
+  "expires": 1790946061411,
+  "params": {
+    "codeChallenge": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "redirectUri": "https://client.fixture.invalid/callback",
+    "resource": "https://lifecycle.fixture.invalid/mcp",
+    "scopes": [
+      "boards:read",
+    ],
+  },
+}
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:291:63
+    289|         [kind, 'transaction-expired'])
+    290|       expect(actual.rows).toEqual([{ afterStart: true, expired: true }…
+    291|       expect(await f.store.take(kind, 'transaction-expired')).toBeUnde…
+       |                                                               ^
+    292|     } finally {
+    293|       await f.pg.exec('rollback')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for code consumption
+AssertionError: expected { expires: 1790946061871, …(5) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "challenge": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "clientId": "lifecycle-fixture",
+  "expires": 1790946061871,
+  "grantId": "fixture-grant",
+  "redirectUri": "https://client.fixture.invalid/callback",
+  "resource": "https://lifecycle.fixture.invalid/mcp",
+}
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:291:63
+    289|         [kind, 'transaction-expired'])
+    290|       expect(actual.rows).toEqual([{ afterStart: true, expired: true }…
+    291|       expect(await f.store.take(kind, 'transaction-expired')).toBeUnde…
+       |                                                               ^
+    292|     } finally {
+    293|       await f.pg.exec('rollback')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires
+AssertionError: expected { Object (value) } to have property "error"
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:313:26
+    311|     hold.release.resolve(undefined)
+    312|     const outcome = await result
+    313|     expect.soft(outcome).toHaveProperty('error')
+       |                          ^
+    314|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    315|     expect.soft(await f.count('grant')).toBe(0)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:315:41
+    313|     expect.soft(outcome).toHaveProperty('error')
+    314|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    315|     expect.soft(await f.count('grant')).toBe(0)
+       |                                         ^
+    316|     expect.soft(await f.count('code')).toBe(0)
+    317|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:316:40
+    314|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    315|     expect.soft(await f.count('grant')).toBe(0)
+    316|     expect.soft(await f.count('code')).toBe(0)
+       |                                        ^
+    317|   })
+    318|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when code consumption settles after its returned record expires
+AssertionError: expected { value: { …(4) } } to have property "error"
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:336:26
+    334|     hold.release.resolve(undefined)
+    335|     const outcome = await result
+    336|     expect.soft(outcome).toHaveProperty('error')
+       |                          ^
+    337|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    338|     expect.soft(await f.count('token')).toBe(0)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when code consumption settles after its returned record expires
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:338:41
+    336|     expect.soft(outcome).toHaveProperty('error')
+    337|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    338|     expect.soft(await f.count('token')).toBe(0)
+       |                                         ^
+    339|   })
+    340|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read
+AssertionError: expected { Object (value) } to have property "error"
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:355:26
+    353|     hold.release.resolve(undefined)
+    354|     const outcome = await result
+    355|     expect.soft(outcome).toHaveProperty('error')
+       |                          ^
+    356|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    357|     expect.soft(await f.count('grant')).toBe(0)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:357:41
+    355|     expect.soft(outcome).toHaveProperty('error')
+    356|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    357|     expect.soft(await f.count('grant')).toBe(0)
+       |                                         ^
+    358|     expect.soft(await f.count('code')).toBe(0)
+    359|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:358:40
+    356|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    357|     expect.soft(await f.count('grant')).toBe(0)
+    358|     expect.soft(await f.count('code')).toBe(0)
+       |                                        ^
+    359|   })
+    360|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when a consumed code expires during the later held grant lookup
+AssertionError: expected { value: { …(4) } } to have property "error"
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:377:26
+    375|     hold.release.resolve(undefined)
+    376|     const outcome = await result
+    377|     expect.soft(outcome).toHaveProperty('error')
+       |                          ^
+    378|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    379|     expect.soft(await f.count('token')).toBe(0)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/18]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when a consumed code expires during the later held grant lookup
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:379:41
+    377|     expect.soft(outcome).toHaveProperty('error')
+    378|     if ('error' in outcome) expect(outcome.error).toHaveProperty('mess…
+    379|     expect.soft(await f.count('token')).toBe(0)
+       |                                         ^
+    380|   })
+    381|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/18]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 4 passed (16)
+   Start at  05:59:53
+   Duration  10.90s (transform 255ms, setup 0ms, import 727ms, tests 10.04s, environment 0ms)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-lifecycle-before.json

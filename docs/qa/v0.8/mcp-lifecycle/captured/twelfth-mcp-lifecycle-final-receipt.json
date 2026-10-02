@@ -1,0 +1,119 @@
+{
+  "at": "2026-10-02T13:22:24.669401+00:00",
+  "base": "f8cfd718a867e90be26609fd392ec6129d05def9",
+  "branch": "codex/gauntlet-mcp-lifecycle",
+  "sourceFrozen": true,
+  "productFiles": [
+    "mcp-server/src/oauth.ts",
+    "mcp-server/src/oauth-store.ts"
+  ],
+  "testFile": "api/_lib/__tests__/connector-lifecycle.test.ts",
+  "node20": "/private/tmp/zeroboard-ai-ci-runtime/node_modules/node/bin/node (20.20.2)",
+  "node22": "/Users/tmcfarlane/.nvm/versions/node/v22.22.0/bin/node (22.22.0)",
+  "gates": {
+    "beforeFullV1": {
+      "passed": 4,
+      "expectedFailed": 12,
+      "total": 16,
+      "seconds": 10.9
+    },
+    "beforeAuthV2": {
+      "passed": 1,
+      "expectedFailed": 4,
+      "filtered": 11,
+      "seconds": 4.74
+    },
+    "firstAfterV3": {
+      "passed": 15,
+      "failed": 1,
+      "seconds": 27.57,
+      "failure": "initial valid control exceeded unchanged5000ms test deadline; exact phase not established"
+    },
+    "isolatedPositiveDiagnostic": {
+      "passed": 1,
+      "filtered": 15,
+      "seconds": 5.12,
+      "caseSeconds": 2.887,
+      "catalogRuntimeSeconds": 2.097,
+      "seedSeconds": 0.262,
+      "httpToolSeconds": 0.522
+    },
+    "finalAfterV4": {
+      "passed": 16,
+      "failed": 0,
+      "total": 16,
+      "seconds": 15.02
+    },
+    "nativeNode20": {
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 7.015744417
+    },
+    "nativeNode22": {
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 5.774296375
+    },
+    "strictMcpTypes": true,
+    "finalApiNodeTypes": true,
+    "finalScopedLint": true,
+    "privateMcpBuild": true
+  },
+  "provenance": "Distinctv1full BEFORE,v2pairedHTTP BEFORE,v3explicitactualSDKunmock AFTER,v4freshbeforeEach AFTER. Assertion bodies identicalv2-v4; original5s tests/default10s hook budgets unchanged. EarlierfailedAFTER retained, diagnostic doesnot retrospectivelyidentifyits exactphase.",
+  "clock": "ActualPGliteWASIreal-time clock callsDate.now; controlledapplication+SQLclock, actualSQLpredicates/rows, notindependent clocks.",
+  "nativePath": "/private/tmp/zeroboard-mcp-lifecycle-b74de20b",
+  "nativeArtifactCount": 32,
+  "nativeManifestSha256": "f144d0f5bd959f861eb2e1114cb9ff839f1a9b924f0182e390193a09e738e3d8",
+  "artifacts": {
+    "work/zeroboard-ai-ci/mcp-server/src/oauth.ts": "b74de20b3770aff5d4880e581bb8073accd72f926c13fed90b63824cd2ab9099",
+    "work/zeroboard-ai-ci/mcp-server/src/oauth-store.ts": "53f46643435e99cdc693a9bf192eff43102f6a9a8b6893379f1ffa95456df1d9",
+    "work/zeroboard-ai-ci/api/_lib/__tests__/connector-lifecycle.test.ts": "fa6043110df2c528eca6603f9734580d482db21dc59c697e79c793235819e53e",
+    "work/zeroboard-ai-ci/node_modules/@electric-sql/pglite/dist/index.js": "03bce0708dbe57ab154c75089ded04c47d0a9e713fe397dee33cd3912101cab5",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-plan.md": "d8b36bbc3b4fd9a2724df732d466176a264d24c56bd11f21da1f12328757bafb",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before.md": "38a91cf55132b536842685aabdbe3e8defd56742d32918fb10cee2a9fb8f7a02",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before-receipt.json": "f19e4b467bfb1fda586f9c82b45fa5e235ae9542fa3ba18cf062314c4f62330f",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-first-before.test.ts.txt": "99212b15214a13e2c03f64bd5cc3d5216ab8390f6aaa45e81b8a4a817c9e7a78",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before.log": "53360ff4dfb2895cab1a71e1759c2e5219719c920529ae6d0827c246b13959a5",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before.json": "fc7e921b2efca9875a67c15573a3cd78aba41471302411009976069df33abb44",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before-auth.log": "b1e247545387c09b67f22d5e460bd793ac9e4ab2eecb15e531f885ffe7b2737d",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before-auth.json": "cc32883934ec15487910b97668d99b6abe21f128f71324d41b0a78db517d0b8f",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-candidate-static.json": "c8c39083ae484f069e018a428bde7dbb97ccd51300c2fbdc045101067971793e",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-first-after.test.ts.txt": "1a2071bb3b04bc25d7ab1ae1017504d9255a404e336db7e65b8de6ada74449e5",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-after.log": "0cfb68a6ccbce3da434091e2d6b39b5cb74ef9f71f954f2afb63ed074444da01",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-after.json": "1b3a2fafca7e7f1fd859e59c5448c553055e1f0c722595136776bafa80202eda",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-positive-diagnostic.log": "6659c5cc854cbd41a81761ca9b7575ef4f6a92b9f8fb39bec400f981c4088b47",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-final.test.ts.txt": "fa6043110df2c528eca6603f9734580d482db21dc59c697e79c793235819e53e",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-after-final.log": "e5a1a50ec58d06d576c554a0072846245823619ed21a97cce894d0a547aa8bfb",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-after-final.json": "daa0878f9f04e3c98e5407e17b97bb8f66758506b34ceb1abe9d7dc2f1a43ab5",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-types-mcp.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-types-api.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-private-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-types-api-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-lint-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-native-node20.log": "5b6b9b94b4df8f66e1ff6d283f445e12e5ff1ff05bc81b6e8899ca9ad36078fe",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-native-node22.log": "6293b4bd939602da17f76f308b115f611afe336730e4442f34935da89d5dabb4",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-vite.config.mjs": "8385640b41ba7a9582e5d470d38321ebc43b63301ab0bf26821fd0ca3f685d18",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-product.diff": "0393942ec2bb09fad1325d4b9fd52f6ee2ded050be0ed3e035f44e921148970c",
+    "outputs/gauntlet/twelfth-mcp-diagnostic/connector-lifecycle.test.ts": "5fd8e158c2f86fc05c0a036827bd8d185b9c993ed12204b0928c2edfc3f6fded",
+    "outputs/gauntlet/twelfth-mcp-diagnostic/vite.config.mjs": "18a695c29b1b1e2b8dfa576fff3003195ed7258fd48a08e24e9a8ddfaceb29dd",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-final.md": "6fae42a2ec7d51b8f8c0f324ffc3f1a11683eceeebf793eb78cc4c27ffff40ca"
+  },
+  "limitations": [
+    "No cancellation/rollback of already-dispatched tools/SQL",
+    "No response-emission wall-clock or cross-system linearizability guarantee",
+    "No real services, credentials, production data or deployment contact",
+    "No broad app/API/MCP gate; root owns fresh integration and exact-headCI"
+  ],
+  "resourcesClosed": true,
+  "sharedDistUnchanged": true,
+  "dependencyTargetsUnchanged": true,
+  "independentReview": {
+    "noBlocker": true,
+    "testBodiesUnchanged": true,
+    "report": "outputs/gauntlet/twelfth-mcp-lifecycle-final-review.md",
+    "sha256": "4c44a89b484233b405822391f4e03b3722d75d9c9cf205a7c6d43e343e1d2cd3"
+  }
+}

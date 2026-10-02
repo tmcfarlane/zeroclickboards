@@ -1,0 +1,26 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci
+
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool 1867ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser 810ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch 1380ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch 984ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch 753ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired pending from the actual consume statement 1125ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired code from the actual consume statement 1004ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid pending consumption 725ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid code consumption 696ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for pending consumption 690ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for code consumption 776ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires 591ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when code consumption settles after its returned record expires 666ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read 673ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when a consumed code expires during the later held grant lookup 516ms
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > retains ordinary approval, valid code exchange and new token account resolution 573ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  06:15:58
+   Duration  15.02s (transform 337ms, setup 0ms, import 988ms, tests 13.83s, environment 0ms)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-lifecycle-after-final.json

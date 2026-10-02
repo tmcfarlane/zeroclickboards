@@ -1,0 +1,121 @@
+
+ RUN  v4.1.4 /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/work/zeroboard-ai-ci
+
+ ✓ api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > allows a current account to dispatch the actual hosted board tool 1239ms
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser 879ms
+   → expected 200 to be 401 // Object.is equality
+   → expected [ 'GET' ] to deeply equal []
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch 747ms
+   → expected 200 to be 401 // Object.is equality
+   → expected [ 'GET' ] to deeply equal []
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch 491ms
+   → expected 200 to be 401 // Object.is equality
+   → expected [ 'GET' ] to deeply equal []
+ × api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch 507ms
+   → expected 200 to be 401 // Object.is equality
+   → expected [ 'GET' ] to deeply equal []
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired pending from the actual consume statement
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not return an already-expired code from the actual consume statement
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid pending consumption
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > keeps exactly one winner for concurrent valid code consumption
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for pending consumption
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > uses current SQL clock instead of the earlier transaction time for code consumption
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a grant/code when pending consumption settles after its returned record expires
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when code consumption settles after its returned record expires
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue grant/code when the resolved account expires during a held board-access read
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > does not issue a token when a consumed code expires during the later held grant lookup
+ ↓ api/_lib/__tests__/connector-lifecycle.test.ts > Single-use pending/code consumption > retains ordinary approval, valid code exchange and new token account resolution
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:226:42
+    224|     expect(f.boardRequests).toEqual([])
+    225|     hold.release.resolve(undefined)
+    226|     expect.soft((await response).status).toBe(401)
+       |                                          ^
+    227|     expect.soft(f.boardRequests).toEqual([])
+    228|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > does not construct new tool authority after revocation settles during held getUser
+AssertionError: expected [ 'GET' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "GET",
++ ]
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:227:34
+    225|     hold.release.resolve(undefined)
+    226|     expect.soft((await response).status).toBe(401)
+    227|     expect.soft(f.boardRequests).toEqual([])
+       |                                  ^
+    228|   })
+    229|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch
+AssertionError: expected 200 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 200
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:244:42
+    242|     f.clock.now = deadline
+    243|     hold.release.resolve(undefined)
+    244|     expect.soft((await response).status).toBe(401)
+       |                                          ^
+    245|     expect.soft(f.boardRequests).toEqual([])
+    246|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects token expiry crossed during held getUser before tool dispatch
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects grant expiry crossed during held getUser before tool dispatch
+ FAIL  api/_lib/__tests__/connector-lifecycle.test.ts > MCP authority after awaited account resolution > rejects account expiry crossed during held getUser before tool dispatch
+AssertionError: expected [ 'GET' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "GET",
++ ]
+
+ ❯ api/_lib/__tests__/connector-lifecycle.test.ts:245:34
+    243|     hold.release.resolve(undefined)
+    244|     expect.soft((await response).status).toBe(401)
+    245|     expect.soft(f.boardRequests).toEqual([])
+       |                                  ^
+    246|   })
+    247| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 1 passed | 11 skipped (16)
+   Start at  06:01:03
+   Duration  4.74s (transform 254ms, setup 0ms, import 696ms, tests 3.87s, environment 0ms)
+
+JSON report written to /Users/tmcfarlane/Documents/Codex/2026-09-30/zeroboard-chatgpt-integration/outputs/gauntlet/twelfth-mcp-lifecycle-before-auth.json

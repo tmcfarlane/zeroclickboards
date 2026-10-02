@@ -1,0 +1,34 @@
+{
+  "base": "f8cfd718a867e90be26609fd392ec6129d05def9",
+  "node": "20.20.2",
+  "phase": "before-product-edits",
+  "fullBefore": {
+    "passed": 4,
+    "failed": 12,
+    "total": 16,
+    "durationSeconds": 10.9
+  },
+  "pairedHttpBefore": {
+    "passed": 1,
+    "failed": 4,
+    "filteredSkips": 11,
+    "durationSeconds": 4.74
+  },
+  "clock": "PGlite WASI real-time clock calls Date.now; controlled shared application/database clock, actual SQL predicates/results",
+  "resourcesClosed": true,
+  "productUnchanged": true,
+  "artifacts": {
+    "work/zeroboard-ai-ci/mcp-server/src/oauth.ts": "7fb75edb0c68d6508ce763aa70d10fc74c31a05556d81b0d0c7d19ad1006e575",
+    "work/zeroboard-ai-ci/mcp-server/src/oauth-store.ts": "a336444c2a02ced5c818f9908ddc5eff45fa0340b51b1e310afd036312079f84",
+    "work/zeroboard-ai-ci/api/_lib/__tests__/connector-lifecycle.test.ts": "544d26e65c3ee1ad1c595207a42f8271f3f37a8d4a795dbe1ba7c9ec419f1849",
+    "work/zeroboard-ai-ci/node_modules/@electric-sql/pglite/dist/index.js": "03bce0708dbe57ab154c75089ded04c47d0a9e713fe397dee33cd3912101cab5",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-first-before.test.ts.txt": "99212b15214a13e2c03f64bd5cc3d5216ab8390f6aaa45e81b8a4a817c9e7a78",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before.log": "53360ff4dfb2895cab1a71e1759c2e5219719c920529ae6d0827c246b13959a5",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before.json": "fc7e921b2efca9875a67c15573a3cd78aba41471302411009976069df33abb44",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before-auth.log": "b1e247545387c09b67f22d5e460bd793ac9e4ab2eecb15e531f885ffe7b2737d",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before-auth.json": "cc32883934ec15487910b97668d99b6abe21f128f71324d41b0a78db517d0b8f",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-vite.config.mjs": "8385640b41ba7a9582e5d470d38321ebc43b63301ab0bf26821fd0ca3f685d18",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-plan.md": "d8b36bbc3b4fd9a2724df732d466176a264d24c56bd11f21da1f12328757bafb",
+    "outputs/gauntlet/twelfth-mcp-lifecycle-before.md": "38a91cf55132b536842685aabdbe3e8defd56742d32918fb10cee2a9fb8f7a02"
+  }
+}
