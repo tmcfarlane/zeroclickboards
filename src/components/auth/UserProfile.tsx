@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, LogOut, ChevronDown, Sparkles, Settings, Shield, Tag } from 'lucide-react';
+import { User, LogIn, LogOut, ChevronDown, Sparkles, Settings, Shield, Tag, Link2 } from 'lucide-react';
 import { useAuthContext } from './AuthProvider';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -51,6 +51,7 @@ export function UserProfile({ onSignInClick, onPricingClick }: UserProfileProps)
         <Button
           variant="ghost"
           size="sm"
+          aria-label="Account menu"
           className="h-9 px-2 text-[#A8B2B2] hover:text-white hover:bg-white/5"
         >
           <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
@@ -87,6 +88,13 @@ export function UserProfile({ onSignInClick, onPricingClick }: UserProfileProps)
           </>
         )}
         <div className="h-px bg-white/10 my-1" />
+        <DropdownMenuItem
+          onClick={() => navigate('/account#connectors')}
+          className="cursor-pointer text-[#78fcd6] hover:bg-white/5 focus:bg-white/5 focus:text-[#78fcd6]"
+        >
+          <Link2 className="w-4 h-4 mr-2" />
+          ChatGPT &amp; Codex
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => navigate('/account')}
           className="cursor-pointer hover:bg-white/5 focus:bg-white/5"

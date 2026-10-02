@@ -1,0 +1,34 @@
+name: ChatGPT connector UI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: connector-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Connector UI (disposable fixtures)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config playwright.connector.config.ts
+      - name: Upload browser evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connector-ui-report
+          path: |
+            playwright-report/
+            test-results/connector-ui/
+          retention-days: 7

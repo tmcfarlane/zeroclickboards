@@ -2,7 +2,8 @@ import type { OAuthRecords, OAuthStore } from './oauth.js';
 export interface SqlExecutor { query(sql: string, values: unknown[]): Promise<{ rows: { value: unknown }[] }> }
 /** Dedicated server-side SQL connection to the private oauth schema; never a model-facing service-role client. */
 export class SqlOAuthStore implements OAuthStore {
-  constructor(private readonly sql: SqlExecutor) {}
+  private readonly sql: SqlExecutor;
+  constructor(sql: SqlExecutor) { this.sql = sql; }
   async get<K extends keyof OAuthRecords>(kind: K, key: string): Promise<OAuthRecords[K] | undefined> {
     const result = await this.sql.query('select value from zeroboard_oauth.records where kind = $1 and key = $2', [kind, key]);
     return result.rows[0]?.value as OAuthRecords[K] | undefined;
