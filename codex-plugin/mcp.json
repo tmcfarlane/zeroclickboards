@@ -3,8 +3,8 @@
   "mcpServers": {
     "zeroboard": {
       "type": "stdio",
-      "command": "zeroboard-mcp",
-      "args": ["serve", "--plugin"]
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/scripts/serve.mjs"]
     }
   }
 }

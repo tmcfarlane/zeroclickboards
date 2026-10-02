@@ -1,4 +1,5 @@
 import type { OAuthClientInformationFull } from '@modelcontextprotocol/sdk/shared/auth.js'
+import { X509Certificate } from 'node:crypto'
 import { isOAuthCallbackUri } from '../../mcp-server/src/oauth-callback.js'
 
 export interface ConnectorConfig {
@@ -6,6 +7,7 @@ export interface ConnectorConfig {
   resource: URL
   consentUrl: URL
   databaseUrl: string
+  databaseCa?: string
   vaultKey: Buffer
   proposalKey: string
   supabaseUrl: string
@@ -27,6 +29,12 @@ export function readConnectorConfig(env: NodeJS.ProcessEnv = process.env): Conne
   if (issuer.pathname !== '/') throw new Error('Origin issuer required')
   const databaseUrl = env.ZEROBOARD_CONNECTOR_DATABASE_URL ?? ''
   if (!['postgres:', 'postgresql:'].includes(new URL(databaseUrl).protocol)) throw new Error('Postgres connection required')
+  const databaseCa = env.ZEROBOARD_CONNECTOR_DATABASE_CA?.trim()
+  if (databaseCa !== undefined) {
+    try {
+      if (!/^-----BEGIN CERTIFICATE-----\r?\n[A-Za-z0-9+/=\r\n]+-----END CERTIFICATE-----$/.test(databaseCa) || !new X509Certificate(databaseCa).ca) throw new Error()
+    } catch { throw new Error('Valid database CA certificate PEM required') }
+  }
   const vaultKeyText = env.ZEROBOARD_CONNECTOR_VAULT_KEY ?? ''
   const vaultKey = Buffer.from(vaultKeyText, 'base64')
   if (vaultKey.length !== 32 || vaultKey.toString('base64') !== vaultKeyText) throw new Error('32-byte base64 vault key required')
@@ -55,6 +63,6 @@ export function readConnectorConfig(env: NodeJS.ProcessEnv = process.env): Conne
   if (new Set(clients.map(c => c.client_id)).size !== clients.length) throw new Error('Distinct client identifiers required')
   const origins: unknown = JSON.parse(env.ZEROBOARD_CONNECTOR_ALLOWED_ORIGINS || '[]')
   if (!Array.isArray(origins) || origins.some(origin => typeof origin !== 'string' || httpsUrl(origin).href !== `${httpsUrl(origin).origin}/`)) throw new Error('Exact origin allowlist required')
-  return { issuer, resource: new URL('/mcp', issuer), consentUrl: new URL('/auth/connector', issuer), databaseUrl,
+  return { issuer, resource: new URL('/mcp', issuer), consentUrl: new URL('/auth/connector', issuer), databaseUrl, databaseCa,
     vaultKey, proposalKey, supabaseUrl, publishableKey, clients, allowedOrigins: [...new Set([issuer.origin, ...origins.map(origin => httpsUrl(origin).origin)])] }
 }

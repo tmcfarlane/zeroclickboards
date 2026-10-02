@@ -5,6 +5,7 @@ import { getHeader, getUserFromRequest, readJsonBody, sendJson } from './_lib/au
 import { configuredConnectorRuntime, type ConnectorRuntime } from './_lib/connector-runtime.js'
 import { sessionExpiry } from './_lib/connector-vault.js'
 import { listBoards, requireBoardEditor } from '../mcp-server/src/board-data.js'
+import { callbackKinds } from '../mcp-server/src/oauth-callback.js'
 
 type AuthenticatedUser = NonNullable<Awaited<ReturnType<typeof getUserFromRequest>>>
 interface HandlerDependencies {
@@ -78,7 +79,8 @@ export function createConnectorHandler(deps: HandlerDependencies = { runtime: co
           clientName: runtime.config.clients.find(client => client.client_id === grant.clientId)?.client_name ?? grant.clientId,
           boardIds: grant.boardIds, scopes: grant.scopes, expiresAt: new Date(grant.expires).toISOString() }))
         sendJson(res, 200, { available: true, endpoint: runtime.config.resource.href, connections,
-          clients: runtime.config.clients.map(client => ({ name: client.client_name ?? client.client_id, clientId: client.client_id })) })
+          clients: runtime.config.clients.map(client => ({ name: client.client_name ?? client.client_id, clientId: client.client_id,
+            callbackKinds: callbackKinds(client.redirect_uris) })) })
         return
       }
       // A bearer token is never read from cookies or query strings. Same-origin

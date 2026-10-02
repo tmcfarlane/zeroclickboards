@@ -29,3 +29,13 @@ export function oauthCallbackMatches(requested: unknown, registered: unknown): b
   return request.nativePathQuery !== undefined && registration.nativePathQuery !== undefined &&
     request.nativePathQuery === registration.nativePathQuery;
 }
+
+export type CallbackKind = 'native' | 'chatgpt';
+
+/** Only advertise setup paths whose documented callbacks are registered. */
+export function callbackKinds(callbacks: readonly string[]): CallbackKind[] {
+  const kinds: CallbackKind[] = [];
+  if (callbacks.some(uri => oauthCallbackMatches('http://127.0.0.1/callback', uri))) kinds.push('native');
+  if (callbacks.includes('https://chatgpt.com/connector_platform_oauth_redirect')) kinds.push('chatgpt');
+  return kinds;
+}

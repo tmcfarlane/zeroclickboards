@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useBoardStore } from '@/store/useBoardStore';
+import { useBoardDialogs } from '@/hooks/useBoardDialogs';
 import type { Column } from '@/types';
 import { KanbanCard } from './KanbanCard';
 import { Button } from '@/components/ui/button';
@@ -20,8 +21,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface KanbanColumnProps {
   boardId: string;
@@ -32,10 +31,9 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ boardId, column, onHide, isDragOver, onAddCard }: KanbanColumnProps) {
-  const { renameColumn, removeColumn, archiveAllCards } = useBoardStore();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const { removeColumn, archiveAllCards } = useBoardStore();
+  const { openTextDialog } = useBoardDialogs();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState(column.title);
 
   const {
     attributes,
@@ -56,13 +54,6 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver, onAddCard }:
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  };
-
-  const handleRename = () => {
-    if (newTitle.trim() && newTitle !== column.title) {
-      renameColumn(boardId, column.id, newTitle.trim());
-    }
-    setIsEditDialogOpen(false);
   };
 
   const handleDelete = () => {
@@ -91,7 +82,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver, onAddCard }:
             </span>
           </div>
           
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 aria-label={`Actions for ${column.title} column`}
@@ -107,7 +98,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver, onAddCard }:
               className="w-40 bg-[#111515] border-white/10 text-[#F2F7F7]"
             >
               <DropdownMenuItem
-                onClick={() => setIsEditDialogOpen(true)}
+                onClick={() => openTextDialog({ kind: 'rename-column', boardId, columnId: column.id })}
                 className="hover:bg-white/5 cursor-pointer focus:bg-white/5"
               >
                 <Edit2 className="w-4 h-4 mr-2" />
@@ -197,42 +188,6 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver, onAddCard }:
         </div>
       </div>
 
-      {/* Rename Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
-          <DialogHeader>
-            <DialogTitle>Rename Column</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="column-name" className="mb-2 block">
-              Column Name
-            </Label>
-            <Input
-              id="column-name"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              className="bg-white/5 border-white/10 text-[#F2F7F7]"
-              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-              className="border-white/10 text-[#F2F7F7] hover:bg-white/5"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRename}
-              className="gradient-cyan text-[#0B0F0F] hover:opacity-90"
-            >
-              Rename
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="bg-[#111515] border-white/10 text-[#F2F7F7]">
@@ -260,8 +215,6 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver, onAddCard }:
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Add Card Dialog */}
 
     </>
   );

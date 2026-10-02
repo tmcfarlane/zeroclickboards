@@ -3,6 +3,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BoardSelector } from '../BoardSelector';
 import { useBoardStore } from '@/store/useBoardStore';
+import { BoardDialogContext } from '@/hooks/useBoardDialogs';
+
+function renderSelector() {
+  return render(<BoardDialogContext.Provider value={{ openTextDialog: vi.fn(), openShareDialog: vi.fn() }}><BoardSelector onCreateBoardClick={vi.fn()} /></BoardDialogContext.Provider>);
+}
 
 vi.mock('uuid', () => {
   let counter = 0;
@@ -22,13 +27,13 @@ beforeEach(() => {
 
 describe('BoardSelector', () => {
   it('shows "Select Board" when no active board', () => {
-    render(<BoardSelector onCreateBoardClick={vi.fn()} />);
+    renderSelector();
     expect(screen.getByText('Select Board')).toBeInTheDocument();
   });
 
   it('shows active board name', () => {
     useBoardStore.getState().createBoard('My Project');
-    render(<BoardSelector onCreateBoardClick={vi.fn()} />);
+    renderSelector();
     expect(screen.getByText('My Project')).toBeInTheDocument();
   });
 
@@ -37,7 +42,7 @@ describe('BoardSelector', () => {
     useBoardStore.getState().createBoard('Board A');
     useBoardStore.getState().createBoard('Board B');
 
-    render(<BoardSelector onCreateBoardClick={vi.fn()} />);
+    renderSelector();
 
     const trigger = screen.getByRole('button');
     await user.click(trigger);

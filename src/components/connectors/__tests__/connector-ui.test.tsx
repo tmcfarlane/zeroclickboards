@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -190,7 +190,7 @@ describe('connection settings', () => {
     await user.click(await screen.findByRole('button', { name: 'Copy URL' }));
     expect(copy).toHaveBeenCalledWith('https://board.example.com/mcp');
     expect(screen.getByRole('status')).toHaveTextContent('Complete setup in your client to connect');
-    expect(screen.getByText(/No connections yet/)).toBeInTheDocument();
+    expect(screen.getByText(/No approved access yet/)).toBeInTheDocument();
   });
 
   it('shows service availability honestly without an enabled setup URL', async () => {
@@ -199,17 +199,111 @@ describe('connection settings', () => {
     expect(await screen.findByText('Connection service unavailable')).toBeInTheDocument();
     expect(screen.getByText('Connection configuration is incomplete.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy URL' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Approved access cannot currently be checked/)).toBeInTheDocument();
+    expect(screen.queryByText(/No approved access yet|Your boards stay private/)).not.toBeInTheDocument();
   });
 
-  it('shows registered public client IDs only when configuration is available', async () => {
-    state.fetch.mockResolvedValueOnce(response({ ...status, clients: [{ name: 'ChatGPT', clientId: 'chatgpt-public-client' }, { name: 'Codex', clientId: 'codex-public-client' }] }));
-    const user = userEvent.setup();
+  it('retains provided approval rows when the service cannot check access', async () => {
+    state.fetch.mockResolvedValueOnce(response({ available: false, endpoint: null, connections: [connection] }));
     render(<ConnectorSettings />);
-    await user.click(await screen.findByText('OAuth setup details'));
-    expect(screen.getByLabelText('ChatGPT OAuth client ID')).toHaveValue('chatgpt-public-client');
+    expect(await screen.findByText('ChatGPT')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Disconnect' })).toBeEnabled();
+    expect(screen.queryByText(/No approved access yet|Your boards stay private/)).not.toBeInTheDocument();
+  });
+
+  it.each(['resolve', 'reject'])('ignores a pending ID copy that completes after changing client (%s)', async outcome => {
+    const user = userEvent.setup();
+    let finish!: () => void;
+    const copy = vi.spyOn(navigator.clipboard, 'writeText').mockImplementationOnce(() => new Promise<void>((resolve, reject) => {
+      finish = () => outcome === 'resolve' ? resolve() : reject(new Error('Clipboard denied'));
+    }));
+    state.fetch.mockResolvedValueOnce(response({ ...status, clients: [
+      { name: 'Web', clientId: 'web-id', callbackKinds: ['chatgpt'] },
+      { name: 'Native', clientId: 'native-id', callbackKinds: ['native'] },
+    ] }));
+    render(<ConnectorSettings />);
+    await user.click(await screen.findByRole('button', { name: 'Copy client ID' }));
+    expect(copy).toHaveBeenCalledWith('web-id');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Client' }), 'native-id');
+    await act(async () => finish());
+    expect(screen.getByLabelText('Native OAuth client ID')).toHaveValue('native-id');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('ignores a pending copy after the account session changes', async () => {
+    const user = userEvent.setup();
+    let finish!: () => void;
+    vi.spyOn(navigator.clipboard, 'writeText').mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+    state.fetch.mockResolvedValueOnce(response(status)).mockResolvedValueOnce(response({ ...status, endpoint: 'https://new.example.com/mcp' }));
+    const view = render(<ConnectorSettings />);
+    await user.click(await screen.findByRole('button', { name: 'Copy URL' }));
+    state.auth.session = { access_token: 'new-account-token' } as Session;
+    view.rerender(<ConnectorSettings />);
+    await waitFor(() => expect(screen.getByLabelText('Connection URL')).toHaveValue('https://new.example.com/mcp'));
+    await act(async () => finish());
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy URL' })).toBeInTheDocument();
+  });
+
+  it('clears a prior copy success when clipboard access fails', async () => {
+    const user = userEvent.setup();
+    const copy = vi.spyOn(navigator.clipboard, 'writeText');
+    state.fetch.mockResolvedValueOnce(response(status));
+    render(<ConnectorSettings />);
+    await user.click(await screen.findByRole('button', { name: 'Copy URL' }));
+    copy.mockRejectedValueOnce(new Error('Clipboard blocked'));
+    await user.click(screen.getByRole('button', { name: 'URL copied' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Copy was blocked');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy URL' })).toBeInTheDocument();
+  });
+
+  it('shows required IDs and the right setup by callback capabilities, even with misleading names', async () => {
+    state.fetch.mockResolvedValueOnce(response({ ...status, clients: [
+      { name: 'Codex', clientId: 'chatgpt-public-client', callbackKinds: ['chatgpt'] },
+      { name: 'ChatGPT', clientId: 'codex-public-client', callbackKinds: ['native'] },
+    ] }));
+    const user = userEvent.setup();
+    const copy = vi.spyOn(navigator.clipboard, 'writeText');
+    render(<ConnectorSettings />);
+    expect(await screen.findByLabelText('Codex OAuth client ID')).toHaveValue('chatgpt-public-client');
+    expect(screen.getByRole('heading', { name: 'ChatGPT web setup' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Codex app & CLI setup' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Copy client ID' }));
+    expect(copy).toHaveBeenLastCalledWith('chatgpt-public-client');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Client' }), 'codex-public-client');
-    expect(screen.getByLabelText('Codex OAuth client ID')).toHaveValue('codex-public-client');
+    expect(screen.getByLabelText('ChatGPT OAuth client ID')).toHaveValue('codex-public-client');
+    expect(screen.queryByRole('heading', { name: 'ChatGPT web setup' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Codex app & CLI setup' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Copy Codex command' }));
+    expect(copy).toHaveBeenLastCalledWith("codex mcp add zeroboard --url 'https://board.example.com/mcp' --oauth-client-id 'codex-public-client' --oauth-resource 'https://board.example.com/mcp'");
+    expect(screen.getByRole('status')).toHaveTextContent('Command copied. Complete setup in your client');
+    expect(screen.getByText(/required OAuth client ID/)).toBeInTheDocument();
     expect(screen.getByText(/no client secret is needed/)).toBeInTheDocument();
+  });
+
+  it('does not offer compatible setup for an unrelated registered callback', async () => {
+    state.fetch.mockResolvedValueOnce(response({ ...status, clients: [{ name: 'ChatGPT', clientId: 'custom-client', callbackKinds: [] }] }));
+    render(<ConnectorSettings />);
+    expect(await screen.findByText(/no configured ChatGPT web or default native Codex client/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy Codex command' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'ChatGPT web setup' })).not.toBeInTheDocument();
+  });
+
+  it('fails closed for an unknown server-provided setup capability', async () => {
+    state.fetch.mockResolvedValueOnce(response({ ...status, clients: [{ name: 'Unknown', clientId: 'client', callbackKinds: ['automatic'] }] }));
+    render(<ConnectorSettings />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('invalid response');
+    expect(screen.queryByRole('button', { name: 'Copy client ID' })).not.toBeInTheDocument();
+  });
+
+  it('presents a live grant as approved access without claiming completed client sign-in', async () => {
+    state.fetch.mockResolvedValueOnce(response({ ...status, connections: [connection] }));
+    render(<ConnectorSettings />);
+    expect(await screen.findByRole('heading', { name: 'Approved access' })).toBeInTheDocument();
+    expect(screen.getByText(/Approval alone does not confirm the client is connected/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Disconnect' })).toBeEnabled();
   });
 
   it('asks before revoking and removes the connection only after server confirmation', async () => {
@@ -220,7 +314,7 @@ describe('connection settings', () => {
     const dialog = screen.getByRole('alertdialog');
     expect(state.fetch).toHaveBeenCalledTimes(1);
     await user.click(within(dialog).getByRole('button', { name: 'Disconnect' }));
-    expect(await screen.findByText(/No connections yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/No approved access yet/)).toBeInTheDocument();
     expect(JSON.parse(state.fetch.mock.calls[1][1].body)).toEqual({ action: 'revoke', connectionId: 'connection-1' });
   });
 
@@ -232,6 +326,6 @@ describe('connection settings', () => {
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Disconnect' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to disconnect');
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-    expect(screen.queryByText(/No connections yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No approved access yet/)).not.toBeInTheDocument();
   });
 });

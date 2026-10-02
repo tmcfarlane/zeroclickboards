@@ -3,7 +3,6 @@ import {
   createServiceClient,
   sendJson,
   readJsonBody,
-  getHeader,
   type NodeRes,
 } from "../_lib/auth.js";
 import { Resend } from "resend";
@@ -61,25 +60,45 @@ export default async function handler(req: unknown, res: NodeRes) {
     });
   }
 
+  let boardUrl: string;
+  try {
+    const origin = new URL(
+      process.env.ZEROBOARD_CONNECTOR_ISSUER || "https://board.zeroclickdev.ai",
+    );
+    if (origin.protocol !== "https:" || origin.href !== `${origin.origin}/`) {
+      throw new Error("Invalid application origin");
+    }
+    boardUrl = new URL(`/board/${encodeURIComponent(boardId)}`, origin).href;
+  } catch {
+    return sendJson(res, 503, { error: "Sharing service is unavailable" });
+  }
+
   let inviterName = user.email || "Someone";
-  let supabase: ReturnType<typeof createServiceClient> | null = null;
+  let supabase: ReturnType<typeof createServiceClient>;
 
   try {
     supabase = createServiceClient();
   } catch {
-    // Service role key not set — continue without DB lookups
+    return sendJson(res, 503, { error: "Sharing service is unavailable" });
   }
+  if (!supabase)
+    return sendJson(res, 503, { error: "Sharing service is unavailable" });
 
   // Verify the caller owns this board
   let boardName = "";
-  if (supabase) {
-    const { data: board } = await supabase
+  let accessSaved = false;
+  const saveFailure = () => sendJson(res, 503, {
+    error: "Failed to save invitation",
+    ...(accessSaved ? { accessSaved: true } : {}),
+  });
+  try {
+    const { data: board, error: boardError } = await supabase
       .from("boards")
       .select("user_id, name")
       .eq("id", boardId)
       .single();
 
-    if (!board || board.user_id !== user.userId) {
+    if (boardError || !board || board.user_id !== user.userId) {
       return sendJson(res, 403, {
         error: "You do not have permission to share this board",
       });
@@ -96,7 +115,7 @@ export default async function handler(req: unknown, res: NodeRes) {
     else if (inviterProfile?.email) inviterName = inviterProfile.email;
 
     // Always store a pending invite (works for any email)
-    await supabase
+    const { data: savedInvite, error: inviteError } = await supabase
       .from("board_invites")
       .upsert(
         {
@@ -107,17 +126,36 @@ export default async function handler(req: unknown, res: NodeRes) {
           board_name: boardName,
         },
         { onConflict: "board_id,email" },
-      );
+      )
+      .select("board_id, email, role, invited_by")
+      .single();
+    if (
+      inviteError ||
+      !savedInvite ||
+      savedInvite.board_id !== boardId ||
+      savedInvite.email !== email ||
+      savedInvite.role !== role ||
+      savedInvite.invited_by !== user.userId
+    ) {
+      return saveFailure();
+    }
+    accessSaved = true;
 
     // If invitee already has an account, also add them as a member immediately
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: profileError } = await supabase
       .from("profiles")
       .select("id")
       .eq("email", email)
-      .single();
+      .maybeSingle();
+    if (profileError) {
+      return saveFailure();
+    }
 
     if (existingProfile) {
-      await supabase
+      if (typeof existingProfile.id !== "string" || !existingProfile.id) {
+        return saveFailure();
+      }
+      const { data: savedMember, error: memberError } = await supabase
         .from("board_members")
         .upsert(
           {
@@ -127,17 +165,34 @@ export default async function handler(req: unknown, res: NodeRes) {
             invited_by: user.userId,
           },
           { onConflict: "board_id,user_id" },
-        );
+        )
+        .select("board_id, user_id, role, invited_by")
+        .single();
+      if (
+        memberError ||
+        !savedMember ||
+        savedMember.board_id !== boardId ||
+        savedMember.user_id !== existingProfile.id ||
+        savedMember.role !== role ||
+        savedMember.invited_by !== user.userId
+      ) {
+        return saveFailure();
+      }
       // Clean up the invite since they're already a member
-      await supabase
+      const { error: cleanupError } = await supabase
         .from("board_invites")
         .delete()
         .eq("board_id", boardId)
         .eq("email", email);
+      if (cleanupError) {
+        return saveFailure();
+      }
     }
+  } catch {
+    return saveFailure();
   }
 
-  const boardUrl = `${getHeader(req, "origin") || "https://zeroclickboards.com"}/board/${boardId}`;
+  const safeBoardUrl = escapeHtml(boardUrl);
   const safeName = escapeHtml(inviterName);
   const safeBoardName = escapeHtml(boardName);
   const safeRole = escapeHtml(role);
@@ -156,7 +211,7 @@ export default async function handler(req: unknown, res: NodeRes) {
             <strong>${safeName}</strong> invited you to collaborate on
             <strong>"${safeBoardName}"</strong> as a <strong>${safeRole}</strong>.
           </p>
-          <a href="${boardUrl}" style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #78fcd6; color: #111; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
+          <a href="${safeBoardUrl}" style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #78fcd6; color: #111; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
             Open Board
           </a>
           <p style="color: #999; font-size: 13px; margin-top: 24px;">
@@ -170,6 +225,7 @@ export default async function handler(req: unknown, res: NodeRes) {
       console.error("[invite/send] Resend error:", JSON.stringify(sendError));
       return sendJson(res, 500, {
         error: sendError.message || "Failed to send invitation email",
+        ...(accessSaved ? { accessSaved: true } : {}),
       });
     }
 
@@ -178,6 +234,9 @@ export default async function handler(req: unknown, res: NodeRes) {
     const message =
       err instanceof Error ? err.message : "Unexpected error sending email";
     console.error("[invite/send] Unexpected error:", err);
-    return sendJson(res, 500, { error: message });
+    return sendJson(res, 500, {
+      error: message,
+      ...(accessSaved ? { accessSaved: true } : {}),
+    });
   }
 }

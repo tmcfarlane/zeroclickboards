@@ -14,7 +14,7 @@ export interface ConnectorStatus {
   available: boolean;
   endpoint: string | null;
   connections: ConnectorConnection[];
-  clients?: { name: string; clientId: string }[];
+  clients?: { name: string; clientId: string; callbackKinds: ('native' | 'chatgpt')[] }[];
   reason?: string;
 }
 
@@ -58,7 +58,8 @@ function isStatus(value: Record<string, unknown>): boolean {
     Array.isArray(value.connections) && value.connections.every(isConnection) &&
     (value.reason === undefined || typeof value.reason === 'string') &&
     (value.clients === undefined || Array.isArray(value.clients) && value.clients.every(client =>
-      isObject(client) && isText(client.name) && isText(client.clientId)));
+      isObject(client) && isText(client.name) && isText(client.clientId) && Array.isArray(client.callbackKinds) &&
+      client.callbackKinds.every(kind => kind === 'native' || kind === 'chatgpt')));
 }
 
 function isConsent(value: Record<string, unknown>): boolean {

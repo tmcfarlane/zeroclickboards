@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { Board } from '@/types';
 import type { BoardSyncState } from '@/lib/board-sync';
 import { boardAccessFor, editableAccess, type BoardAccess } from '@/lib/board-access';
 import type { CardEditorSession } from '@/store/useBoardStore';
 import { AppShell } from '../AppShell';
+import { useBoardDialogs } from '@/hooks/useBoardDialogs';
 
 const state = vi.hoisted(() => ({
   auth: { isSignedIn: true, isLoaded: true, userId: 'current-user' as string | null },
@@ -52,7 +54,12 @@ vi.mock('@/store/useBoardStore', () => ({
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => state.auth }));
 vi.mock('@/hooks/useKeyboardShortcuts', () => ({ useKeyboardShortcuts: vi.fn() }));
 vi.mock('@/components/KeyboardShortcutsHelp', () => ({ KeyboardShortcutsHelp: () => null }));
-vi.mock('@/components/board/KanbanBoard', () => ({ KanbanBoard: () => <p>Kanban board content</p> }));
+vi.mock('@/components/board/KanbanBoard', () => ({
+  KanbanBoard: () => {
+    const { openTextDialog } = useBoardDialogs();
+    return <><p>Kanban board content</p><button onClick={() => openTextDialog({ kind: 'rename-board', boardId: 'current-board' })}>Open board rename</button></>;
+  },
+}));
 vi.mock('@/components/board/BoardSkeleton', () => ({ BoardSkeleton: () => <p>Loading board content</p> }));
 vi.mock('@/components/timeline/TimelineView', () => ({ TimelineView: () => <p>Timeline board content</p> }));
 vi.mock('@/components/ai/AIAssistant', () => ({ AIAssistant: () => null }));
@@ -203,5 +210,29 @@ describe('AppShell board synchronization', () => {
     unmount();
     window.dispatchEvent(new Event('focus'));
     expect(state.store.refreshFromRemote).not.toHaveBeenCalled();
+  });
+
+  it('warns for an open text draft and removes the warning after explicit cancellation', async () => {
+    const user = userEvent.setup();
+    renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open board rename' }));
+    await user.clear(screen.getByRole('textbox', { name: 'Board Name' }));
+    await user.type(screen.getByRole('textbox', { name: 'Board Name' }), 'Unsaved name');
+    expect(attemptToLeave().defaultPrevented).toBe(true);
+    await user.click(screen.getByRole('button', { name: /^Cancel$/ }));
+    expect(attemptToLeave().defaultPrevented).toBe(false);
+    expect(state.store.renameBoard).not.toHaveBeenCalled();
+  });
+
+  it('clears the retained text draft when the authenticated identity changes', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderAppShell();
+    await user.click(screen.getByRole('button', { name: 'Open board rename' }));
+    await user.type(screen.getByRole('textbox', { name: 'Board Name' }), ' private draft');
+    state.auth = { isSignedIn: true, isLoaded: true, userId: 'another-user' };
+    rerender(<AppShell />);
+    expect(screen.queryByRole('dialog', { name: 'Rename Board' })).not.toBeInTheDocument();
+    expect(attemptToLeave().defaultPrevented).toBe(false);
+    expect(state.store.renameBoard).not.toHaveBeenCalled();
   });
 });

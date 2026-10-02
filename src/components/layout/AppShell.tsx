@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,9 @@ import { ActiveCardEditor } from '@/components/board/ActiveCardEditor';
 import { CardEditor, type CardEditorSaveData } from '@/components/board/CardEditor';
 import { BoardSyncNotice } from '@/components/board/BoardSyncNotice';
 import { BoardSelector } from '@/components/board/BoardSelector';
+import { BoardTextDialog } from '@/components/board/BoardTextDialog';
+import { ShareBoardDialog } from '@/components/board/ShareBoardDialog';
+import { BoardDialogContext, type BoardTextDialogRequest, type BoardTextDialogTarget } from '@/hooks/useBoardDialogs';
 import { ReadOnlyBoard } from '@/components/board/ReadOnlyBoard';
 import { ViewToggle } from '@/components/board/ViewToggle';
 import { Input } from '@/components/ui/input';
@@ -45,6 +48,9 @@ export function AppShell() {
   } = useBoardStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newCardTarget, setNewCardTarget] = useState<{ boardId: string; columnId: string } | null>(null);
+  const [textDialogRequest, setTextDialogRequest] = useState<BoardTextDialogRequest | null>(null);
+  const [shareDialogRequest, setShareDialogRequest] = useState<{ boardId: string; boardName: string; isPublic: boolean; embedEnabled: boolean } | null>(null);
+  const [hasShareDraft, setHasShareDraft] = useState(false);
   const [searchBoardId, setSearchBoardId] = useState<string | null>(null);
   const [viewerSearch, setViewerSearch] = useState('');
   const viewerSearchRef = useRef<HTMLInputElement>(null);
@@ -57,9 +63,26 @@ export function AppShell() {
 
   const activeBoard = getActiveBoard();
   const userBoards = getBoardsForUser();
-  const hasUnsavedChanges = !!cardEditorSession || Object.values(boardSyncStates).some((state) => state.status !== 'saved');
+  const hasUnsavedChanges = !!cardEditorSession || !!textDialogRequest || hasShareDraft || Object.values(boardSyncStates).some((state) => state.status !== 'saved');
   const repoUrl = import.meta.env.VITE_GITHUB_REPO_URL as string | undefined;
   const canEditActiveBoard = !!activeBoard && useBoardStore.getState().canEditBoard(activeBoard.id);
+  const sharedBoard = shareDialogRequest ? useBoardStore.getState().boards.find((board) => board.id === shareDialogRequest.boardId) : undefined;
+
+  const openTextDialog = useCallback((target: BoardTextDialogTarget) => {
+    const store = useBoardStore.getState();
+    const board = store.boards.find((candidate) => candidate.id === target.boardId);
+    if (!board || !store.canEditBoard(target.boardId)) return;
+    const column = target.kind === 'rename-column' ? board.columns.find((candidate) => candidate.id === target.columnId) : undefined;
+    if (target.kind === 'rename-column' && !column) return;
+    setTextDialogRequest({ ...target, initialTitle: target.kind === 'rename-board' ? board.name : column?.title ?? '' });
+  }, []);
+  const openShareDialog = useCallback((boardId: string) => {
+    const store = useBoardStore.getState();
+    const board = store.boards.find((candidate) => candidate.id === boardId);
+    if (!board || !store.canManageBoard(boardId)) return;
+    setShareDialogRequest({ boardId, boardName: board.name, isPublic: board.isPublic ?? false, embedEnabled: board.embedEnabled ?? false });
+  }, []);
+  const boardDialogs = useMemo(() => ({ openTextDialog, openShareDialog }), [openTextDialog, openShareDialog]);
 
   useKeyboardShortcuts({
     onNewCard: () => {
@@ -96,6 +119,9 @@ export function AppShell() {
   useEffect(() => {
     if (isLoaded) {
       setCurrentUserId(userId);
+      setTextDialogRequest(null);
+      setShareDialogRequest(null);
+      setHasShareDraft(false);
     }
   }, [isLoaded, userId, setCurrentUserId]);
 
@@ -134,13 +160,13 @@ export function AppShell() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (isSignedIn && remoteStatus === 'ready' && userBoards.length === 0 && !cardEditorSession) {
+    if (isSignedIn && remoteStatus === 'ready' && userBoards.length === 0 && !cardEditorSession && !textDialogRequest && !shareDialogRequest) {
       const boardId = createBoard('My First Project', 'Welcome to ZeroBoard!');
       setActiveBoard(boardId);
     } else if (!activeBoardId && userBoards.length > 0) {
       setActiveBoard(userBoards[0].id);
     }
-  }, [userBoards, activeBoardId, createBoard, setActiveBoard, isSignedIn, isLoaded, remoteStatus, cardEditorSession]);
+  }, [userBoards, activeBoardId, createBoard, setActiveBoard, isSignedIn, isLoaded, remoteStatus, cardEditorSession, textDialogRequest, shareDialogRequest]);
 
   const handleAIClick = () => {
     setIsAIOpen((v) => !v);
@@ -176,6 +202,7 @@ export function AppShell() {
   }
 
   return (
+    <BoardDialogContext.Provider value={boardDialogs}>
     <div className="h-dvh bg-[#0B0F0F] text-[#F2F7F7] noise-overlay flex flex-col">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F0F]/90 backdrop-blur-md border-b border-white/5">
@@ -290,6 +317,19 @@ export function AppShell() {
 
 
       <ActiveCardEditor />
+      {textDialogRequest && <BoardTextDialog key={`${textDialogRequest.kind}:${textDialogRequest.boardId}:${textDialogRequest.kind === 'rename-column' ? textDialogRequest.columnId : ''}`} request={textDialogRequest} onClose={() => setTextDialogRequest(null)} />}
+      {shareDialogRequest && (
+        <ShareBoardDialog
+          key={shareDialogRequest.boardId}
+          boardId={shareDialogRequest.boardId}
+          boardName={sharedBoard?.name ?? shareDialogRequest.boardName}
+          isPublic={sharedBoard?.isPublic ?? shareDialogRequest.isPublic}
+          embedEnabled={sharedBoard?.embedEnabled ?? shareDialogRequest.embedEnabled}
+          isOpen
+          onDraftChange={setHasShareDraft}
+          onOpenChange={(open) => { if (!open) { setShareDialogRequest(null); setHasShareDraft(false); } }}
+        />
+      )}
       {newCardTarget && (
         <CardEditor isOpen onClose={() => setNewCardTarget(null)} onSave={handleKeyboardAddCard} mode="create" accessMessage={!useBoardStore.getState().canEditBoard(newCardTarget.boardId) ? 'You no longer have editing access to this board. Your form is kept here; copy anything you need before closing it.' : undefined} />
       )}
@@ -317,5 +357,6 @@ export function AppShell() {
         onUpgrade={() => setIsUpgradePromptOpen(true)}
       />
     </div>
+    </BoardDialogContext.Provider>
   );
 }
