@@ -150,6 +150,16 @@ describe('connector configuration and encrypted account vault', () => {
 })
 
 describe('account connector API and durable OAuth flow', () => {
+  it.each(['not-a-route', 'constructor', 'toString', '__proto__'])('rejects unknown protocol route %s as JSON without probing storage', async route => {
+    const runtime = { health: vi.fn() } as unknown as ReturnType<typeof createConnectorRuntime>
+    const handler = createConnectorHandler({ runtime: () => runtime, authenticate: vi.fn() })
+    let body = ''; const res = { setHeader: vi.fn(), end: (value: string) => { body = value }, statusCode: 0 } as unknown as ServerResponse
+    await handler({ url: `/api/connector?route=${route}`, method: 'GET' } as IncomingMessage, res)
+    expect(res.statusCode).toBe(404)
+    expect(JSON.parse(body)).toEqual({ error: 'Unknown connector route' })
+    expect(runtime.health).not.toHaveBeenCalled()
+  })
+
   it('authenticates status and reports unavailable configuration honestly', async () => {
     const { request } = await setup()
     expect((await request('/api/connector')).status).toBe(401)

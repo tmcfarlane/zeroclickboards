@@ -15,7 +15,9 @@ export function MobileSearchOverlay({ isOpen, onClose, value, onChange }: Mobile
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      // The opening dropdown restores its trigger first; then focus search.
+      const timeout = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timeout);
     }
   }, [isOpen]);
 
@@ -26,12 +28,14 @@ export function MobileSearchOverlay({ isOpen, onClose, value, onChange }: Mobile
       <Search className="w-4 h-4 text-[#A8B2B2] shrink-0" />
       <Input
         ref={inputRef}
+        aria-label="Search cards"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search cards..."
         className="flex-1 h-9 bg-white/5 border-white/10 text-[#F2F7F7] placeholder:text-[#A8B2B2]/50"
       />
       <Button
+        aria-label="Close search"
         variant="ghost"
         size="icon"
         onClick={() => { onChange(''); onClose(); }}

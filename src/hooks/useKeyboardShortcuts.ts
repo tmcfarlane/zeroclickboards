@@ -14,6 +14,7 @@ interface KeyboardShortcutCallbacks {
 
 export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.defaultPrevented || e.isComposing) return;
     // Don't trigger shortcuts when typing in inputs, textareas, or contenteditable
     const target = e.target as HTMLElement;
     if (
@@ -21,13 +22,13 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       target.tagName === 'TEXTAREA' ||
       target.tagName === 'SELECT' ||
       target.isContentEditable ||
-      target.closest('[role="dialog"]')  // Don't trigger in dialogs
+      target.closest('[role="dialog"], [role="menu"]')
     ) {
       return;
     }
 
     // Handle Ctrl/Cmd shortcuts (undo/redo)
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       if (e.shiftKey) {
         callbacks.onRedo?.();
@@ -40,7 +41,7 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     // Don't trigger with modifier keys (except shift for shift combos)
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-    switch (e.key) {
+    switch (e.key.toLowerCase()) {
       case 'n':
         if (e.shiftKey) {
           e.preventDefault();

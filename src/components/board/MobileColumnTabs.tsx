@@ -25,6 +25,7 @@ function DroppableTab({ col, index, isActive, onTabChange }: {
     <button
       ref={setNodeRef}
       type="button"
+      aria-pressed={isActive}
       onClick={() => onTabChange(index)}
       className={`flex-shrink-0 px-3 py-2.5 text-sm font-medium transition-colors border-b-2 ${
         isOver

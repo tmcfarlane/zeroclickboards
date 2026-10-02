@@ -31,20 +31,17 @@ export function CardActionsMenu({ boardId, columnId, cardId, columns, onEdit }: 
 
   const moveTargets = useMemo(() => columns.filter((c) => c.id !== columnId), [columns, columnId]);
 
-  const card = useMemo(() => {
-    const board = useBoardStore.getState().boards.find((b) => b.id === boardId);
-    const col = board?.columns.find((c) => c.id === columnId);
-    return col?.cards.find((c) => c.id === cardId);
-  }, [boardId, columnId, cardId]);
+  const card = columns.find((column) => column.id === columnId)?.cards.find((candidate) => candidate.id === cardId);
 
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             type="button"
+            aria-label={card ? `Actions for ${card.title}` : 'Card actions'}
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 transition-opacity"
+            className="h-6 w-6 p-0 opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5 transition-opacity"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="w-3.5 h-3.5" />

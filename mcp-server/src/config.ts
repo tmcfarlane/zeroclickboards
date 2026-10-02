@@ -43,4 +43,13 @@ export function assertConfigured(): void {
         'ZEROBOARD_SUPABASE_ANON_KEY (or VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',
     );
   }
+  const key = SUPABASE_ANON_KEY.trim();
+  const keyError = () => new Error('ZeroBoard MCP requires a Supabase publishable/anon key; secret and service-role keys are not supported.');
+  if (key.startsWith('sb_secret_')) throw keyError();
+  if (key.split('.').length === 3) {
+    try {
+      const claims = JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString()) as { role?: unknown };
+      if (claims.role !== 'anon') throw keyError();
+    } catch { throw keyError(); }
+  }
 }

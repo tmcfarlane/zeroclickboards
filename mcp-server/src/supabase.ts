@@ -1,7 +1,7 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { createNodeClient } from './node-client.js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, storageKeyFor, assertConfigured } from './config.js';
-import { fileStorage } from './credentials.js';
+import { fileStorage, hasCredentials, credentialsMatchProject } from './credentials.js';
 
 /**
  * Build a Supabase client backed by the on-disk credential store. With
@@ -35,6 +35,9 @@ export class NotAuthenticatedError extends Error {
  * NotAuthenticatedError if there is no session or the token is revoked/expired.
  */
 export async function getAuthedClient(): Promise<{ client: SupabaseClient; user: User }> {
+  if (hasCredentials() && !credentialsMatchProject(SUPABASE_URL)) {
+    throw new NotAuthenticatedError('Saved login belongs to another Supabase project. Check ZEROBOARD_SUPABASE_URL before signing in; the saved account was not changed.');
+  }
   const client = makeClient();
   const { data: sessionData } = await client.auth.getSession();
   if (!sessionData.session) throw new NotAuthenticatedError();

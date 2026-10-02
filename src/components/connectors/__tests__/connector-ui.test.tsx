@@ -89,8 +89,8 @@ describe('connector consent', () => {
     expect(await screen.findByRole('link', { name: 'Return to ChatGPT' })).toHaveAttribute('href', 'https://chatgpt.example.com/callback?error=access_denied&state=original');
   });
 
-  it('fails closed for unsupported permissions', async () => {
-    state.fetch.mockResolvedValueOnce(response({ ...consent, scopes: ['boards:read', 'cards:delete'] }));
+  it.each(['cards:delete', 'constructor', 'toString', '__proto__'])('fails closed for unsupported permission %s', async scope => {
+    state.fetch.mockResolvedValueOnce(response({ ...consent, scopes: ['boards:read', scope] }));
     renderConsent();
     expect(await screen.findByRole('alert')).toHaveTextContent('unsupported permission');
     expect(screen.getByRole('button', { name: 'Allow connection' })).toBeDisabled();
@@ -154,7 +154,7 @@ describe('connection settings', () => {
   });
 
   it('asks before revoking and removes the connection only after server confirmation', async () => {
-    state.fetch.mockResolvedValueOnce(response({ ...status, connections: [connection] })).mockResolvedValueOnce(response({ revoked: true }));
+    state.fetch.mockResolvedValueOnce(response({ ...status, connections: [connection] })).mockResolvedValueOnce(response({ success: true }));
     const user = userEvent.setup();
     render(<ConnectorSettings />);
     await user.click(await screen.findByRole('button', { name: 'Disconnect' }));

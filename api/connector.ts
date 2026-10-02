@@ -34,7 +34,7 @@ export function createConnectorHandler(deps: HandlerDependencies = { runtime: co
     let runtime: ConnectorRuntime | null
     try { runtime = deps.runtime() } catch { runtime = null }
     if (route !== null) {
-      const path = routes[route]
+      const path = Object.hasOwn(routes, route) ? routes[route] : undefined
       if (!path) { sendJson(res, 404, { error: 'Unknown connector route' }); return }
       if (!runtime) { sendJson(res, 503, { error: 'Hosted connector unavailable' }); return }
       try { await runtime.health() } catch { sendJson(res, 503, { error: 'Hosted connector unavailable' }); return }

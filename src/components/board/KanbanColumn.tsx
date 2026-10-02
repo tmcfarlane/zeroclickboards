@@ -106,6 +106,7 @@ export function KanbanColumn({ boardId, column, onHide, isDragOver }: KanbanColu
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
+                aria-label={`Actions for ${column.title} column`}
                 variant="ghost"
                 size="sm"
                 className="h-7 w-7 p-0 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/5"

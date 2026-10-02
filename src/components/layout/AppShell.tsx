@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
@@ -9,6 +9,7 @@ import { useUndoStore } from '@/store/useUndoStore';
 import { KanbanBoard } from '@/components/board/KanbanBoard';
 import { BoardSkeleton } from '@/components/board/BoardSkeleton';
 import { ActiveCardEditor } from '@/components/board/ActiveCardEditor';
+import { CardEditor, type CardEditorSaveData } from '@/components/board/CardEditor';
 import { BoardSyncNotice } from '@/components/board/BoardSyncNotice';
 import { TimelineView } from '@/components/timeline/TimelineView';
 import { AIAssistant } from '@/components/ai/AIAssistant';
@@ -27,6 +28,7 @@ export function AppShell() {
     activeBoardId,
     viewMode,
     createBoard,
+    addCard,
     setActiveBoard,
     setViewMode,
     getActiveBoard,
@@ -38,6 +40,7 @@ export function AppShell() {
     refreshFromRemote
   } = useBoardStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newCardTarget, setNewCardTarget] = useState<{ boardId: string; columnId: string } | null>(null);
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -52,6 +55,14 @@ export function AppShell() {
   const searchInputId = 'board-search-input';
 
   useKeyboardShortcuts({
+    onNewCard: () => {
+      const column = activeBoard?.columns.find((candidate) => !activeBoard.hiddenColumnIds?.includes(candidate.id));
+      if (activeBoard && column) {
+        setNewCardTarget({ boardId: activeBoard.id, columnId: column.id });
+      } else if (activeBoard) {
+        toast.info('Show or add a column before adding a card.');
+      }
+    },
     onSearch: () => {
       const el = document.getElementById(searchInputId) as HTMLInputElement | null;
       el?.focus();
@@ -118,6 +129,23 @@ export function AppShell() {
     setIsAIOpen((v) => !v);
   };
 
+  const handleKeyboardAddCard = (data: CardEditorSaveData) => {
+    if (!newCardTarget) return;
+    const board = useBoardStore.getState().boards.find((candidate) => candidate.id === newCardTarget.boardId);
+    if (!board?.columns.some((column) => column.id === newCardTarget.columnId)) {
+      toast.error('This column is no longer available. Close this card and choose another column.');
+      return;
+    }
+    addCard(newCardTarget.boardId, newCardTarget.columnId, data.title, data.content, data.targetDate, {
+      description: data.description,
+      labels: data.labels,
+      coverImage: data.coverImage,
+      attachments: data.attachments,
+      recurrence: data.recurrence,
+    });
+    setNewCardTarget(null);
+  };
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-[#0B0F0F] flex items-center justify-center">
@@ -147,6 +175,7 @@ export function AppShell() {
             <div className="hidden sm:block h-5 w-px bg-white/10" aria-hidden="true" />
 
             <Button
+              aria-label="New Board"
               onClick={() => setIsCreateDialogOpen(true)}
               variant="ghost"
               className="h-8 px-3 bg-white/5 border border-white/10 text-[#A8B2B2] hover:text-[#F2F7F7] hover:bg-white/10 font-medium rounded-md text-xs"
@@ -226,6 +255,9 @@ export function AppShell() {
 
 
       <ActiveCardEditor />
+      {newCardTarget && (
+        <CardEditor isOpen onClose={() => setNewCardTarget(null)} onSave={handleKeyboardAddCard} mode="create" />
+      )}
       <AIUpgradePrompt isOpen={isUpgradePromptOpen} onOpenChange={setIsUpgradePromptOpen} />
       <KeyboardShortcutsHelp isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
       <SignInModal isOpen={isSignInModalOpen} onOpenChange={setIsSignInModalOpen} />

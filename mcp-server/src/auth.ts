@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { createNodeClient } from './node-client.js';
 import { makeClient, getAuthedClient, NotAuthenticatedError } from './supabase.js';
 import { setSupabaseUrl, clearCredentials, hasCredentials } from './credentials.js';
-import { SUPABASE_URL, SUPABASE_ANON_KEY, WEB_BASE_URL } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, WEB_BASE_URL, assertConfigured } from './config.js';
 
 function flag(name: string): string | undefined {
   const idx = process.argv.indexOf(`--${name}`);
@@ -167,6 +167,9 @@ async function passwordLogin(): Promise<void> {
 }
 
 export async function login(): Promise<void> {
+  // Reject privileged keys before creating a listener or validating a browser
+  // session with the non-persisting probe client.
+  assertConfigured();
   // Use password mode when explicitly asked or when credentials are supplied;
   // otherwise do the browser flow (supports Google OAuth + email).
   const usePassword =

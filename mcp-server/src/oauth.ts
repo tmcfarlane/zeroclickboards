@@ -82,6 +82,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
     if (!client?.redirect_uris.includes(pending.params.redirectUri)) throw new InvalidClientError('Callback unavailable');
     const redirect = new URL(pending.params.redirectUri);
     redirect.searchParams.set('error', 'access_denied');
+    redirect.searchParams.set('iss', this.options.issuer.href);
     if (pending.params.state !== undefined) redirect.searchParams.set('state', pending.params.state);
     return redirect.href;
   }
@@ -111,6 +112,7 @@ export class ZeroBoardOAuth implements OAuthServerProvider {
     await this.options.store.put('code', hash(code), { grantId, clientId: pending.clientId, redirectUri: pending.params.redirectUri,
       challenge: pending.params.codeChallenge, resource: pending.params.resource, expires: Date.now() + 60_000 });
     const redirect = new URL(pending.params.redirectUri); redirect.searchParams.set('code', code);
+    redirect.searchParams.set('iss', this.options.issuer.href);
     if (pending.params.state !== undefined) redirect.searchParams.set('state', pending.params.state);
     return redirect.href;
   }

@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Link2, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuthContext } from '@/components/auth/AuthProvider';
 import { SignInModal } from '@/components/auth/SignInModal';
 import { Button } from '@/components/ui/button';
-import { connectorRequest, permissionLabels } from '@/components/connectors/connector-api';
+import { connectorRequest, permissionLabel } from '@/components/connectors/connector-api';
 import type { ConnectorConsent } from '@/components/connectors/connector-api';
 
 export function ConnectorConsentPage() {
@@ -34,7 +34,7 @@ export function ConnectorConsentPage() {
     return () => controller.abort();
   }, [isLoaded, session, request, refresh]);
 
-  const unknownScopes = consent?.scopes.some((scope) => !permissionLabels[scope]) ?? false;
+  const unknownScopes = consent?.scopes.some((scope) => !permissionLabel(scope)) ?? false;
   const needsEditor = consent?.scopes.includes('cards:add') ?? false;
   const eligibleBoards = consent?.boards.filter((board) => !needsEditor || board.canAddCards) ?? [];
   const canApprove = !!consent && !unknownScopes && selected.length > 0 && !busy;
@@ -126,7 +126,7 @@ export function ConnectorConsentPage() {
               <p className="mt-3 text-sm text-[#A8B2B2]">Signed in as <span className="text-[#F2F7F7] break-all">{user?.email}</span></p>
               <div className="mt-6 rounded-lg border border-[#78fcd6]/20 bg-[#78fcd6]/5 p-4">
                 <h2 className="text-sm font-medium mb-3">This client is requesting permission to:</h2>
-                <ul className="space-y-2 text-sm text-[#A8B2B2]">{consent.scopes.map((scope) => <li key={scope} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 shrink-0 text-[#78fcd6]" aria-hidden="true" />{permissionLabels[scope] || `Unsupported permission: ${scope}`}</li>)}</ul>
+                <ul className="space-y-2 text-sm text-[#A8B2B2]">{consent.scopes.map((scope) => <li key={scope} className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5 shrink-0 text-[#78fcd6]" aria-hidden="true" />{permissionLabel(scope) || `Unsupported permission: ${scope}`}</li>)}</ul>
               </div>
 
               <fieldset className="mt-6" disabled={!!busy || unknownScopes}>

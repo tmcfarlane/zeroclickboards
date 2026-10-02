@@ -92,6 +92,15 @@ test.describe('disconnect', () => {
 });
 
 test.describe('service failure', () => {
+  test('a malformed successful status response stays inside the settings error UI', async ({ page }) => {
+    await page.route('**/api/connector', (route) => json(route, { available: true, endpoint, connections: null }));
+    await page.goto('/account#connectors');
+    await expect(page.getByRole('alert')).toHaveText('The connection service returned an invalid response. Please try again.');
+    await expect(page.getByRole('heading', { name: 'ChatGPT & Codex', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Copy URL' })).toHaveCount(0);
+  });
+
   test('describes unavailable deployment configuration honestly', async ({ page }) => {
     await page.route('**/api/connector', (route) => json(route, {
       available: false,
@@ -136,6 +145,17 @@ test.describe('service failure', () => {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('alertdialog').getByRole('alert')).toHaveText('Unable to disconnect. Please try again.');
     await expect(page.getByText(/1 selected board/)).toBeVisible();
+  });
+
+  test('a successful HTTP response without revoke acknowledgement keeps the connection', async ({ page }) => {
+    await page.route('**/api/connector', (route) => json(route,
+      route.request().method() === 'POST' ? { success: false } : { ...ready, connections: [connection] }));
+    await page.goto('/account#connectors');
+    await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Disconnect', exact: true }).click();
+    await expect(page.getByRole('alertdialog').getByRole('alert')).toHaveText('The connection service returned an invalid response. Please try again.');
+    await expect(page.getByText(/1 selected board/)).toBeVisible();
+    await expect(page.getByText(/No connections yet/)).toHaveCount(0);
   });
 });
 
@@ -194,6 +214,15 @@ test.describe('OAuth consent', () => {
 });
 
 test.describe('consent validation', () => {
+  test('malformed board permissions fail closed instead of enabling access', async ({ page }) => {
+    await page.route('**/api/connector?**', (route) => json(route, { ...consent,
+      boards: [{ id: BOARD_ID, name: 'Product roadmap', canAddCards: 'false' }] }));
+    await page.goto('/auth/connector?request=disposable-request');
+    await expect(page.getByRole('alert')).toHaveText('The connection service returned an invalid response. Please try again.');
+    await expect(page.getByRole('button', { name: 'Allow connection', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('checkbox')).toHaveCount(0);
+  });
+
   test('an expired request fails visibly without offering approval', async ({ page }) => {
     await page.route('**/api/connector?**', (route) => json(route, { error: 'This connection request has expired. Restart setup in your client.' }, 400));
     await page.goto('/auth/connector?request=expired-request');

@@ -102,14 +102,16 @@ export function BoardSelector({ onCreateBoardClick }: BoardSelectorProps) {
                 )}
                 <span className="truncate">{board.name}</span>
               </div>
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 opacity-100 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                 <button
+                  aria-label={`Rename ${board.name}`}
                   onClick={(e) => openRenameDialog(board, e)}
                   className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-[#78fcd6] transition-colors"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  aria-label={`Delete ${board.name}`}
                   onClick={(e) => openDeleteDialog(board, e)}
                   className="p-1.5 hover:bg-white/10 rounded-md text-[#A8B2B2] hover:text-red-400 transition-colors"
                 >

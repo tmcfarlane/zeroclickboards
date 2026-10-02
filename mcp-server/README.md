@@ -4,11 +4,21 @@ An [MCP](https://modelcontextprotocol.io) server for **ZeroBoard** — manage yo
 
 > Status: **v1 core** (issue #9). Read/write tools + resources over stdio, authenticated with your ZeroBoard (Supabase) account. See [Roadmap](#roadmap) for what's next.
 
-## Release 0.2.0
+## Repository version 0.2.0
 
 This release adds the `set_recurrence` tool and recurring-card schedules to `add_card`, bringing the server to 28 tools. Concurrent browser and MCP edits preserve independent card changes, body edits retain checklists and metadata, recurring archives create only one successor, and date inputs are validated as real calendar dates. Cover images and attachment flags stay consistent.
 
-Node.js 20 or newer is now required. Install the current release with `npx -y @zeroclickdev/zeroboard-mcp@latest`; the saved ZeroBoard login is reused.
+Node.js 20 or newer is now required. The npm registry still serves 0.1.0 as of October 1, 2026; `npx @latest` does not yet include this checkout's scoped plugin and newer tools. Build the reviewed version locally to use these changes:
+
+```bash
+cd mcp-server
+npm ci
+npm run build
+npm link
+zeroboard-mcp --help
+```
+
+Use `zeroboard-mcp` from that installation in place of the published `npx` commands below. It reuses the saved ZeroBoard login; sign in only when needed. The portable local plugin bundle described in [codex-plugin/README.md](https://github.com/tmcfarlane/zeroclickboards/blob/main/codex-plugin/README.md) is another option that avoids `npm link`.
 
 ## Quick start
 
@@ -58,6 +68,28 @@ Restart Claude Desktop after editing; the `zeroboard` tools appear under the too
 
 Add `"--read-only"` to `args` (or set `ZEROBOARD_READONLY=1`) to expose only the read tools.
 
+### Scoped local plugin mode
+
+The reviewed 0.2.0 runtime supports `serve --plugin`. Set `ZEROBOARD_BOARD_IDS` in the MCP process environment to the comma-separated IDs of explicitly selected boards. An absent or empty list grants no boards. Plugin mode exposes six reads plus `preview_cards` and `commit_cards`; `--read-only` omits commit. It excludes destructive tools, existing-card mutations, board creation and billed AI generation.
+
+```json
+{
+  "mcpServers": {
+    "zeroboard": {
+      "command": "zeroboard-mcp",
+      "args": ["serve", "--plugin"],
+      "env": { "ZEROBOARD_BOARD_IDS": "your-selected-board-id" }
+    }
+  }
+}
+```
+
+Keep host approval enabled for `commit_cards`. Show the returned preview and obtain explicit approval before saving its exact signed token. Card batches include dates, save atomically and do not duplicate on replay. A stale preview requires a fresh preview/approval. Batches also have an aggregate encoded size limit: if a large Unicode/text batch cannot fit the commit request, preview returns a split-batch error before offering an unusable approval.
+
+Server options must be exact: `--plugin` and `--read-only`. Unknown options fail before account initialization; typos such as `--plguin` or `--read-only=1` cannot silently start writable legacy mode. `serve --help` and `--plugin --help` show help without reading a session.
+
+For the hosted ChatGPT connection, consent/settings UI and private deployment requirements, see [HOSTED.md](https://github.com/tmcfarlane/zeroclickboards/blob/main/mcp-server/HOSTED.md). Local stdio plugins and the hosted OAuth connection use separate transport/auth setup.
+
 ## Tools
 
 **Read:** `list_boards`, `get_board`, `list_columns`, `list_cards`, `get_card`, `search`
@@ -100,10 +132,11 @@ Set a target date to anchor the schedule. An undated card uses the current date 
 
 ## Auth & security
 
-- Uses **Supabase Auth** with the public anon key only — **never** the service‑role key. Postgres **RLS** (`auth.uid() = user_id`) enforces that you only ever see/modify your own data.
+- Uses **Supabase Auth** with the public anon key only — **never** the service‑role key. Requests carry the user's RLS-scoped JWT, and the server additionally checks ownership or explicit board membership. Viewers can read; writes require owner/editor access. Plugin mode also restricts every read/write to selected boards; public/embed visibility alone does not grant integration access. Apply and verify the deployment policies described in [HOSTED.md](https://github.com/tmcfarlane/zeroclickboards/blob/main/mcp-server/HOSTED.md).
 - `login` opens the ZeroBoard web app's `/auth/cli` page, which signs you in with the app's normal Supabase auth (Google or email) and hands the session back to a short‑lived loopback listener on `127.0.0.1`, gated by a one‑time random `state`. No password is typed into the CLI. (`--password` / `ZEROBOARD_EMAIL`+`ZEROBOARD_PASSWORD` do a headless password grant instead.)
 - The CLI validates the delivered session before accepting it, so a stale/expired session is rejected rather than stored.
-- It stores `{ access_token, refresh_token }` in `~/.zeroboard/credentials.json` (mode `0600`). The long‑lived server auto‑refreshes the access token and rewrites the rotated refresh token. `logout` wipes it.
+- Saved profiles are bound to their Supabase project URL. Changing the project configuration does not forward or clear another project's saved session; status/server startup explains the mismatch. A successful new login intentionally replaces the single profile and saves its URL with the session. Older profiles without URL metadata remain compatible until rewritten.
+- It stores `{ access_token, refresh_token }` in `~/.zeroboard/credentials.json` (mode `0600`; copied/older files with looser permissions are tightened before rewrites). New profile directories use mode `0700`. The long‑lived server auto‑refreshes the access token and rewrites the rotated refresh token. `logout` wipes it.
 - Card titles/contents are returned verbatim to your agent. As with any data source, treat board text as **untrusted input** (possible prompt injection) — the server never executes it.
 
 ## Concurrency
@@ -166,8 +199,8 @@ MIT
 `zeroboard-mcp serve --plugin` exposes selected-board reads and the signed
 `preview_cards` / `commit_cards` meeting flow. Set `ZEROBOARD_BOARD_IDS` explicitly;
 missing/empty selection grants no boards. `--read-only` also disables commit.
-The portable package and workflow skills are in [`../codex-plugin`](../codex-plugin).
-The 0.2.0 server must be built from this review branch; 0.1.0 lacks these options.
+The portable package and workflow skills are in [codex-plugin](https://github.com/tmcfarlane/zeroclickboards/tree/main/codex-plugin).
+Build the repository's 0.2.0 server to use these options; the published 0.1.0 lacks them.
 
 All MCP board reads now require ownership or explicit membership; unrelated
 public/embed-visible boards are excluded. All mutations enforce owner/editor
@@ -175,5 +208,4 @@ permissions, while deletion requires ownership. Apply the reviewed JSONB RLS
 migration only after verifying staging/deployed policies.
 
 The hosted OAuth/HTTP library and production adapter requirements are documented
-in [HOSTED.md](HOSTED.md). They do not deploy an endpoint or implement Sign in with
-ChatGPT. Existing ZeroBoard AI funding and account subscriptions are unchanged.
+in [HOSTED.md](https://github.com/tmcfarlane/zeroclickboards/blob/main/mcp-server/HOSTED.md). The included Vercel adapter needs the documented private database and client configuration before the endpoint becomes available. It does not implement Sign in with ChatGPT. Existing ZeroBoard AI funding and account subscriptions are unchanged.
