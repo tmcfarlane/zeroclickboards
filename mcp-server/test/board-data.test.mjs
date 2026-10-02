@@ -188,20 +188,20 @@ test('delete reports success only after the API returns the deleted row', async 
   const { client, state } = createBoardFixture();
   assert.deepEqual(await deleteBoard(client, 'board-1'), { id: 'board-1' });
   assert.equal(state.row, null);
-  assert.equal(state.requests[0].url.searchParams.get('select'), 'id');
-  assert.match(state.requests[0].headers.get('prefer'), /return=representation/);
+  assert.equal(state.requests[1].url.searchParams.get('select'), 'id');
+  assert.match(state.requests[1].headers.get('prefer'), /return=representation/);
 });
 
 test('delete of a missing board does not claim success', async () => {
   const { client } = createBoardFixture({ row: null });
-  await assert.rejects(deleteBoard(client, 'board-1'), /was not deleted/);
+  await assert.rejects(deleteBoard(client, 'board-1'), /not found/);
 });
 
 test('delete denied silently by RLS does not claim success', async () => {
-  const { client, state } = createBoardFixture({ onRequest: () => jsonResponse([]) });
+  const { client, state } = createBoardFixture({ onRequest: (req) => req.method === 'DELETE' ? jsonResponse([]) : undefined });
   await assert.rejects(deleteBoard(client, 'board-1'), /may not have delete access/);
   assert.equal(state.row.id, 'board-1');
-  assert.equal(state.requests.length, 1);
+  assert.equal(state.requests.length, 2);
 });
 
 test('delete preserves server errors and does not retry', async () => {

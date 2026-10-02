@@ -1,0 +1,18 @@
+import type { OAuthRecords, OAuthStore } from './oauth.js';
+export interface SqlExecutor { query(sql: string, values: unknown[]): Promise<{ rows: { value: unknown }[] }> }
+/** Dedicated server-side SQL connection to the private oauth schema; never a model-facing service-role client. */
+export class SqlOAuthStore implements OAuthStore {
+  constructor(private readonly sql: SqlExecutor) {}
+  async get<K extends keyof OAuthRecords>(kind: K, key: string): Promise<OAuthRecords[K] | undefined> {
+    const result = await this.sql.query('select value from zeroboard_oauth.records where kind = $1 and key = $2', [kind, key]);
+    return result.rows[0]?.value as OAuthRecords[K] | undefined;
+  }
+  async put<K extends keyof OAuthRecords>(kind: K, key: string, value: OAuthRecords[K]): Promise<void> {
+    await this.sql.query(`insert into zeroboard_oauth.records(kind,key,value,expires_at) values($1,$2,$3::jsonb,to_timestamp($4 / 1000.0))
+      on conflict(kind,key) do update set value = excluded.value, expires_at = excluded.expires_at`, [kind, key, JSON.stringify(value), value.expires]);
+  }
+  async take<K extends keyof OAuthRecords>(kind: K, key: string): Promise<OAuthRecords[K] | undefined> {
+    const result = await this.sql.query('delete from zeroboard_oauth.records where kind = $1 and key = $2 returning value', [kind, key]);
+    return result.rows[0]?.value as OAuthRecords[K] | undefined;
+  }
+}

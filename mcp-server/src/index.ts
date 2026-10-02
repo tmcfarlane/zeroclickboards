@@ -6,6 +6,8 @@ const HELP = `zeroboard-mcp — ZeroBoard MCP server
 
 Usage:
   zeroboard-mcp [serve]      Start the MCP server over stdio (default)
+  zeroboard-mcp --plugin     Selected-board reads and approved additive card batches
+                             Requires ZEROBOARD_BOARD_IDS (comma-separated ids).
   zeroboard-mcp --read-only  Start in read-only mode (no write tools)
   zeroboard-mcp login        Sign in via the browser (Google or email). Use \`--password\`
                              (or ZEROBOARD_EMAIL/PASSWORD) for headless password sign-in.

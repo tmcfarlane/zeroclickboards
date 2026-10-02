@@ -1,3 +1,4 @@
+import { bindBoardAccess } from '../../dist/board-data.js';
 import assert from 'node:assert/strict';
 import { createNodeClient as createClient } from '../../dist/node-client.js';
 
@@ -43,10 +44,15 @@ export const jsonResponse = (data, status = 200) => new Response(JSON.stringify(
  * error, or return a Response. Normal GET/PATCH/DELETE honor equality filters;
  * successful writes advance updated_at, as the production database trigger does.
  */
-export function createBoardFixture({ row = makeBoard(), onRequest } = {}) {
+export function createBoardFixture({ row = makeBoard(), onRequest, access = { userId: 'user-1' }, members = [] } = {}) {
   const state = { row: structuredClone(row), requests: [], version: 0 };
   const fetch = async (input, init = {}) => {
     const url = new URL(input);
+    if (url.pathname === '/rest/v1/board_members') {
+      const selected = members.filter((m) => ['board_id', 'user_id'].every((key) => !url.searchParams.has(key) || url.searchParams.get(key) === `eq.${m[key]}`));
+      return jsonResponse(new Headers(init.headers).get('accept') === 'application/vnd.pgrst.object+json' ? selected[0] ?? null : selected);
+    }
+    if (url.pathname === '/auth/v1/user') return jsonResponse({ id: 'user-1' });
     assert.equal(url.pathname, '/rest/v1/boards');
     const method = init.method ?? 'GET';
     const body = init.body ? JSON.parse(init.body) : undefined;
@@ -57,6 +63,7 @@ export function createBoardFixture({ row = makeBoard(), onRequest } = {}) {
 
     const matches = state.row && ['id', 'updated_at'].every((key) => {
       const filter = url.searchParams.get(key);
+      if (filter?.startsWith('in.(')) return filter.slice(4, -1).split(',').includes(state.row[key]);
       return filter === null || filter === `eq.${state.row[key]}`;
     });
     let rows = [];
@@ -85,5 +92,6 @@ export function createBoardFixture({ row = makeBoard(), onRequest } = {}) {
     global: { fetch },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
+  bindBoardAccess(client, access);
   return { client, state };
 }

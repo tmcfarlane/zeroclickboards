@@ -160,3 +160,20 @@ npm run smoke:mcp # opt-in live MCP protocol checks; supply those same variables
 ## License
 
 MIT
+
+## Scoped local plugin and hosted connector core (0.2.0)
+
+`zeroboard-mcp serve --plugin` exposes selected-board reads and the signed
+`preview_cards` / `commit_cards` meeting flow. Set `ZEROBOARD_BOARD_IDS` explicitly;
+missing/empty selection grants no boards. `--read-only` also disables commit.
+The portable package and workflow skills are in [`../codex-plugin`](../codex-plugin).
+The 0.2.0 server must be built from this review branch; 0.1.0 lacks these options.
+
+All MCP board reads now require ownership or explicit membership; unrelated
+public/embed-visible boards are excluded. All mutations enforce owner/editor
+permissions, while deletion requires ownership. Apply the reviewed JSONB RLS
+migration only after verifying staging/deployed policies.
+
+The hosted OAuth/HTTP library and production adapter requirements are documented
+in [HOSTED.md](HOSTED.md). They do not deploy an endpoint or implement Sign in with
+ChatGPT. Existing ZeroBoard AI funding and account subscriptions are unchanged.

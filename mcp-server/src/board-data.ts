@@ -59,6 +59,52 @@ function encodeData(columns: Column[], base: unknown): BoardData {
   };
 }
 
+export interface BoardAccess {
+  userId: string;
+  /** Undefined means local account access; [] explicitly grants no boards. */
+  boardIds?: readonly string[];
+}
+const accessByClient = new WeakMap<SupabaseClient, BoardAccess>();
+export function bindBoardAccess(client: SupabaseClient, access: BoardAccess): void {
+  const previous = accessByClient.get(client);
+  const frozen = { userId: access.userId, boardIds: access.boardIds === undefined ? undefined : [...access.boardIds] };
+  if (previous && JSON.stringify(previous) !== JSON.stringify(frozen)) throw new Error('Never reuse a client across authorization contexts');
+  accessByClient.set(client, frozen);
+}
+async function accessFor(client: SupabaseClient): Promise<BoardAccess> {
+  const bound = accessByClient.get(client);
+  if (bound) return bound;
+  const { data, error } = await client.auth.getUser();
+  if (error || !data.user) throw new Error('Authentication required');
+  return { userId: data.user.id };
+}
+async function checkAccess(client: SupabaseClient, row: BoardRow, write = false, ownerOnly = false): Promise<void> {
+  const access = await accessFor(client);
+  if (access.boardIds !== undefined && !access.boardIds.includes(row.id)) throw new Error('Board is outside the selected-board grant');
+  if (row.user_id === access.userId) return;
+  if (!ownerOnly) {
+    const { data, error } = await client.from('board_members').select('role').eq('board_id', row.id).eq('user_id', access.userId).maybeSingle();
+    if (error) throw new Error('Unable to verify board membership');
+    if (data && (!write || data.role === 'editor')) return;
+  }
+  throw new Error(write ? 'Board requires owner/editor access' : 'Board requires explicit membership');
+}
+async function accessibleRows(client: SupabaseClient): Promise<BoardRow[]> {
+  const access = await accessFor(client);
+  const { data: members, error: memberError } = await client.from('board_members').select('board_id').eq('user_id', access.userId);
+  if (memberError) throw new Error('Unable to verify board membership');
+  // Do not include unrelated public/embed boards merely because RLS exposes them.
+  let query = client.from('boards').select(SELECT_COLS);
+  if (access.boardIds !== undefined) {
+    if (!access.boardIds.length) return [];
+    query = query.in('id', [...access.boardIds]);
+  }
+  const { data, error } = await query.order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  const memberIds = new Set((members ?? []).map((m) => m.board_id));
+  return (data as BoardRow[]).filter((row) => row.user_id === access.userId || memberIds.has(row.id));
+}
+
 const SELECT_COLS = 'id,user_id,name,description,data,created_at,updated_at,is_public,embed_enabled';
 
 function rowToFullBoard(row: BoardRow): FullBoard {
@@ -99,6 +145,7 @@ async function getRow(client: SupabaseClient, boardId: string): Promise<BoardRow
   const { data, error } = await client.from('boards').select(SELECT_COLS).eq('id', boardId).maybeSingle();
   if (error) throw new BoardError(error.message);
   if (!data) return notFound('Board', boardId);
+  await checkAccess(client, data as unknown as BoardRow);
   return data as unknown as BoardRow;
 }
 
@@ -111,18 +158,20 @@ async function getRow(client: SupabaseClient, boardId: string): Promise<BoardRow
 async function mutateColumns(
   client: SupabaseClient,
   boardId: string,
-  mutator: (columns: Column[]) => Column[],
+  mutator: (columns: Column[], revision: string) => Column[] | null,
 ): Promise<FullBoard> {
   let previousVersion: string | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
     const row = await getRow(client, boardId);
+    await checkAccess(client, row, true);
     // RLS can reject an update by returning zero rows without an error. If the
     // row's version did not change, another write did not cause the rejection.
     if (row.updated_at === previousVersion) {
       throw new BoardError(`Board ${boardId} could not be updated. Check your edit access.`);
     }
     const base = decodeData(row.data);
-    const nextColumns = mutator(structuredClone(base.columns));
+    const nextColumns = mutator(structuredClone(base.columns), row.updated_at);
+    if (nextColumns === null) return rowToFullBoard(row);
     const nextData = encodeData(nextColumns, row.data);
     const { data, error } = await client
       .from('boards')
@@ -158,12 +207,7 @@ function locateCard(columns: Column[], cardId: string): { column: Column; card: 
 // ---------------------------------------------------------------------------
 
 export async function listBoards(client: SupabaseClient): Promise<BoardSummary[]> {
-  const { data, error } = await client
-    .from('boards')
-    .select(SELECT_COLS)
-    .order('created_at', { ascending: true });
-  if (error) throw new BoardError(error.message);
-  return (data as unknown as BoardRow[]).map(rowToSummary);
+  return (await accessibleRows(client)).map(rowToSummary);
 }
 
 export async function getBoard(client: SupabaseClient, boardId: string): Promise<FullBoard> {
@@ -177,6 +221,8 @@ export async function createBoard(
   description?: string,
   columns?: Column[],
 ): Promise<FullBoard> {
+  const access = await accessFor(client);
+  if (access.userId !== userId || access.boardIds !== undefined) throw new Error('Board creation is outside this grant');
   const id = newId();
   const now = nowIso();
   const data: BoardData = { columns: columns ?? createDefaultColumns() };
@@ -238,6 +284,7 @@ export async function updateBoardMeta(
   boardId: string,
   patch: { name?: string; description?: string },
 ): Promise<FullBoard> {
+  await checkAccess(client, await getRow(client, boardId), true);
   const update: Record<string, unknown> = { updated_at: nowIso() };
   if (patch.name !== undefined) update.name = patch.name;
   if (patch.description !== undefined) update.description = patch.description;
@@ -252,6 +299,7 @@ export async function updateBoardMeta(
 }
 
 export async function deleteBoard(client: SupabaseClient, boardId: string): Promise<{ id: string }> {
+  await checkAccess(client, await getRow(client, boardId), true, true);
   const { data, error } = await client.from('boards').delete().eq('id', boardId).select('id').maybeSingle();
   if (error) throw new BoardError(error.message);
   if (!data) throw new BoardError(`Board ${boardId} was not deleted. It may not exist or you may not have delete access.`);
@@ -629,8 +677,7 @@ export async function search(
 ): Promise<SearchHit[]> {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  const { data, error } = await client.from('boards').select(SELECT_COLS);
-  if (error) throw new BoardError(error.message);
+  const data = await accessibleRows(client);
   const hits: SearchHit[] = [];
   for (const row of data as unknown as BoardRow[]) {
     const { columns } = decodeData(row.data);
@@ -653,4 +700,26 @@ export async function search(
     }
   }
   return hits;
+}
+
+/** One conditional JSONB update for the approved batch, including its dates. */
+export async function addPreviewCards(client: SupabaseClient, boardId: string, revision: string,
+  cards: (NewCardInput & { id: string; columnId: string; text?: string })[]): Promise<FullBoard> {
+  return mutateColumns(client, boardId, (columns, currentRevision) => {
+    const ids = new Set(columns.flatMap((column) => column.cards.map((card) => card.id)));
+    if (cards.every((card) => ids.has(card.id))) return null;
+    if (cards.some((card) => ids.has(card.id))) throw new Error('Partial batch exists; review the board');
+    if (currentRevision !== revision) throw new Error('Board changed since preview; preview again before approval');
+    const now = nowIso();
+    for (const draft of cards) {
+      findColumn(columns, draft.columnId).cards.push({ id: draft.id, title: draft.title, description: draft.description,
+        content: { type: 'text', text: draft.text ?? '' }, targetDate: draft.targetDate === undefined ? undefined : parseTargetDate(draft.targetDate),
+        labels: [], isArchived: false, createdAt: now, updatedAt: now });
+    }
+    return columns;
+  });
+}
+
+export async function requireBoardEditor(client: SupabaseClient, boardId: string): Promise<void> {
+  await checkAccess(client, await getRow(client, boardId), true);
 }
