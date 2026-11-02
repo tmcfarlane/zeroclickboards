@@ -209,3 +209,9 @@ migration only after verifying staging/deployed policies.
 
 The hosted OAuth/HTTP library and production adapter requirements are documented
 in [HOSTED.md](https://github.com/tmcfarlane/zeroclickboards/blob/main/mcp-server/HOSTED.md). The included Vercel adapter needs the documented private database and client configuration before the endpoint becomes available. It does not implement Sign in with ChatGPT. Existing ZeroBoard AI funding and account subscriptions are unchanged.
+
+### Opening boards in a browser
+
+Every board summary and full-board result includes a canonical `url`, for example `https://board.zeroclickdev.ai/board/<boardId>`. Agents should use this field when linking or opening a board for a user. It uses `ZEROBOARD_WEB_URL` when configured and is returned by listings, reads, creation, and operations that return a full board.
+
+The full-page route handles sign-in and board permissions; the URL does not grant access or make a board public. Use `/embed/<boardId>` only for embedding, not as a user-facing board link.

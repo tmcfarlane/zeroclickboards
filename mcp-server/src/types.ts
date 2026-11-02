@@ -81,6 +81,7 @@ export interface BoardRow {
 /** Lightweight board listing (no card payload). */
 export interface BoardSummary {
   id: string;
+  url: string;
   name: string;
   description?: string;
   columnCount: number;
@@ -92,6 +93,7 @@ export interface BoardSummary {
 /** A fully-decoded board with columns and cards. */
 export interface FullBoard {
   id: string;
+  url: string;
   name: string;
   description?: string;
   columns: Column[];

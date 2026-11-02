@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { WEB_BASE_URL } from './config.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createRecurringCardCopy } from './recurrence.js';
 import { parseRecurrence } from './recurrence-schema.js';
@@ -111,6 +112,7 @@ function rowToFullBoard(row: BoardRow): FullBoard {
   const decoded = decodeData(row.data);
   return {
     id: row.id,
+    url: `${WEB_BASE_URL}/board/${encodeURIComponent(row.id)}`,
     name: row.name,
     description: row.description ?? undefined,
     columns: decoded.columns,
@@ -127,6 +129,7 @@ function rowToSummary(row: BoardRow): BoardSummary {
   const { columns } = decodeData(row.data);
   return {
     id: row.id,
+    url: `${WEB_BASE_URL}/board/${encodeURIComponent(row.id)}`,
     name: row.name,
     description: row.description ?? undefined,
     columnCount: columns.length,
