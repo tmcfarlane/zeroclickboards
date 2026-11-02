@@ -6,6 +6,7 @@ import {
   createBoardFromTemplate,
   deleteBoard,
   getBoard,
+  listBoards,
   reorderColumns,
   setCoverImage,
   setRecurrence,
@@ -702,3 +703,13 @@ test('AI board templates retain independent checklist body text and snapshot inp
   assert.equal(result.columns[0].cards[1].content.text, '');
   assert.equal(state.requests.length, 1);
 });
+
+for (const isPublic of [false, true]) {
+  test(`board links open the full page for ${isPublic ? 'public' : 'private'} boards`, async () => {
+    const { client } = createBoardFixture({ row: makeBoard({ is_public: isPublic }) });
+    const expected = `${process.env.ZEROBOARD_WEB_URL?.replace(/\/$/, '') ?? 'https://board.zeroclickdev.ai'}/board/board-1`;
+    assert.equal((await listBoards(client))[0].url, expected);
+    assert.equal((await getBoard(client, 'board-1')).url, expected);
+    assert.equal((await updateCard(client, 'board-1', 'card-a', { title: 'Updated' })).url, expected);
+  });
+}
