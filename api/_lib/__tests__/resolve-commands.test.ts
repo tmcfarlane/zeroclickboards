@@ -13,6 +13,7 @@ const card = (id: string, title: string, archived = false) => ({
 
 const board: FullBoard = {
   id: 'board-1',
+  url: 'https://board.zeroclickdev.ai/board/board-1',
   name: 'Test',
   columns: [
     { id: 'col-todo', title: 'To Do', order: 0, cards: [card('c1', 'Fix login bug'), card('c2', 'Write docs')] },
