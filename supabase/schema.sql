@@ -62,14 +62,10 @@ drop policy if exists "profiles_select_own" on public.profiles;
 drop policy if exists "profiles_insert_own" on public.profiles;
 drop policy if exists "profiles_update_own" on public.profiles;
 
+-- Clients only read profiles. The sign-up trigger and the service role write
+-- them, so a user can never set their own plan or subscription status.
 create policy "profiles_select_own" on public.profiles
-  for select using (auth.uid() = id);
-
-create policy "profiles_insert_own" on public.profiles
-  for insert with check (auth.uid() = id);
-
-create policy "profiles_update_own" on public.profiles
-  for update using (auth.uid() = id);
+  for select to authenticated using (auth.uid() = id);
 
 drop policy if exists "boards_select_own" on public.boards;
 drop policy if exists "boards_insert_own" on public.boards;
