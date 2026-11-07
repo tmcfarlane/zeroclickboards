@@ -341,10 +341,38 @@ create policy "cards_select_accessible" on public.cards
     OR board_id IN (select id from public.boards where is_public = true)
   );
 
--- Allow authenticated users to search profiles by email (for inviting)
+-- Profiles hold emails and Stripe ids, so a user reads only their own row and
+-- the rows of people they share a board with. Invites look up emails with the
+-- service role in api/invite/send.ts.
 drop policy if exists "profiles_search_by_email" on public.profiles;
-create policy "profiles_search_by_email" on public.profiles
-  for select using (auth.uid() is not null);
+
+create or replace function public.shares_board_with(target uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.board_members bm
+    where bm.user_id = target
+      and (
+        bm.board_id in (select b.id from public.boards b where b.user_id = auth.uid())
+        or bm.board_id in (select public.get_board_ids_for_user(auth.uid()))
+      )
+  ) or exists (
+    select 1 from public.boards b
+    where b.user_id = target
+      and b.id in (select public.get_board_ids_for_user(auth.uid()))
+  );
+$$;
+
+revoke all on function public.shares_board_with(uuid) from public, anon;
+grant execute on function public.shares_board_with(uuid) to authenticated, service_role;
+
+drop policy if exists "profiles_select_board_peers" on public.profiles;
+create policy "profiles_select_board_peers" on public.profiles
+  for select to authenticated using (public.shares_board_with(id));
 
 do $$
 begin
